@@ -8,7 +8,7 @@ interface EvolutionNote {
   professional: string;
   specialty: string;
   content: string;
-  type: "medica" | "enfermagem" | "fisioterapia" | "nutricao";
+  type: "medica" | "enfermagem" | "fisioterapia" | "nutricao" | "psicologia";
 }
 
 interface EvolutionNotesProps {
@@ -16,18 +16,20 @@ interface EvolutionNotesProps {
   onAddNote?: () => void;
 }
 
-const typeStyles = {
+const typeStyles: Record<string, string> = {
   medica: "border-l-primary",
   enfermagem: "border-l-success",
   fisioterapia: "border-l-warning",
   nutricao: "border-l-accent",
+  psicologia: "border-l-info",
 };
 
-const typeLabels = {
+const typeLabels: Record<string, string> = {
   medica: "Evolução Médica",
   enfermagem: "Evolução de Enfermagem",
   fisioterapia: "Evolução Fisioterapia",
   nutricao: "Evolução Nutricional",
+  psicologia: "Evolução Psicológica",
 };
 
 export function EvolutionNotes({ notes, onAddNote }: EvolutionNotesProps) {
