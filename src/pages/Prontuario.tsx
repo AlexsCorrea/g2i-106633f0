@@ -157,7 +157,7 @@ export default function Prontuario() {
       time: format(parseISO(note.created_at), "HH:mm", { locale: ptBR }),
       professional: note.profiles?.full_name || "Profissional",
       specialty: note.profiles?.specialty || note.note_type,
-      type: note.note_type,
+      type: note.note_type as "medica" | "enfermagem" | "fisioterapia" | "nutricao" | "psicologia",
       content: note.content,
     }));
   };
