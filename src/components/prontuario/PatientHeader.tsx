@@ -14,15 +14,16 @@ interface PatientHeaderProps {
     bloodType: string;
     recordNumber: string;
     photo?: string;
-    status: "internado" | "ambulatorial" | "emergencia" | "alta";
+    status: "internado" | "ambulatorial" | "alta" | "transferido" | "obito";
   };
 }
 
 const statusConfig = {
   internado: { label: "Internado", className: "bg-info/10 text-info border-info/20" },
   ambulatorial: { label: "Ambulatorial", className: "bg-success/10 text-success border-success/20" },
-  emergencia: { label: "Emergência", className: "bg-destructive/10 text-destructive border-destructive/20" },
   alta: { label: "Alta Médica", className: "bg-muted text-muted-foreground" },
+  transferido: { label: "Transferido", className: "bg-warning/10 text-warning border-warning/20" },
+  obito: { label: "Óbito", className: "bg-muted text-muted-foreground border-muted" },
 };
 
 export function PatientHeader({ patient }: PatientHeaderProps) {

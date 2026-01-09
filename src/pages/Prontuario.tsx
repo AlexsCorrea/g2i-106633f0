@@ -74,58 +74,63 @@ export default function Prontuario() {
     
     const vitals = [];
     if (latestVitals.heart_rate) {
+      const heartStatus = latestVitals.heart_rate < 60 || latestVitals.heart_rate > 100 ? "warning" : "normal";
       vitals.push({
         label: "Freq. Cardíaca",
         value: latestVitals.heart_rate.toString(),
         unit: "bpm",
-        status: (latestVitals.heart_rate < 60 || latestVitals.heart_rate > 100 ? "warning" : "normal") as const,
+        status: heartStatus as "normal" | "warning" | "critical",
         icon: "heart" as const,
       });
     }
     if (latestVitals.blood_pressure_systolic && latestVitals.blood_pressure_diastolic) {
-      const status = latestVitals.blood_pressure_systolic > 140 || latestVitals.blood_pressure_diastolic > 90 ? "warning" : "normal";
+      const bpStatus = latestVitals.blood_pressure_systolic > 140 || latestVitals.blood_pressure_diastolic > 90 ? "warning" : "normal";
       vitals.push({
         label: "Pressão Arterial",
         value: `${latestVitals.blood_pressure_systolic}/${latestVitals.blood_pressure_diastolic}`,
         unit: "mmHg",
-        status: status as const,
+        status: bpStatus as "normal" | "warning" | "critical",
         icon: "pressure" as const,
       });
     }
     if (latestVitals.temperature) {
       const temp = Number(latestVitals.temperature);
+      const tempStatus = temp < 36 || temp > 37.5 ? "warning" : "normal";
       vitals.push({
         label: "Temperatura",
         value: temp.toFixed(1),
         unit: "°C",
-        status: (temp < 36 || temp > 37.5 ? "warning" : "normal") as const,
+        status: tempStatus as "normal" | "warning" | "critical",
         icon: "temp" as const,
       });
     }
     if (latestVitals.respiratory_rate) {
+      const rrStatus = latestVitals.respiratory_rate < 12 || latestVitals.respiratory_rate > 20 ? "warning" : "normal";
       vitals.push({
         label: "Freq. Respiratória",
         value: latestVitals.respiratory_rate.toString(),
         unit: "rpm",
-        status: (latestVitals.respiratory_rate < 12 || latestVitals.respiratory_rate > 20 ? "warning" : "normal") as const,
+        status: rrStatus as "normal" | "warning" | "critical",
         icon: "wind" as const,
       });
     }
     if (latestVitals.oxygen_saturation) {
+      const spo2Status = latestVitals.oxygen_saturation < 95 ? "critical" : "normal";
       vitals.push({
         label: "Saturação O₂",
         value: latestVitals.oxygen_saturation.toString(),
         unit: "%",
-        status: (latestVitals.oxygen_saturation < 95 ? "critical" : "normal") as const,
+        status: spo2Status as "normal" | "warning" | "critical",
         icon: "oxygen" as const,
       });
     }
     if (latestVitals.glucose) {
+      const glucoseStatus = latestVitals.glucose < 70 || latestVitals.glucose > 140 ? "warning" : "normal";
       vitals.push({
         label: "Glicemia",
         value: latestVitals.glucose.toString(),
         unit: "mg/dL",
-        status: (latestVitals.glucose < 70 || latestVitals.glucose > 140 ? "warning" : "normal") as const,
+        status: glucoseStatus as "normal" | "warning" | "critical",
         icon: "activity" as const,
       });
     }
