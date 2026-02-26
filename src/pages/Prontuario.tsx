@@ -12,12 +12,13 @@ import { EvolutionNotes } from "@/components/prontuario/EvolutionNotes";
 import { VitalSignsForm } from "@/components/prontuario/forms/VitalSignsForm";
 import { MedicationForm } from "@/components/prontuario/forms/MedicationForm";
 import { EvolutionNoteForm } from "@/components/prontuario/forms/EvolutionNoteForm";
+import { OphthalmologyForm } from "@/components/prontuario/forms/OphthalmologyForm";
 import { ScalesForm } from "@/components/prontuario/forms/ScalesForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  FileText, Activity, Pill, ClipboardList, Scale, 
+  FileText, Activity, Pill, ClipboardList, Scale, Eye,
   Plus, Loader2, AlertTriangle, CheckCircle2 
 } from "lucide-react";
 import { format, parseISO, differenceInYears } from "date-fns";
@@ -38,6 +39,7 @@ export default function Prontuario() {
   const [showMedicationForm, setShowMedicationForm] = useState(false);
   const [showEvolutionForm, setShowEvolutionForm] = useState(false);
   const [showScalesForm, setShowScalesForm] = useState(false);
+  const [showOphthalmologyForm, setShowOphthalmologyForm] = useState(false);
   const [scalesInitialTab, setScalesInitialTab] = useState<"braden" | "morse" | "glasgow">("braden");
 
   if (loadingPatient) {
@@ -206,6 +208,10 @@ export default function Prontuario() {
           <TabsTrigger value="escalas" className="gap-2">
             <Scale className="h-4 w-4" />
             Escalas
+          </TabsTrigger>
+          <TabsTrigger value="oftalmologia" className="gap-2">
+            <Eye className="h-4 w-4" />
+            Oftalmologia
           </TabsTrigger>
         </TabsList>
 
@@ -473,6 +479,24 @@ export default function Prontuario() {
             </div>
           </div>
         </TabsContent>
+
+        <TabsContent value="oftalmologia" className="mt-6">
+          <div className="medical-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="section-header mb-0">
+                <Eye className="h-4 w-4 text-primary" />
+                Consulta Oftalmológica
+              </h3>
+              <Button size="sm" onClick={() => setShowOphthalmologyForm(true)} className="gap-1.5">
+                <Plus className="h-4 w-4" />
+                Nova Consulta
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Abra o formulário para registrar uma consulta oftalmológica completa com todos os exames.
+            </p>
+          </div>
+        </TabsContent>
       </Tabs>
 
       {id && (
@@ -481,6 +505,7 @@ export default function Prontuario() {
           <MedicationForm patientId={id} open={showMedicationForm} onOpenChange={setShowMedicationForm} />
           <EvolutionNoteForm patientId={id} open={showEvolutionForm} onOpenChange={setShowEvolutionForm} />
           <ScalesForm patientId={id} open={showScalesForm} onOpenChange={setShowScalesForm} initialTab={scalesInitialTab} />
+          <OphthalmologyForm patientId={id} open={showOphthalmologyForm} onOpenChange={setShowOphthalmologyForm} />
         </>
       )}
     </div>
