@@ -5,10 +5,13 @@ import { useLatestVitalSigns, useVitalSigns } from "@/hooks/useVitalSigns";
 import { useMedications } from "@/hooks/useMedications";
 import { useEvolutionNotes } from "@/hooks/useEvolutionNotes";
 import { useLatestBraden, useLatestMorse, useLatestGlasgow } from "@/hooks/useScales";
+import { useAllergies } from "@/hooks/useAllergies";
 import { PatientHeader } from "@/components/prontuario/PatientHeader";
 import { VitalsCard } from "@/components/prontuario/VitalsCard";
 import { MedicationsCard } from "@/components/prontuario/MedicationsCard";
 import { EvolutionNotes } from "@/components/prontuario/EvolutionNotes";
+import { AllergiesCard } from "@/components/prontuario/AllergiesCard";
+import { TimelineCard } from "@/components/prontuario/TimelineCard";
 import { VitalSignsForm } from "@/components/prontuario/forms/VitalSignsForm";
 import { MedicationForm } from "@/components/prontuario/forms/MedicationForm";
 import { EvolutionNoteForm } from "@/components/prontuario/forms/EvolutionNoteForm";
@@ -34,6 +37,7 @@ export default function Prontuario() {
   const { data: latestBraden } = useLatestBraden(id);
   const { data: latestMorse } = useLatestMorse(id);
   const { data: latestGlasgow } = useLatestGlasgow(id);
+  const { data: allergies } = useAllergies(id);
 
   const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [showMedicationForm, setShowMedicationForm] = useState(false);
@@ -243,13 +247,42 @@ export default function Prontuario() {
             </div>
 
             <div className="space-y-6">
+              <AllergiesCard
+                allergies={(allergies || []).map((a) => ({
+                  id: a.id,
+                  name: a.allergen,
+                  type: a.allergy_type as "medicamento" | "alimento" | "contraste" | "inseto" | "outro",
+                  severity: a.severity,
+                  reaction: a.reaction || undefined,
+                }))}
+              />
+
+              <TimelineCard
+                events={[
+                  ...(evolutionNotes || []).map((note) => ({
+                    id: note.id,
+                    date: format(parseISO(note.created_at), "dd/MM/yyyy", { locale: ptBR }),
+                    time: format(parseISO(note.created_at), "HH:mm", { locale: ptBR }),
+                    title: `${note.profiles?.full_name || "Profissional"} - ${note.note_type}`,
+                    type: "consulta" as const,
+                  })),
+                  ...(medications || []).filter(m => m.status === "ativo").map((med) => ({
+                    id: med.id,
+                    date: format(parseISO(med.start_date), "dd/MM/yyyy", { locale: ptBR }),
+                    time: format(parseISO(med.created_at), "HH:mm", { locale: ptBR }),
+                    title: `${med.name} ${med.dosage}`,
+                    type: "prescricao" as const,
+                  })),
+                ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10)}
+              />
+
               <div className="medical-card p-5">
                 <h3 className="section-header">
                   <Scale className="h-4 w-4 text-primary" />
                   Escalas
                 </h3>
                 <div className="space-y-3">
-                  <div 
+                  <div
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50"
                     onClick={() => openScalesForm("braden")}
                   >
@@ -265,8 +298,7 @@ export default function Prontuario() {
                       <Badge variant="outline">Avaliar</Badge>
                     )}
                   </div>
-
-                  <div 
+                  <div
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50"
                     onClick={() => openScalesForm("morse")}
                   >
@@ -282,8 +314,7 @@ export default function Prontuario() {
                       <Badge variant="outline">Avaliar</Badge>
                     )}
                   </div>
-
-                  <div 
+                  <div
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50"
                     onClick={() => openScalesForm("glasgow")}
                   >
