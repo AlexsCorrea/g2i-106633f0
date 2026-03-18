@@ -44,7 +44,11 @@ export default function Prontuario() {
   const [showEvolutionForm, setShowEvolutionForm] = useState(false);
   const [showScalesForm, setShowScalesForm] = useState(false);
   const [showOphthalmologyForm, setShowOphthalmologyForm] = useState(false);
-  const [ophthalmologyMinimized, setOphthalmologyMinimized] = useState(false);
+  const [ophthalmologyMinimized, setOphthalmologyMinimized] = useState(() => {
+    if (!id) return false;
+    const draft = localStorage.getItem(`ophthalmology_draft_${id}`);
+    return !!draft;
+  });
   const [scalesInitialTab, setScalesInitialTab] = useState<"braden" | "morse" | "glasgow">("braden");
 
   if (loadingPatient) {
