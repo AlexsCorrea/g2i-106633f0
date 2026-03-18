@@ -44,6 +44,7 @@ export default function Prontuario() {
   const [showEvolutionForm, setShowEvolutionForm] = useState(false);
   const [showScalesForm, setShowScalesForm] = useState(false);
   const [showOphthalmologyForm, setShowOphthalmologyForm] = useState(false);
+  const [ophthalmologyMinimized, setOphthalmologyMinimized] = useState(false);
   const [scalesInitialTab, setScalesInitialTab] = useState<"braden" | "morse" | "glasgow">("braden");
 
   if (loadingPatient) {
@@ -536,7 +537,7 @@ export default function Prontuario() {
           <MedicationForm patientId={id} open={showMedicationForm} onOpenChange={setShowMedicationForm} />
           <EvolutionNoteForm patientId={id} open={showEvolutionForm} onOpenChange={setShowEvolutionForm} />
           <ScalesForm patientId={id} open={showScalesForm} onOpenChange={setShowScalesForm} initialTab={scalesInitialTab} />
-          <OphthalmologyForm patientId={id} open={showOphthalmologyForm} onOpenChange={setShowOphthalmologyForm} />
+          <OphthalmologyForm patientId={id} open={showOphthalmologyForm} onOpenChange={setShowOphthalmologyForm} minimized={ophthalmologyMinimized} onMinimizedChange={setOphthalmologyMinimized} />
         </>
       )}
     </div>
