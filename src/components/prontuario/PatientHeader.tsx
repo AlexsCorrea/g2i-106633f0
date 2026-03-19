@@ -1,4 +1,4 @@
-import { User, Calendar, Phone, MapPin, FileText, AlertTriangle } from "lucide-react";
+import { User, Calendar, Phone, MapPin, FileText, BedDouble, Building2, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -15,6 +15,11 @@ interface PatientHeaderProps {
     recordNumber: string;
     photo?: string;
     status: "internado" | "ambulatorial" | "alta" | "transferido" | "obito";
+    room?: string;
+    bed?: string;
+    healthInsurance?: string;
+    emergencyContact?: string;
+    emergencyPhone?: string;
   };
 }
 
@@ -40,25 +45,31 @@ export function PatientHeader({ patient }: PatientHeaderProps) {
         </Avatar>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
             <h1 className="text-2xl font-bold text-foreground truncate">
               {patient.name}
             </h1>
             <Badge variant="outline" className={status.className}>
               {status.label}
             </Badge>
+            {patient.room && patient.bed && (
+              <Badge variant="secondary" className="gap-1 font-mono">
+                <BedDouble className="h-3 w-3" />
+                {patient.room} / Leito {patient.bed}
+              </Badge>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
             <div>
-              <p className="data-label">Data de Nascimento</p>
+              <p className="data-label">Nascimento</p>
               <p className="data-value flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                {patient.birthDate} ({patient.age} anos)
+                {patient.birthDate} ({patient.age}a)
               </p>
             </div>
             <div>
-              <p className="data-label">Sexo / Tipo Sanguíneo</p>
+              <p className="data-label">Sexo / Tipo Sang.</p>
               <p className="data-value flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5 text-muted-foreground" />
                 {patient.gender} • <span className="text-destructive font-semibold">{patient.bloodType}</span>
@@ -75,9 +86,18 @@ export function PatientHeader({ patient }: PatientHeaderProps) {
                 <span className="font-mono">{patient.recordNumber}</span>
               </p>
             </div>
+            {patient.healthInsurance && (
+              <div>
+                <p className="data-label">Convênio</p>
+                <p className="data-value flex items-center gap-1.5">
+                  <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+                  {patient.healthInsurance}
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-6 mt-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-6 mt-3 text-sm text-muted-foreground flex-wrap">
             <span className="flex items-center gap-1.5">
               <Phone className="h-3.5 w-3.5" />
               {patient.phone}
@@ -86,6 +106,12 @@ export function PatientHeader({ patient }: PatientHeaderProps) {
               <MapPin className="h-3.5 w-3.5" />
               {patient.address}
             </span>
+            {patient.emergencyContact && (
+              <span className="flex items-center gap-1.5 text-warning">
+                <Phone className="h-3.5 w-3.5" />
+                Emergência: {patient.emergencyContact} {patient.emergencyPhone ? `(${patient.emergencyPhone})` : ""}
+              </span>
+            )}
           </div>
         </div>
       </div>
