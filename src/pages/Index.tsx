@@ -195,6 +195,9 @@ const Index = () => {
                 <div className="text-sm text-muted-foreground">Altas Previstas</div>
               </Card>
             </div>
+
+            {/* What's New Modal */}
+            <WhatsNewModal />
           </div>
         )}
       </main>
