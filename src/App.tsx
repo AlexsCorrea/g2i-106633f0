@@ -25,6 +25,7 @@ function App() {
             <Sonner />
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/welcome" element={<Welcome />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/patients" element={<Patients />} />
               <Route path="/prontuario/:id" element={<Prontuario />} />
