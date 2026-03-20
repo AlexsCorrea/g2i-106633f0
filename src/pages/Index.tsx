@@ -6,6 +6,7 @@ import {
   Users, Calendar, FileText, LogIn, LogOut, 
   Heart, Activity, Pill, ClipboardList, Shield
 } from "lucide-react";
+import WhatsNewModal from "@/components/WhatsNewModal";
 
 const Index = () => {
   const navigate = useNavigate();
