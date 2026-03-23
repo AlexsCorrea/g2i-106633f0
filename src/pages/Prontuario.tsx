@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText, Activity, Pill, ClipboardList, Scale, Eye,
-  Plus, Loader2, AlertTriangle, CheckCircle2, ArrowLeft
+  Plus, Loader2, AlertTriangle, CheckCircle2, ArrowLeft, Brain
 } from "lucide-react";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
