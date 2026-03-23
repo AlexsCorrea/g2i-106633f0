@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { usePatient } from "@/hooks/usePatients";
 import { useLatestVitalSigns, useVitalSigns } from "@/hooks/useVitalSigns";
@@ -19,12 +19,13 @@ import { OphthalmologyForm } from "@/components/prontuario/forms/OphthalmologyFo
 import { ScalesForm } from "@/components/prontuario/forms/ScalesForm";
 import { ProntuarioSidebar } from "@/components/prontuario/ProntuarioSidebar";
 import { AIChatButton } from "@/components/prontuario/AIChatButton";
+import { AIAssistantPanel } from "@/components/prontuario/AIAssistantPanel";
 import { PlaceholderSection } from "@/components/prontuario/sections/PlaceholderSection";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText, Activity, Pill, ClipboardList, Scale, Eye,
-  Plus, Loader2, AlertTriangle, CheckCircle2, ArrowLeft
+  Plus, Loader2, AlertTriangle, CheckCircle2, ArrowLeft, Brain
 } from "lucide-react";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -48,6 +49,7 @@ export default function Prontuario() {
   const [showEvolutionForm, setShowEvolutionForm] = useState(false);
   const [showScalesForm, setShowScalesForm] = useState(false);
   const [showOphthalmologyForm, setShowOphthalmologyForm] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(false);
   const [ophthalmologyMinimized, setOphthalmologyMinimized] = useState(() => {
     if (!id) return false;
     const draft = localStorage.getItem(`ophthalmology_draft_${id}`);
@@ -182,6 +184,15 @@ export default function Prontuario() {
     evolutionSummary: (evolutionNotes || []).slice(0, 3).map((n) => `[${n.note_type}] ${n.content.slice(0, 100)}...`).join("\n"),
     medicalHistory: "",
   };
+
+  const patientContextString = useMemo(() => {
+    return `Paciente: ${patient.full_name}
+Alergias: ${patientContext.allergies.length > 0 ? patientContext.allergies.join(", ") : "NKDA"}
+Medicamentos ativos: ${patientContext.medications.length > 0 ? patientContext.medications.join("; ") : "Nenhum"}
+Sinais vitais: ${patientContext.latestVitals || "Sem registro"}
+Escalas: ${patientContext.scales || "Sem avaliação"}
+Evoluções recentes: ${patientContext.evolutionSummary || "Sem evoluções"}`;
+  }, [patient.full_name, patientContext.allergies, patientContext.medications, patientContext.latestVitals, patientContext.scales, patientContext.evolutionSummary]);
 
   // ---- Section renderers ----
   const renderResumo = () => (
@@ -472,8 +483,24 @@ export default function Prontuario() {
         </div>
       </div>
 
-      {/* AI Chat */}
+      {/* AI Chat & Assistant */}
       <AIChatButton patientContext={patientContext} />
+      
+      {/* AI Assistant Panel trigger */}
+      <button
+        onClick={() => setShowAIPanel(true)}
+        className="fixed bottom-6 right-24 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center bg-emerald-600 text-white hover:scale-105 transition-all duration-300"
+        title="Assistente IA Clínico"
+      >
+        <Brain className="h-6 w-6" />
+      </button>
+
+      <AIAssistantPanel
+        patientContext={patientContextString}
+        patientName={patient.full_name}
+        isOpen={showAIPanel}
+        onClose={() => setShowAIPanel(false)}
+      />
 
       {/* Forms */}
       {id && (
