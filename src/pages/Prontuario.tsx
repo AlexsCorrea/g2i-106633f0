@@ -19,6 +19,7 @@ import { OphthalmologyForm } from "@/components/prontuario/forms/OphthalmologyFo
 import { ScalesForm } from "@/components/prontuario/forms/ScalesForm";
 import { ProntuarioSidebar } from "@/components/prontuario/ProntuarioSidebar";
 import { AIChatButton } from "@/components/prontuario/AIChatButton";
+import { AIAssistantPanel } from "@/components/prontuario/AIAssistantPanel";
 import { PlaceholderSection } from "@/components/prontuario/sections/PlaceholderSection";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
