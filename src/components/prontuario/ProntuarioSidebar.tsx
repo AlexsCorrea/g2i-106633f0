@@ -1,28 +1,16 @@
 import { useState } from "react";
 import {
-  LayoutDashboard,
-  Stethoscope,
-  Heart,
-  Activity,
-  Apple,
-  Brain,
-  Pill,
-  Eye,
-  Ear,
-  FileText,
-  Scale,
-  ClipboardList,
-  Shield,
-  Users,
-  Scissors,
-  Zap,
-  Link2,
-  ChevronDown,
-  ChevronRight,
+  LayoutDashboard, Stethoscope, Heart, Activity, Apple, Brain, Pill, Eye, Ear,
+  FileText, Scale, ClipboardList, Shield, Users, Scissors, Zap, Link2,
+  ChevronDown, ChevronRight, BedDouble, Syringe, Thermometer, FlaskConical,
+  HeartPulse, Droplets, Hand, Smile, ShieldCheck, Bug, Archive, History,
+  LogOut, PanelLeftClose, PanelLeftOpen, UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface SidebarSection {
   id: string;
@@ -35,15 +23,34 @@ export interface SidebarSection {
 const sections: SidebarSection[] = [
   { id: "resumo", label: "Resumo", icon: LayoutDashboard },
   {
+    id: "episodio",
+    label: "Episódio Assistencial",
+    icon: ClipboardList,
+    children: [
+      { id: "atendimento", label: "Atendimento Atual", icon: ClipboardList },
+      { id: "admissao", label: "Admissão / Internação", icon: BedDouble },
+      { id: "transferencias", label: "Transferências", icon: BedDouble },
+      { id: "alta-desfecho", label: "Alta e Desfecho", icon: LogOut },
+    ],
+  },
+  {
     id: "area-medica",
     label: "Área Médica",
     icon: Stethoscope,
     children: [
       { id: "evolucao-medica", label: "Evolução Médica", icon: ClipboardList },
-      { id: "prescricoes", label: "Prescrições", icon: Pill },
-      { id: "pedidos-exames", label: "Pedidos de Exames", icon: FileText },
+      { id: "admissao-diagnostico", label: "Diagnósticos (CID)", icon: FileText },
       { id: "oftalmologia", label: "Oftalmologia", icon: Eye },
-      { id: "admissao-diagnostico", label: "Admissão e Diagnóstico", icon: FileText },
+    ],
+  },
+  {
+    id: "prescricao",
+    label: "Prescrição Integrada",
+    icon: Pill,
+    children: [
+      { id: "prescricoes", label: "Prescrição Médica", icon: Pill },
+      { id: "checagem-enfermagem", label: "Checagem / Aprazamento", icon: Heart },
+      { id: "historico-prescricao", label: "Histórico de Prescrições", icon: History },
     ],
   },
   {
@@ -53,70 +60,91 @@ const sections: SidebarSection[] = [
     children: [
       { id: "evolucao-enfermagem", label: "Evolução Enfermagem", icon: ClipboardList },
       { id: "sinais-vitais", label: "Sinais Vitais", icon: Activity },
-      { id: "escalas", label: "Escalas", icon: Scale },
-      { id: "balanço-hidrico", label: "Balanço Hídrico", icon: Activity },
-    ],
-  },
-  {
-    id: "area-fisioterapia",
-    label: "Área Fisioterapia",
-    icon: Activity,
-    children: [
-      { id: "evolucao-fisioterapia", label: "Evolução Fisioterapia", icon: ClipboardList },
-    ],
-  },
-  {
-    id: "area-nutricao",
-    label: "Área Nutricionista",
-    icon: Apple,
-    children: [
-      { id: "evolucao-nutricao", label: "Evolução Nutricional", icon: ClipboardList },
-      { id: "dieta", label: "Dieta Prescrita", icon: FileText },
-    ],
-  },
-  {
-    id: "area-psicologia",
-    label: "Área Psicologia",
-    icon: Brain,
-    children: [
-      { id: "evolucao-psicologia", label: "Evolução Psicológica", icon: ClipboardList },
+      { id: "escalas", label: "Escalas de Risco", icon: Scale },
+      { id: "balanco-hidrico", label: "Balanço Hídrico", icon: Droplets },
     ],
   },
   {
     id: "area-farmacia",
-    label: "Área Farmácia",
-    icon: Pill,
+    label: "Farmácia Hospitalar",
+    icon: FlaskConical,
     children: [
       { id: "dispensacao", label: "Dispensação", icon: Pill },
       { id: "interacoes", label: "Interações Medicamentosas", icon: Shield },
+      { id: "estoque-paciente", label: "Estoque por Paciente", icon: Archive },
     ],
   },
   {
-    id: "area-fonoaudiologia",
-    label: "Área Fonoaudiologia",
-    icon: Ear,
+    id: "exames",
+    label: "Exames e Diagnóstico",
+    icon: FlaskConical,
     children: [
-      { id: "evolucao-fono", label: "Evolução Fono", icon: ClipboardList },
+      { id: "pedidos-exames", label: "Solicitação de Exames", icon: FileText },
+      { id: "resultados-exames", label: "Resultados", icon: FileText },
+      { id: "imagens", label: "Exames de Imagem", icon: Eye },
     ],
   },
   {
-    id: "assistencia-social",
-    label: "Assistência Social",
-    icon: Users,
+    id: "centro-cirurgico",
+    label: "Centro Cirúrgico",
+    icon: Scissors,
     children: [
-      { id: "evolucao-social", label: "Evolução Social", icon: ClipboardList },
+      { id: "bloco-cirurgico", label: "Agenda / Descrição", icon: Scissors },
+      { id: "anestesia", label: "Anestesia", icon: Syringe },
+      { id: "checklist-cirurgico", label: "Checklist de Segurança", icon: ShieldCheck },
     ],
   },
-  { id: "bloco-cirurgico", label: "Bloco Cirúrgico", icon: Scissors },
+  {
+    id: "uti",
+    label: "UTI / Terapia Intensiva",
+    icon: HeartPulse,
+    children: [
+      { id: "evolucao-uti", label: "Evolução UTI", icon: ClipboardList },
+      { id: "ventilacao", label: "Ventilação Mecânica", icon: Activity },
+      { id: "drogas-vasoativas", label: "Drogas Vasoativas", icon: Thermometer },
+    ],
+  },
   { id: "hemodinamica", label: "Hemodinâmica", icon: Zap },
   {
+    id: "multidisciplinar",
+    label: "Equipe Multidisciplinar",
+    icon: Users,
+    children: [
+      { id: "evolucao-nutricao", label: "Nutrição", icon: Apple },
+      { id: "dieta", label: "Dieta Prescrita", icon: Apple },
+      { id: "evolucao-fisioterapia", label: "Fisioterapia", icon: Activity },
+      { id: "evolucao-psicologia", label: "Psicologia", icon: Brain },
+      { id: "evolucao-fono", label: "Fonoaudiologia", icon: Ear },
+      { id: "evolucao-social", label: "Serviço Social", icon: Users },
+      { id: "terapia-ocupacional", label: "Terapia Ocupacional", icon: Hand },
+      { id: "odontologia", label: "Odontologia", icon: Smile },
+    ],
+  },
+  {
+    id: "seguranca",
+    label: "Segurança e Qualidade",
+    icon: ShieldCheck,
+    children: [
+      { id: "seguranca-paciente", label: "Segurança do Paciente", icon: ShieldCheck },
+      { id: "ccih", label: "Controle de Infecção", icon: Bug },
+    ],
+  },
+  {
     id: "documentos",
-    label: "Documentos",
+    label: "Documentos e Anexos",
     icon: FileText,
     children: [
-      { id: "termos", label: "Termos", icon: FileText },
-      { id: "anexos", label: "Anexos", icon: Link2 },
-      { id: "auditoria", label: "Auditoria", icon: Shield },
+      { id: "termos", label: "Termos de Consentimento", icon: FileText },
+      { id: "anexos", label: "Anexos e Arquivos", icon: Link2 },
+    ],
+  },
+  {
+    id: "auditoria-geral",
+    label: "Auditoria e Histórico",
+    icon: History,
+    children: [
+      { id: "auditoria", label: "Log de Auditoria", icon: History },
+      { id: "timeline-clinica", label: "Timeline Clínica", icon: Activity },
     ],
   },
 ];
@@ -126,6 +154,8 @@ interface ProntuarioSidebarProps {
   onSectionChange: (section: string) => void;
   allergiesCount?: number;
   documentsCount?: number;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export function ProntuarioSidebar({
@@ -133,8 +163,10 @@ export function ProntuarioSidebar({
   onSectionChange,
   allergiesCount,
   documentsCount,
+  collapsed = false,
+  onToggleCollapse,
 }: ProntuarioSidebarProps) {
-  const [expandedSections, setExpandedSections] = useState<string[]>(["area-medica", "area-enfermagem"]);
+  const [expandedSections, setExpandedSections] = useState<string[]>([]);
 
   const toggleExpand = (sectionId: string) => {
     setExpandedSections((prev) =>
@@ -143,12 +175,13 @@ export function ProntuarioSidebar({
   };
 
   const handleClick = (section: SidebarSection) => {
+    if (collapsed && section.children) {
+      onToggleCollapse?.();
+      setExpandedSections((prev) => [...prev, section.id]);
+      return;
+    }
     if (section.children) {
       toggleExpand(section.id);
-      // Navigate to first child
-      if (!expandedSections.includes(section.id)) {
-        onSectionChange(section.children[0].id);
-      }
     } else {
       onSectionChange(section.id);
     }
@@ -159,70 +192,110 @@ export function ProntuarioSidebar({
     return undefined;
   };
 
-  return (
-    <ScrollArea className="h-[calc(100vh-280px)]">
-      <nav className="pr-2 space-y-0.5">
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center py-2 gap-0.5">
+        <Button variant="ghost" size="icon" className="mb-2 h-8 w-8" onClick={onToggleCollapse}>
+          <PanelLeftOpen className="h-4 w-4" />
+        </Button>
         {sections.map((section) => {
           const Icon = section.icon;
-          const isExpanded = expandedSections.includes(section.id);
-          const isActive = activeSection === section.id;
-          const hasActiveChild = section.children?.some((c) => c.id === activeSection);
-          const badge = getBadge(section.id);
-
+          const isActive = activeSection === section.id || section.children?.some((c) => c.id === activeSection);
           return (
-            <div key={section.id}>
-              <button
-                onClick={() => handleClick(section)}
-                className={cn(
-                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
-                  isActive || hasActiveChild
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4 flex-shrink-0" />
-                <span className="flex-1 text-left truncate">{section.label}</span>
-                {badge && (
-                  <Badge variant="destructive" className="text-[10px] h-5 min-w-5 px-1.5">
-                    {badge}
-                  </Badge>
-                )}
-                {section.children &&
-                  (isExpanded ? (
-                    <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
-                  ))}
-              </button>
-
-              {section.children && isExpanded && (
-                <div className="ml-4 pl-3 border-l border-border space-y-0.5 mt-0.5">
-                  {section.children.map((child) => {
-                    const ChildIcon = child.icon || FileText;
-                    const isChildActive = activeSection === child.id;
-
-                    return (
-                      <button
-                        key={child.id}
-                        onClick={() => onSectionChange(child.id)}
-                        className={cn(
-                          "w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors",
-                          isChildActive
-                            ? "bg-primary/10 text-primary font-semibold"
-                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                        )}
-                      >
-                        <ChildIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate">{child.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <Tooltip key={section.id}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => handleClick(section)}
+                  className={cn(
+                    "w-9 h-9 flex items-center justify-center rounded-lg transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">{section.label}</TooltipContent>
+            </Tooltip>
           );
         })}
-      </nav>
-    </ScrollArea>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between px-3 py-2 mb-1">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Prontuário</span>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onToggleCollapse}>
+          <PanelLeftClose className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      <ScrollArea className="h-[calc(100vh-320px)]">
+        <nav className="pr-2 space-y-0.5">
+          {sections.map((section) => {
+            const Icon = section.icon;
+            const isExpanded = expandedSections.includes(section.id);
+            const isActive = activeSection === section.id;
+            const hasActiveChild = section.children?.some((c) => c.id === activeSection);
+            const badge = getBadge(section.id);
+
+            return (
+              <div key={section.id}>
+                <button
+                  onClick={() => handleClick(section)}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors",
+                    isActive || hasActiveChild
+                      ? "bg-primary/10 text-primary font-semibold"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="flex-1 text-left truncate">{section.label}</span>
+                  {badge && (
+                    <Badge variant="destructive" className="text-[9px] h-4 min-w-4 px-1">
+                      {badge}
+                    </Badge>
+                  )}
+                  {section.children &&
+                    (isExpanded ? (
+                      <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3 flex-shrink-0" />
+                    ))}
+                </button>
+
+                {section.children && isExpanded && (
+                  <div className="ml-4 pl-2.5 border-l border-border space-y-0.5 mt-0.5">
+                    {section.children.map((child) => {
+                      const ChildIcon = child.icon || FileText;
+                      const isChildActive = activeSection === child.id;
+
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => onSectionChange(child.id)}
+                          className={cn(
+                            "w-full flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] transition-colors",
+                            isChildActive
+                              ? "bg-primary/10 text-primary font-semibold"
+                              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                          )}
+                        >
+                          <ChildIcon className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{child.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+      </ScrollArea>
+    </div>
   );
 }
