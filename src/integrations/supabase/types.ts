@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      adverse_events: {
+        Row: {
+          actions_taken: string | null
+          created_at: string
+          description: string
+          event_type: string
+          id: string
+          occurred_at: string
+          patient_id: string
+          reported_by: string
+          severity: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actions_taken?: string | null
+          created_at?: string
+          description: string
+          event_type: string
+          id?: string
+          occurred_at?: string
+          patient_id: string
+          reported_by: string
+          severity?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actions_taken?: string | null
+          created_at?: string
+          description?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          patient_id?: string
+          reported_by?: string
+          severity?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adverse_events_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "adverse_events_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       allergies: {
         Row: {
           allergen: string
@@ -242,6 +299,123 @@ export type Database = {
           },
         ]
       }
+      exam_requests: {
+        Row: {
+          collected_at: string | null
+          created_at: string
+          exam_category: string
+          exam_type: string
+          id: string
+          observations: string | null
+          patient_id: string
+          priority: string
+          requested_by: string
+          result_date: string | null
+          result_text: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          collected_at?: string | null
+          created_at?: string
+          exam_category?: string
+          exam_type: string
+          id?: string
+          observations?: string | null
+          patient_id: string
+          priority?: string
+          requested_by: string
+          result_date?: string | null
+          result_text?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          collected_at?: string | null
+          created_at?: string
+          exam_category?: string
+          exam_type?: string
+          id?: string
+          observations?: string | null
+          patient_id?: string
+          priority?: string
+          requested_by?: string
+          result_date?: string | null
+          result_text?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_requests_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fluid_balance: {
+        Row: {
+          created_at: string
+          direction: string
+          id: string
+          notes: string | null
+          patient_id: string
+          recorded_at: string
+          recorded_by: string
+          shift: string | null
+          type: string
+          volume_ml: number
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          id?: string
+          notes?: string | null
+          patient_id: string
+          recorded_at?: string
+          recorded_by: string
+          shift?: string | null
+          type: string
+          volume_ml: number
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          recorded_at?: string
+          recorded_by?: string
+          shift?: string | null
+          type?: string
+          volume_ml?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fluid_balance_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fluid_balance_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       glasgow_scale: {
         Row: {
           evaluated_at: string
@@ -330,6 +504,64 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "medical_history_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medication_administrations: {
+        Row: {
+          administered_at: string | null
+          administered_by: string
+          created_at: string
+          id: string
+          medication_id: string
+          notes: string | null
+          patient_id: string
+          scheduled_time: string
+          status: string
+        }
+        Insert: {
+          administered_at?: string | null
+          administered_by: string
+          created_at?: string
+          id?: string
+          medication_id: string
+          notes?: string | null
+          patient_id: string
+          scheduled_time: string
+          status?: string
+        }
+        Update: {
+          administered_at?: string | null
+          administered_by?: string
+          created_at?: string
+          id?: string
+          medication_id?: string
+          notes?: string | null
+          patient_id?: string
+          scheduled_time?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_administrations_administered_by_fkey"
+            columns: ["administered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medication_administrations_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medication_administrations_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
@@ -460,6 +692,60 @@ export type Database = {
           },
         ]
       }
+      multidisciplinary_notes: {
+        Row: {
+          content: string
+          created_at: string
+          goals: string | null
+          id: string
+          note_type: string
+          patient_id: string
+          professional_id: string
+          specialty: string
+          therapeutic_plan: string | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          goals?: string | null
+          id?: string
+          note_type?: string
+          patient_id: string
+          professional_id: string
+          specialty: string
+          therapeutic_plan?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          goals?: string | null
+          id?: string
+          note_type?: string
+          patient_id?: string
+          professional_id?: string
+          specialty?: string
+          therapeutic_plan?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multidisciplinary_notes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multidisciplinary_notes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           address: string | null
@@ -529,6 +815,67 @@ export type Database = {
         }
         Relationships: []
       }
+      pharmacy_dispensations: {
+        Row: {
+          batch_number: string | null
+          created_at: string
+          dispensed_at: string | null
+          dispensed_by: string
+          id: string
+          medication_id: string
+          notes: string | null
+          patient_id: string
+          quantity: number
+          status: string
+        }
+        Insert: {
+          batch_number?: string | null
+          created_at?: string
+          dispensed_at?: string | null
+          dispensed_by: string
+          id?: string
+          medication_id: string
+          notes?: string | null
+          patient_id: string
+          quantity?: number
+          status?: string
+        }
+        Update: {
+          batch_number?: string | null
+          created_at?: string
+          dispensed_at?: string | null
+          dispensed_by?: string
+          id?: string
+          medication_id?: string
+          notes?: string | null
+          patient_id?: string
+          quantity?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_dispensations_dispensed_by_fkey"
+            columns: ["dispensed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_dispensations_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_dispensations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -561,6 +908,72 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      surgical_procedures: {
+        Row: {
+          anesthesia_type: string | null
+          created_at: string
+          description: string | null
+          end_time: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          procedure_type: string
+          scheduled_date: string | null
+          start_time: string | null
+          status: string
+          surgeon_id: string
+          team_members: string | null
+          updated_at: string
+        }
+        Insert: {
+          anesthesia_type?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          procedure_type: string
+          scheduled_date?: string | null
+          start_time?: string | null
+          status?: string
+          surgeon_id: string
+          team_members?: string | null
+          updated_at?: string
+        }
+        Update: {
+          anesthesia_type?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          procedure_type?: string
+          scheduled_date?: string | null
+          start_time?: string | null
+          status?: string
+          surgeon_id?: string
+          team_members?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surgical_procedures_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surgical_procedures_surgeon_id_fkey"
+            columns: ["surgeon_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vital_signs: {
         Row: {
