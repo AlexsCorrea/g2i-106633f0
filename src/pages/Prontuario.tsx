@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { usePatient } from "@/hooks/usePatients";
 import { useLatestVitalSigns, useVitalSigns } from "@/hooks/useVitalSigns";
