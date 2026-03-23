@@ -120,6 +120,7 @@ export function AIAssistantPanel({
           <VoiceTranscription
             transcript={transcript}
             onTranscriptUpdate={setTranscript}
+            patientContext={patientContext}
           />
           {transcript.length > 0 && (
             <div className="mt-4 pt-4 border-t border-border">
