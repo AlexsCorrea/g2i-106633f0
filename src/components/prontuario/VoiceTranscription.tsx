@@ -23,7 +23,7 @@ export function VoiceTranscription({ onTranscriptUpdate, transcript }: VoiceTran
   const [interimText, setInterimText] = useState("");
   const [duration, setDuration] = useState(0);
   const recognitionRef = useRef<any>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
