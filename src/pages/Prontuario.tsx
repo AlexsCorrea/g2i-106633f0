@@ -185,14 +185,12 @@ export default function Prontuario() {
     medicalHistory: "",
   };
 
-  const patientContextString = useMemo(() => {
-    return `Paciente: ${patient.full_name}
+  const patientContextString = `Paciente: ${patient.full_name}
 Alergias: ${patientContext.allergies.length > 0 ? patientContext.allergies.join(", ") : "NKDA"}
 Medicamentos ativos: ${patientContext.medications.length > 0 ? patientContext.medications.join("; ") : "Nenhum"}
 Sinais vitais: ${patientContext.latestVitals || "Sem registro"}
 Escalas: ${patientContext.scales || "Sem avaliação"}
 Evoluções recentes: ${patientContext.evolutionSummary || "Sem evoluções"}`;
-  }, [patient.full_name, patientContext.allergies, patientContext.medications, patientContext.latestVitals, patientContext.scales, patientContext.evolutionSummary]);
 
   // ---- Section renderers ----
   const renderResumo = () => (
