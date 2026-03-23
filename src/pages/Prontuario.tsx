@@ -483,8 +483,24 @@ Evoluções recentes: ${patientContext.evolutionSummary || "Sem evoluções"}`;
         </div>
       </div>
 
-      {/* AI Chat */}
+      {/* AI Chat & Assistant */}
       <AIChatButton patientContext={patientContext} />
+      
+      {/* AI Assistant Panel trigger */}
+      <button
+        onClick={() => setShowAIPanel(true)}
+        className="fixed bottom-6 right-24 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center bg-emerald-600 text-white hover:scale-105 transition-all duration-300"
+        title="Assistente IA Clínico"
+      >
+        <Brain className="h-6 w-6" />
+      </button>
+
+      <AIAssistantPanel
+        patientContext={patientContextString}
+        patientName={patient.full_name}
+        isOpen={showAIPanel}
+        onClose={() => setShowAIPanel(false)}
+      />
 
       {/* Forms */}
       {id && (
