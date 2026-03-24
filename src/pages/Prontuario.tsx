@@ -1142,7 +1142,7 @@ export default function Prontuario() {
           <AdverseEventForm patientId={id} open={showAdverseForm} onOpenChange={setShowAdverseForm} />
           <DispensationForm patientId={id} open={showDispensationForm} onOpenChange={setShowDispensationForm} />
           <MultidisciplinaryForm patientId={id} specialty={multiSpecialty.key} specialtyLabel={multiSpecialty.label} open={showMultiForm} onOpenChange={setShowMultiForm} />
-          <PatientForm patientId={id} open={showPatientForm} onOpenChange={setShowPatientForm} />
+          <EditPatientForm patientId={id} open={showPatientForm} onOpenChange={setShowPatientForm} />
         </>
       )}
     </div>
