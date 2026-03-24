@@ -29,7 +29,7 @@ import { SurgicalProcedureForm } from "@/components/prontuario/forms/SurgicalPro
 import { AdverseEventForm } from "@/components/prontuario/forms/AdverseEventForm";
 import { MultidisciplinaryForm } from "@/components/prontuario/forms/MultidisciplinaryForm";
 import { DispensationForm } from "@/components/prontuario/forms/DispensationForm";
-import { PatientForm } from "@/components/prontuario/forms/PatientForm";
+import { EditPatientForm } from "@/components/prontuario/forms/EditPatientForm";
 import { ProntuarioSidebar } from "@/components/prontuario/ProntuarioSidebar";
 import { QuickActions } from "@/components/prontuario/QuickActions";
 import { AIChatButton } from "@/components/prontuario/AIChatButton";
