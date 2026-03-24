@@ -18,7 +18,6 @@ import { VitalsCard } from "@/components/prontuario/VitalsCard";
 import { MedicationsCard } from "@/components/prontuario/MedicationsCard";
 import { EvolutionNotes } from "@/components/prontuario/EvolutionNotes";
 import { AllergiesCard } from "@/components/prontuario/AllergiesCard";
-import { TimelineCard } from "@/components/prontuario/TimelineCard";
 import { VitalSignsForm } from "@/components/prontuario/forms/VitalSignsForm";
 import { MedicationForm } from "@/components/prontuario/forms/MedicationForm";
 import { EvolutionNoteForm } from "@/components/prontuario/forms/EvolutionNoteForm";
@@ -30,6 +29,7 @@ import { SurgicalProcedureForm } from "@/components/prontuario/forms/SurgicalPro
 import { AdverseEventForm } from "@/components/prontuario/forms/AdverseEventForm";
 import { MultidisciplinaryForm } from "@/components/prontuario/forms/MultidisciplinaryForm";
 import { DispensationForm } from "@/components/prontuario/forms/DispensationForm";
+import { EditPatientForm } from "@/components/prontuario/forms/EditPatientForm";
 import { ProntuarioSidebar } from "@/components/prontuario/ProntuarioSidebar";
 import { QuickActions } from "@/components/prontuario/QuickActions";
 import { AIChatButton } from "@/components/prontuario/AIChatButton";
@@ -42,10 +42,30 @@ import {
   Activity, Pill, ClipboardList, Scale, Eye, Plus, Loader2, AlertTriangle,
   ArrowLeft, Brain, BedDouble, Scissors, Syringe, ShieldCheck,
   HeartPulse, Droplets, Apple, Ear, Users, Hand, Smile, Bug, FileText,
-  History, FlaskConical, Zap, Thermometer, LogOut, Archive, Link2, Check, X, Clock, Trash2,
+  History, FlaskConical, Zap, Thermometer, LogOut, Archive, Link2, Check, X, Trash2,
 } from "lucide-react";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+const statusColors: Record<string, string> = {
+  solicitado: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  coletado: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  em_analise: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  liberado: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  pendente: "bg-muted text-muted-foreground",
+  administrado: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  recusado: "bg-destructive/10 text-destructive",
+  dispensado: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  agendado: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  realizado: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  cancelado: "bg-destructive/10 text-destructive",
+  aberto: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  investigando: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  fechado: "bg-muted text-muted-foreground",
+  ativo: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  suspenso: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  concluido: "bg-muted text-muted-foreground",
+};
 
 export default function Prontuario() {
   const { id } = useParams<{ id: string }>();
@@ -88,6 +108,7 @@ export default function Prontuario() {
   const [showAdverseForm, setShowAdverseForm] = useState(false);
   const [showDispensationForm, setShowDispensationForm] = useState(false);
   const [showMultiForm, setShowMultiForm] = useState(false);
+  const [showPatientForm, setShowPatientForm] = useState(false);
   const [multiSpecialty, setMultiSpecialty] = useState({ key: "nutricao", label: "Nutrição" });
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [ophthalmologyMinimized, setOphthalmologyMinimized] = useState(() => {
@@ -146,24 +167,6 @@ export default function Prontuario() {
   const openScalesForm = (tab: "braden" | "morse" | "glasgow") => { setScalesInitialTab(tab); setShowScalesForm(true); };
   const getBradenRisk = (score?: number) => { if (!score) return null; if (score <= 12) return { label: "Alto Risco", color: "text-destructive" }; if (score <= 14) return { label: "Risco Moderado", color: "text-warning" }; return { label: "Baixo Risco", color: "text-success" }; };
   const getMorseRisk = (score?: number) => { if (score === undefined || score === null) return null; if (score >= 45) return { label: "Alto Risco", color: "text-destructive" }; if (score >= 25) return { label: "Risco Moderado", color: "text-warning" }; return { label: "Baixo Risco", color: "text-success" }; };
-
-  const statusColors: Record<string, string> = {
-    solicitado: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    coletado: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-    em_analise: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-    liberado: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-    pendente: "bg-muted text-muted-foreground",
-    administrado: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-    recusado: "bg-destructive/10 text-destructive",
-    dispensado: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-    agendado: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    realizado: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-    cancelado: "bg-destructive/10 text-destructive",
-    aberto: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-    investigando: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-    fechado: "bg-muted text-muted-foreground",
-  };
-
   const openMultiForm = (key: string, label: string) => { setMultiSpecialty({ key, label }); setShowMultiForm(true); };
 
   // AI context
@@ -202,7 +205,6 @@ export default function Prontuario() {
             </div>
           )) || <p className="text-muted-foreground text-sm">Sem prescrição ativa</p>}
         </div>
-        {/* Exames pendentes */}
         {examRequests && examRequests.filter(e => e.status !== "liberado").length > 0 && (
           <div className="medical-card p-4">
             <h3 className="section-header"><FlaskConical className="h-4 w-4 text-primary" />Exames Pendentes</h3>
@@ -233,7 +235,6 @@ export default function Prontuario() {
             ))}
           </div>
         </div>
-        {/* Fluid balance summary */}
         {fluidBalance && fluidBalance.length > 0 && (
           <div className="medical-card p-4">
             <h3 className="section-header"><Droplets className="h-4 w-4 text-primary" />Balanço Hídrico (24h)</h3>
@@ -255,6 +256,167 @@ export default function Prontuario() {
       </div>
     </div>
   );
+
+  // === ATENDIMENTO ATUAL ===
+  const renderAtendimento = () => (
+    <ModuleSection title="Atendimento Atual" icon={ClipboardList} description="Episódio assistencial vigente">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="medical-card p-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Dados da Internação</h4>
+          <div className="space-y-2">
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Status</span><Badge className={`text-[10px] ${statusColors[patient.status] || "bg-muted"}`}>{patient.status}</Badge></div>
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Admissão</span><span className="text-sm font-medium">{patient.admission_date ? format(parseISO(patient.admission_date), "dd/MM/yyyy HH:mm") : "N/A"}</span></div>
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Quarto</span><span className="text-sm font-medium">{patient.room || "N/A"}</span></div>
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Leito</span><span className="text-sm font-medium">{patient.bed || "N/A"}</span></div>
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Convênio</span><span className="text-sm font-medium">{patient.health_insurance || "Particular"}</span></div>
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Tipo Sanguíneo</span><span className="text-sm font-medium">{patient.blood_type || "N/A"}</span></div>
+          </div>
+        </div>
+        <div className="medical-card p-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Resumo do Episódio</h4>
+          <div className="space-y-2">
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Evoluções</span><span className="text-sm font-bold">{evolutionNotes?.length || 0}</span></div>
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Prescrições Ativas</span><span className="text-sm font-bold">{medications?.filter(m => m.status === "ativo").length || 0}</span></div>
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Exames Pendentes</span><span className="text-sm font-bold">{examRequests?.filter(e => e.status !== "liberado").length || 0}</span></div>
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Cirurgias</span><span className="text-sm font-bold">{surgeries?.length || 0}</span></div>
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Dias de Internação</span><span className="text-sm font-bold">{patient.admission_date ? Math.ceil((Date.now() - new Date(patient.admission_date).getTime()) / 86400000) : "N/A"}</span></div>
+            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Alergias</span><span className="text-sm font-bold text-destructive">{allergies?.length || 0}</span></div>
+          </div>
+        </div>
+      </div>
+      <div className="medical-card p-4 mt-4">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contato de Emergência</h4>
+        <div className="flex gap-4">
+          <div><span className="text-sm text-muted-foreground">Nome: </span><span className="text-sm font-medium">{patient.emergency_contact || "Não informado"}</span></div>
+          <div><span className="text-sm text-muted-foreground">Telefone: </span><span className="text-sm font-medium">{patient.emergency_phone || "Não informado"}</span></div>
+        </div>
+      </div>
+    </ModuleSection>
+  );
+
+  // === ADMISSÃO ===
+  const renderAdmissao = () => (
+    <ModuleSection title="Admissão / Internação" icon={BedDouble} onAdd={() => setShowPatientForm(true)} addLabel="Editar Dados" description="Dados de admissão hospitalar e alocação de leito">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="medical-card p-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Identificação</h4>
+          <div className="space-y-2 text-sm">
+            <p><span className="text-muted-foreground">Nome:</span> <span className="font-medium">{patient.full_name}</span></p>
+            <p><span className="text-muted-foreground">CPF:</span> <span className="font-medium">{patient.cpf || "N/I"}</span></p>
+            <p><span className="text-muted-foreground">RG:</span> <span className="font-medium">{patient.rg || "N/I"}</span></p>
+            <p><span className="text-muted-foreground">Nascimento:</span> <span className="font-medium">{format(parseISO(patient.birth_date), "dd/MM/yyyy")}</span></p>
+            <p><span className="text-muted-foreground">Sexo:</span> <span className="font-medium">{patient.gender === "M" ? "Masculino" : "Feminino"}</span></p>
+            <p><span className="text-muted-foreground">Tipo Sanguíneo:</span> <span className="font-medium">{patient.blood_type || "N/I"}</span></p>
+          </div>
+        </div>
+        <div className="medical-card p-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Internação</h4>
+          <div className="space-y-2 text-sm">
+            <p><span className="text-muted-foreground">Data Admissão:</span> <span className="font-medium">{patient.admission_date ? format(parseISO(patient.admission_date), "dd/MM/yyyy HH:mm") : "N/I"}</span></p>
+            <p><span className="text-muted-foreground">Status:</span> <Badge className={`text-[10px] ml-1 ${statusColors[patient.status] || ""}`}>{patient.status}</Badge></p>
+            <p><span className="text-muted-foreground">Quarto:</span> <span className="font-medium">{patient.room || "N/I"}</span></p>
+            <p><span className="text-muted-foreground">Leito:</span> <span className="font-medium">{patient.bed || "N/I"}</span></p>
+            <p><span className="text-muted-foreground">Convênio:</span> <span className="font-medium">{patient.health_insurance || "Particular"}</span></p>
+            <p><span className="text-muted-foreground">Nº Carteira:</span> <span className="font-medium">{patient.health_insurance_number || "N/I"}</span></p>
+          </div>
+        </div>
+        <div className="medical-card p-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contato</h4>
+          <div className="space-y-2 text-sm">
+            <p><span className="text-muted-foreground">Telefone:</span> <span className="font-medium">{patient.phone || "N/I"}</span></p>
+            <p><span className="text-muted-foreground">Endereço:</span> <span className="font-medium">{patient.address || "N/I"}</span></p>
+            <p><span className="text-muted-foreground">Contato Emergência:</span> <span className="font-medium">{patient.emergency_contact || "N/I"}</span></p>
+            <p><span className="text-muted-foreground">Tel. Emergência:</span> <span className="font-medium">{patient.emergency_phone || "N/I"}</span></p>
+          </div>
+        </div>
+      </div>
+    </ModuleSection>
+  );
+
+  // === TRANSFERÊNCIAS ===
+  const renderTransferencias = () => {
+    const transferNotes = (multiNotes || []).filter(n => n.specialty === "transferencia");
+    return (
+      <ModuleSection title="Transferências" icon={BedDouble} onAdd={() => openMultiForm("transferencia", "Transferência")} addLabel="Nova Transferência" recordCount={transferNotes.length}>
+        {transferNotes.length > 0 ? (
+          <div className="space-y-3">
+            {transferNotes.map(n => (
+              <div key={n.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium">{format(parseISO(n.created_at), "dd/MM/yyyy HH:mm")}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">{n.profiles?.full_name}</span>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteMulti.mutate({ id: n.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+                <p className="text-sm">{n.content}</p>
+                {n.goals && <p className="text-xs text-muted-foreground mt-1">Motivo: {n.goals}</p>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="medical-card p-4">
+            <p className="text-sm text-muted-foreground">Localização atual: <span className="font-medium text-foreground">Quarto {patient.room || "N/I"} - Leito {patient.bed || "N/I"}</span></p>
+            <p className="text-xs text-muted-foreground mt-2">Nenhuma transferência registrada neste episódio.</p>
+          </div>
+        )}
+      </ModuleSection>
+    );
+  };
+
+  // === ALTA E DESFECHO ===
+  const renderAltaDesfecho = () => {
+    const altaNotes = (multiNotes || []).filter(n => n.specialty === "alta");
+    return (
+      <ModuleSection title="Alta e Desfecho" icon={LogOut} onAdd={() => openMultiForm("alta", "Alta / Desfecho")} addLabel="Registrar Alta" recordCount={altaNotes.length}>
+        <div className="medical-card p-4 mb-3">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Status Atual</h4>
+          <Badge className={`${statusColors[patient.status] || "bg-muted"}`}>{patient.status}</Badge>
+          {patient.status === "internado" && <p className="text-xs text-muted-foreground mt-2">Paciente internado há {patient.admission_date ? Math.ceil((Date.now() - new Date(patient.admission_date).getTime()) / 86400000) : "?"} dias.</p>}
+        </div>
+        {altaNotes.length > 0 && (
+          <div className="space-y-3">
+            {altaNotes.map(n => (
+              <div key={n.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium">{format(parseISO(n.created_at), "dd/MM/yyyy HH:mm")}</span>
+                  <span className="text-[10px] text-muted-foreground">{n.profiles?.full_name}</span>
+                </div>
+                <p className="text-sm">{n.content}</p>
+                {n.therapeutic_plan && <p className="text-xs mt-1 text-muted-foreground">Orientações: {n.therapeutic_plan}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </ModuleSection>
+    );
+  };
+
+  // === DIAGNÓSTICOS ===
+  const renderDiagnosticos = () => {
+    const diagNotes = (multiNotes || []).filter(n => n.specialty === "diagnostico");
+    return (
+      <ModuleSection title="Diagnósticos (CID-10)" icon={FileText} onAdd={() => openMultiForm("diagnostico", "Diagnóstico")} addLabel="Novo Diagnóstico" recordCount={diagNotes.length}>
+        {diagNotes.length > 0 ? (
+          <div className="space-y-3">
+            {diagNotes.map(n => (
+              <div key={n.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">{n.content}</p>
+                  <div className="flex items-center gap-1">
+                    <Badge variant="outline" className="text-[10px]">{n.note_type === "definitivo" ? "Definitivo" : "Hipótese"}</Badge>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteMulti.mutate({ id: n.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+                {n.goals && <p className="text-xs text-muted-foreground">CID: {n.goals}</p>}
+                <p className="text-[10px] text-muted-foreground">{n.profiles?.full_name} • {format(parseISO(n.created_at), "dd/MM/yyyy HH:mm")}</p>
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title="Sem Diagnósticos" description="Nenhum diagnóstico registrado." icon={FileText} actionLabel="Novo Diagnóstico" onAction={() => openMultiForm("diagnostico", "Diagnóstico")} />}
+      </ModuleSection>
+    );
+  };
 
   const renderVitaisHistory = () => (
     <ModuleSection title="Sinais Vitais" icon={Activity} onAdd={() => setShowVitalsForm(true)} addLabel="Registrar" recordCount={vitalSigns?.length}>
@@ -330,15 +492,9 @@ export default function Prontuario() {
                   <Badge variant="outline" className="text-[10px]">{ex.priority}</Badge>
                 </div>
                 <div className="flex items-center gap-1">
-                  {ex.status === "solicitado" && (
-                    <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => updateExam.mutate({ id: ex.id, status: "coletado", collected_at: new Date().toISOString(), patient_id: ex.patient_id })}>Marcar Coletado</Button>
-                  )}
-                  {ex.status === "coletado" && (
-                    <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => updateExam.mutate({ id: ex.id, status: "em_analise", patient_id: ex.patient_id })}>Em Análise</Button>
-                  )}
-                  {ex.status === "em_analise" && (
-                    <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => updateExam.mutate({ id: ex.id, status: "liberado", result_date: new Date().toISOString(), patient_id: ex.patient_id })}>Liberar</Button>
-                  )}
+                  {ex.status === "solicitado" && <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => updateExam.mutate({ id: ex.id, status: "coletado", collected_at: new Date().toISOString(), patient_id: ex.patient_id })}>Coletado</Button>}
+                  {ex.status === "coletado" && <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => updateExam.mutate({ id: ex.id, status: "em_analise", patient_id: ex.patient_id })}>Em Análise</Button>}
+                  {ex.status === "em_analise" && <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => updateExam.mutate({ id: ex.id, status: "liberado", result_date: new Date().toISOString(), patient_id: ex.patient_id })}>Liberar</Button>}
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteExam.mutate({ id: ex.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
                 </div>
               </div>
@@ -352,11 +508,57 @@ export default function Prontuario() {
     </ModuleSection>
   );
 
-  // === PHARMACY (linked to prescriptions) ===
+  // === RESULTADOS ===
+  const renderResultadosExames = () => {
+    const liberados = (examRequests || []).filter(e => e.status === "liberado");
+    return (
+      <ModuleSection title="Resultados de Exames" icon={FileText} recordCount={liberados.length}>
+        {liberados.length > 0 ? (
+          <div className="space-y-3">
+            {liberados.map(ex => (
+              <div key={ex.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">{ex.exam_type}</p>
+                  <Badge className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Liberado</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">{ex.profiles?.full_name} • Solicitado: {format(parseISO(ex.created_at), "dd/MM/yyyy")} {ex.result_date && `• Liberado: ${format(parseISO(ex.result_date), "dd/MM/yyyy")}`}</p>
+                {ex.result_text && <div className="mt-2 p-3 rounded bg-muted/50 border"><p className="text-sm">{ex.result_text}</p></div>}
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title="Sem Resultados" description="Nenhum exame com resultado liberado." icon={FileText} />}
+      </ModuleSection>
+    );
+  };
+
+  // === IMAGENS ===
+  const renderImagens = () => {
+    const imgExams = (examRequests || []).filter(e => e.exam_category === "imagem");
+    return (
+      <ModuleSection title="Exames de Imagem" icon={Eye} onAdd={() => setShowExamForm(true)} addLabel="Solicitar" recordCount={imgExams.length}>
+        {imgExams.length > 0 ? (
+          <div className="space-y-3">
+            {imgExams.map(ex => (
+              <div key={ex.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">{ex.exam_type}</p>
+                  <Badge className={`text-[10px] ${statusColors[ex.status] || ""}`}>{ex.status.replace("_", " ")}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">{ex.profiles?.full_name} • {format(parseISO(ex.created_at), "dd/MM/yyyy HH:mm")}</p>
+                {ex.result_text && <div className="mt-2 p-2 rounded bg-muted/50"><p className="text-xs">{ex.result_text}</p></div>}
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title="Sem Exames de Imagem" description="Nenhum exame de imagem solicitado." icon={Eye} actionLabel="Solicitar" onAction={() => setShowExamForm(true)} />}
+      </ModuleSection>
+    );
+  };
+
+  // === PHARMACY ===
   const renderPharmacy = () => {
     const activeMeds = (medications || []).filter(m => m.status === "ativo");
     return (
-      <ModuleSection title="Dispensação de Medicamentos" icon={Pill} onAdd={() => setShowDispensationForm(true)} addLabel="Dispensar" description="Medicamentos prescritos aguardando dispensação pela farmácia">
+      <ModuleSection title="Dispensação de Medicamentos" icon={Pill} onAdd={() => setShowDispensationForm(true)} addLabel="Dispensar" description="Medicamentos prescritos aguardando dispensação">
         {activeMeds.length > 0 ? (
           <div className="space-y-3">
             {activeMeds.map((med) => {
@@ -389,12 +591,61 @@ export default function Prontuario() {
     );
   };
 
-  // === NURSING CHECKLIST (linked to prescriptions) ===
+  // === INTERAÇÕES MEDICAMENTOSAS ===
+  const renderInteracoes = () => {
+    const activeMeds = (medications || []).filter(m => m.status === "ativo");
+    return (
+      <ModuleSection title="Interações Medicamentosas" icon={ShieldCheck} description="Análise de interações entre medicamentos prescritos">
+        <div className="medical-card p-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Medicamentos Ativos ({activeMeds.length})</h4>
+          {activeMeds.length > 0 ? (
+            <div className="space-y-2">
+              {activeMeds.map(med => (
+                <div key={med.id} className="flex items-center justify-between py-1 border-b border-border last:border-0">
+                  <span className="text-sm font-medium">{med.name} {med.dosage}</span>
+                  <span className="text-xs text-muted-foreground">{med.route} • {med.frequency}</span>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-sm text-muted-foreground">Nenhum medicamento ativo.</p>}
+        </div>
+        {activeMeds.length >= 2 && (
+          <div className="medical-card p-4 mt-3 border-l-4 border-yellow-500">
+            <p className="text-xs font-semibold text-yellow-700 dark:text-yellow-400">⚠️ Atenção: {activeMeds.length} medicamentos ativos em uso simultâneo. Verifique possíveis interações.</p>
+          </div>
+        )}
+      </ModuleSection>
+    );
+  };
+
+  // === ESTOQUE POR PACIENTE ===
+  const renderEstoquePaciente = () => {
+    const allDisps = dispensations || [];
+    return (
+      <ModuleSection title="Estoque por Paciente" icon={Archive} recordCount={allDisps.length}>
+        {allDisps.length > 0 ? (
+          <div className="space-y-3">
+            {allDisps.map(d => (
+              <div key={d.id} className="medical-card p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">{d.medications?.name} {d.medications?.dosage}</p>
+                  <p className="text-[10px] text-muted-foreground">Lote: {d.batch_number || "N/I"} • Qtd: {d.quantity} • {d.dispensed_at ? format(parseISO(d.dispensed_at), "dd/MM HH:mm") : ""}</p>
+                </div>
+                <Badge className={`text-[10px] ${statusColors[d.status] || ""}`}>{d.status}</Badge>
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title="Sem Dispensações" description="Nenhum medicamento dispensado para este paciente." icon={Archive} />}
+      </ModuleSection>
+    );
+  };
+
+  // === NURSING CHECKLIST ===
   const renderChecagem = () => {
     const activeMeds = (medications || []).filter(m => m.status === "ativo");
     const admins = medAdmins || [];
     return (
-      <ModuleSection title="Checagem / Aprazamento" icon={Check} description="Administração de medicamentos pela enfermagem vinculada à prescrição">
+      <ModuleSection title="Checagem / Aprazamento" icon={Check} description="Administração de medicamentos pela enfermagem">
         {activeMeds.length > 0 ? (
           <div className="space-y-3">
             {activeMeds.map((med) => {
@@ -431,6 +682,30 @@ export default function Prontuario() {
             })}
           </div>
         ) : <EmptyModule title="Sem Prescrições" description="Nenhum medicamento para checar." icon={Check} />}
+      </ModuleSection>
+    );
+  };
+
+  // === HISTÓRICO PRESCRIÇÃO ===
+  const renderHistoricoPrescricao = () => {
+    const allMeds = medications || [];
+    return (
+      <ModuleSection title="Histórico de Prescrições" icon={History} recordCount={allMeds.length}>
+        {allMeds.length > 0 ? (
+          <div className="space-y-3">
+            {allMeds.map(med => (
+              <div key={med.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">{med.name} {med.dosage}</p>
+                  <Badge className={`text-[10px] ${statusColors[med.status] || ""}`}>{med.status}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">{med.frequency} • {med.route}</p>
+                <p className="text-xs text-muted-foreground">{med.profiles?.full_name} • Início: {format(parseISO(med.start_date), "dd/MM/yyyy")} {med.end_date ? `• Fim: ${format(parseISO(med.end_date), "dd/MM/yyyy")}` : ""}</p>
+                {med.instructions && <p className="text-xs mt-1 italic text-muted-foreground">{med.instructions}</p>}
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title="Sem Prescrições" description="Nenhuma prescrição registrada." icon={History} />}
       </ModuleSection>
     );
   };
@@ -501,6 +776,82 @@ export default function Prontuario() {
     </ModuleSection>
   );
 
+  // === ANESTESIA ===
+  const renderAnestesia = () => {
+    const surgWithAnesthesia = (surgeries || []).filter(s => s.anesthesia_type);
+    return (
+      <ModuleSection title="Anestesia" icon={Syringe} recordCount={surgWithAnesthesia.length} description="Fichas anestésicas vinculadas aos procedimentos cirúrgicos">
+        {surgWithAnesthesia.length > 0 ? (
+          <div className="space-y-3">
+            {surgWithAnesthesia.map(s => (
+              <div key={s.id} className="medical-card p-4">
+                <p className="text-sm font-semibold">{s.procedure_type}</p>
+                <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                  <div><span className="text-muted-foreground text-xs">Tipo Anestesia:</span><p className="font-medium text-xs">{s.anesthesia_type}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Cirurgião:</span><p className="font-medium text-xs">{s.profiles?.full_name}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Data:</span><p className="font-medium text-xs">{s.scheduled_date ? format(parseISO(s.scheduled_date), "dd/MM/yyyy") : "N/I"}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Status:</span><Badge className={`text-[10px] ${statusColors[s.status] || ""}`}>{s.status}</Badge></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title="Sem Fichas Anestésicas" description="Nenhum procedimento com anestesia registrado." icon={Syringe} />}
+      </ModuleSection>
+    );
+  };
+
+  // === CHECKLIST CIRÚRGICO ===
+  const renderChecklistCirurgico = () => {
+    const checklistNotes = (multiNotes || []).filter(n => n.specialty === "checklist_cirurgico");
+    return (
+      <ModuleSection title="Checklist de Segurança Cirúrgica" icon={ShieldCheck} onAdd={() => openMultiForm("checklist_cirurgico", "Checklist Cirúrgico")} addLabel="Novo Checklist" recordCount={checklistNotes.length}>
+        {checklistNotes.length > 0 ? (
+          <div className="space-y-3">
+            {checklistNotes.map(n => (
+              <div key={n.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium">{format(parseISO(n.created_at), "dd/MM/yyyy HH:mm")}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">{n.profiles?.full_name}</span>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteMulti.mutate({ id: n.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+                <p className="text-sm">{n.content}</p>
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title="Sem Checklists" description="Nenhum checklist de segurança registrado." icon={ShieldCheck} actionLabel="Novo Checklist" onAction={() => openMultiForm("checklist_cirurgico", "Checklist Cirúrgico")} />}
+      </ModuleSection>
+    );
+  };
+
+  // === UTI ===
+  const renderUTI = (specialty: string, label: string, icon: React.ElementType) => {
+    const notes = (multiNotes || []).filter(n => n.specialty === specialty);
+    return (
+      <ModuleSection title={label} icon={icon} onAdd={() => openMultiForm(specialty, label)} addLabel="Novo Registro" recordCount={notes.length}>
+        {notes.length > 0 ? (
+          <div className="space-y-3">
+            {notes.map(n => (
+              <div key={n.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium">{format(parseISO(n.created_at), "dd/MM/yyyy HH:mm")}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">{n.profiles?.full_name}</span>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteMulti.mutate({ id: n.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+                <p className="text-sm">{n.content}</p>
+                {n.therapeutic_plan && <div className="mt-2 p-2 rounded bg-muted/50"><p className="text-[10px] font-medium text-muted-foreground">Plano</p><p className="text-xs">{n.therapeutic_plan}</p></div>}
+                {n.goals && <div className="mt-1 p-2 rounded bg-muted/50"><p className="text-[10px] font-medium text-muted-foreground">Parâmetros / Metas</p><p className="text-xs">{n.goals}</p></div>}
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title={`Sem Registros de ${label}`} description={`Nenhum registro de ${label.toLowerCase()}.`} icon={icon} actionLabel="Novo Registro" onAction={() => openMultiForm(specialty, label)} />}
+      </ModuleSection>
+    );
+  };
+
   // === ADVERSE EVENTS ===
   const renderAdverseEvents = () => (
     <ModuleSection title="Segurança do Paciente" icon={ShieldCheck} onAdd={() => setShowAdverseForm(true)} addLabel="Novo Evento" recordCount={adverseEvents?.length}>
@@ -525,6 +876,57 @@ export default function Prontuario() {
       ) : <EmptyModule title="Sem Eventos" description="Nenhum evento adverso registrado." icon={ShieldCheck} actionLabel="Registrar Evento" onAction={() => setShowAdverseForm(true)} />}
     </ModuleSection>
   );
+
+  // === CCIH ===
+  const renderCCIH = () => {
+    const ccihNotes = (multiNotes || []).filter(n => n.specialty === "ccih");
+    return (
+      <ModuleSection title="Controle de Infecção Hospitalar" icon={Bug} onAdd={() => openMultiForm("ccih", "CCIH")} addLabel="Novo Registro" recordCount={ccihNotes.length}>
+        {ccihNotes.length > 0 ? (
+          <div className="space-y-3">
+            {ccihNotes.map(n => (
+              <div key={n.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium">{format(parseISO(n.created_at), "dd/MM/yyyy HH:mm")}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">{n.profiles?.full_name}</span>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteMulti.mutate({ id: n.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+                <p className="text-sm">{n.content}</p>
+                {n.therapeutic_plan && <p className="text-xs mt-1 text-muted-foreground">Conduta: {n.therapeutic_plan}</p>}
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title="Sem Registros de CCIH" description="Nenhuma notificação de infecção hospitalar." icon={Bug} actionLabel="Novo Registro" onAction={() => openMultiForm("ccih", "CCIH")} />}
+      </ModuleSection>
+    );
+  };
+
+  // === DOCUMENTOS / TERMOS / ANEXOS ===
+  const renderDocumentos = (specialty: string, label: string, icon: React.ElementType) => {
+    const notes = (multiNotes || []).filter(n => n.specialty === specialty);
+    return (
+      <ModuleSection title={label} icon={icon} onAdd={() => openMultiForm(specialty, label)} addLabel="Novo" recordCount={notes.length}>
+        {notes.length > 0 ? (
+          <div className="space-y-3">
+            {notes.map(n => (
+              <div key={n.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">{n.content.split("\n")[0]}</p>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">{format(parseISO(n.created_at), "dd/MM/yyyy HH:mm")}</span>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteMulti.mutate({ id: n.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">{n.profiles?.full_name}</p>
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title={`Sem ${label}`} description={`Nenhum registro de ${label.toLowerCase()}.`} icon={icon} actionLabel="Novo" onAction={() => openMultiForm(specialty, label)} />}
+      </ModuleSection>
+    );
+  };
 
   // === MULTIDISCIPLINARY ===
   const renderMulti = (specialty: string, label: string, icon: React.ElementType) => {
@@ -553,15 +955,44 @@ export default function Prontuario() {
     );
   };
 
+  // === AUDITORIA ===
+  const renderAuditoria = () => {
+    const allEvents: { id: string; date: string; action: string; user: string; module: string }[] = [];
+    (evolutionNotes || []).forEach(n => allEvents.push({ id: n.id, date: n.created_at, action: `Evolução ${n.note_type} registrada`, user: n.profiles?.full_name || "Profissional", module: "Evolução" }));
+    (medications || []).forEach(m => allEvents.push({ id: m.id, date: m.created_at, action: `Prescrição: ${m.name} ${m.dosage}`, user: m.profiles?.full_name || "Profissional", module: "Prescrição" }));
+    (examRequests || []).forEach(e => allEvents.push({ id: e.id, date: e.created_at, action: `Exame solicitado: ${e.exam_type}`, user: e.profiles?.full_name || "Profissional", module: "Exames" }));
+    (surgeries || []).forEach(s => allEvents.push({ id: s.id, date: s.created_at, action: `Cirurgia: ${s.procedure_type}`, user: s.profiles?.full_name || "Profissional", module: "Centro Cirúrgico" }));
+    (adverseEvents || []).forEach(e => allEvents.push({ id: e.id, date: e.created_at, action: `Evento adverso: ${e.event_type}`, user: e.profiles?.full_name || "Profissional", module: "Segurança" }));
+    allEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return (
+      <ModuleSection title="Log de Auditoria" icon={History} recordCount={allEvents.length} description="Histórico de todas as ações registradas no prontuário">
+        {allEvents.length > 0 ? (
+          <div className="space-y-1">
+            {allEvents.slice(0, 50).map(ev => (
+              <div key={ev.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
+                <span className="text-[10px] font-mono text-muted-foreground w-28 flex-shrink-0">{format(parseISO(ev.date), "dd/MM/yy HH:mm")}</span>
+                <Badge variant="outline" className="text-[9px] w-20 justify-center flex-shrink-0">{ev.module}</Badge>
+                <span className="text-xs flex-1 truncate">{ev.action}</span>
+                <span className="text-[10px] text-muted-foreground flex-shrink-0">{ev.user}</span>
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title="Sem Registros" description="Nenhuma ação registrada." icon={History} />}
+      </ModuleSection>
+    );
+  };
+
   // === TIMELINE ===
   const renderTimeline = () => {
-    const events: { id: string; date: string; time: string; title: string; type: string; description?: string }[] = [];
-    (evolutionNotes || []).forEach(n => events.push({ id: n.id, date: n.created_at, time: format(parseISO(n.created_at), "HH:mm"), title: `Evolução ${n.note_type}`, type: "evolucao", description: n.content.slice(0, 100) }));
-    (medications || []).forEach(m => events.push({ id: m.id, date: m.created_at, time: format(parseISO(m.created_at), "HH:mm"), title: `Prescrição: ${m.name} ${m.dosage}`, type: "prescricao" }));
-    (examRequests || []).forEach(e => events.push({ id: e.id, date: e.created_at, time: format(parseISO(e.created_at), "HH:mm"), title: `Exame: ${e.exam_type}`, type: "exame", description: `Status: ${e.status}` }));
-    (vitalSigns || []).forEach(v => events.push({ id: v.id, date: v.recorded_at, time: format(parseISO(v.recorded_at), "HH:mm"), title: "Sinais Vitais", type: "sinais_vitais" }));
-    (surgeries || []).forEach(s => events.push({ id: s.id, date: s.created_at, time: format(parseISO(s.created_at), "HH:mm"), title: `Cirurgia: ${s.procedure_type}`, type: "cirurgia" }));
-    (adverseEvents || []).forEach(e => events.push({ id: e.id, date: e.occurred_at, time: format(parseISO(e.occurred_at), "HH:mm"), title: `Evento: ${e.event_type}`, type: "evento_adverso", description: e.description.slice(0, 80) }));
+    const events: { id: string; date: string; time: string; title: string; type: string; description?: string; user?: string }[] = [];
+    (evolutionNotes || []).forEach(n => events.push({ id: n.id, date: n.created_at, time: format(parseISO(n.created_at), "HH:mm"), title: `Evolução ${n.note_type}`, type: "evolucao", description: n.content.slice(0, 100), user: n.profiles?.full_name }));
+    (medications || []).forEach(m => events.push({ id: m.id, date: m.created_at, time: format(parseISO(m.created_at), "HH:mm"), title: `Prescrição: ${m.name} ${m.dosage}`, type: "prescricao", user: m.profiles?.full_name }));
+    (examRequests || []).forEach(e => events.push({ id: e.id, date: e.created_at, time: format(parseISO(e.created_at), "HH:mm"), title: `Exame: ${e.exam_type}`, type: "exame", description: `Status: ${e.status}`, user: e.profiles?.full_name }));
+    (vitalSigns || []).forEach(v => events.push({ id: v.id, date: v.recorded_at, time: format(parseISO(v.recorded_at), "HH:mm"), title: "Sinais Vitais", type: "sinais_vitais", user: v.profiles?.full_name }));
+    (surgeries || []).forEach(s => events.push({ id: s.id, date: s.created_at, time: format(parseISO(s.created_at), "HH:mm"), title: `Cirurgia: ${s.procedure_type}`, type: "cirurgia", user: s.profiles?.full_name }));
+    (adverseEvents || []).forEach(e => events.push({ id: e.id, date: e.occurred_at, time: format(parseISO(e.occurred_at), "HH:mm"), title: `Evento: ${e.event_type}`, type: "evento_adverso", description: e.description.slice(0, 80), user: e.profiles?.full_name }));
+    (fluidBalance || []).forEach(f => events.push({ id: f.id, date: f.recorded_at, time: format(parseISO(f.recorded_at), "HH:mm"), title: `Balanço Hídrico: ${f.type} (${f.direction}) ${f.volume_ml}mL`, type: "balanco_hidrico", user: f.profiles?.full_name }));
+    (multiNotes || []).forEach(n => events.push({ id: n.id, date: n.created_at, time: format(parseISO(n.created_at), "HH:mm"), title: `${n.specialty}: ${n.content.slice(0, 60)}`, type: "multidisciplinar", user: n.profiles?.full_name }));
 
     const filtered = timelineFilter === "todos" ? events : events.filter(e => e.type === timelineFilter);
     filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -569,6 +1000,7 @@ export default function Prontuario() {
     const typeColors: Record<string, string> = {
       evolucao: "bg-blue-500", prescricao: "bg-green-500", exame: "bg-purple-500",
       sinais_vitais: "bg-red-500", cirurgia: "bg-orange-500", evento_adverso: "bg-yellow-500",
+      balanco_hidrico: "bg-cyan-500", multidisciplinar: "bg-pink-500",
     };
 
     return (
@@ -584,6 +1016,8 @@ export default function Prontuario() {
               <SelectItem value="sinais_vitais">Sinais Vitais</SelectItem>
               <SelectItem value="cirurgia">Cirurgias</SelectItem>
               <SelectItem value="evento_adverso">Eventos Adversos</SelectItem>
+              <SelectItem value="balanco_hidrico">Balanço Hídrico</SelectItem>
+              <SelectItem value="multidisciplinar">Multidisciplinar</SelectItem>
             </SelectContent>
           </Select>
           <Badge variant="secondary" className="text-[10px]">{filtered.length} eventos</Badge>
@@ -597,6 +1031,7 @@ export default function Prontuario() {
                   <div className="flex items-center gap-2 mb-1">
                     <Badge className={`text-[9px] ${typeColors[ev.type] || "bg-muted"} text-white`}>{ev.type.replace("_", " ")}</Badge>
                     <span className="text-[10px] text-muted-foreground">{format(parseISO(ev.date), "dd/MM/yyyy")} às {ev.time}</span>
+                    {ev.user && <span className="text-[10px] text-muted-foreground">• {ev.user}</span>}
                   </div>
                   <p className="text-sm font-medium">{ev.title}</p>
                   {ev.description && <p className="text-xs text-muted-foreground mt-0.5">{ev.description}</p>}
@@ -609,60 +1044,52 @@ export default function Prontuario() {
     );
   };
 
-  // === PLACEHOLDER for remaining sections ===
-  const moduleConfig: Record<string, { title: string; icon: React.ElementType; description: string; actionLabel?: string; onAction?: () => void }> = {
-    "atendimento": { title: "Atendimento Atual", icon: ClipboardList, description: "Episódio assistencial atual do paciente." },
-    "admissao": { title: "Admissão / Internação", icon: BedDouble, description: "Dados de admissão hospitalar e alocação de leito." },
-    "transferencias": { title: "Transferências", icon: BedDouble, description: "Transferências entre unidades." },
-    "alta-desfecho": { title: "Alta e Desfecho", icon: LogOut, description: "Alta hospitalar e desfecho clínico." },
-    "admissao-diagnostico": { title: "Diagnósticos (CID-10)", icon: FileText, description: "Hipóteses e diagnósticos definitivos." },
-    "historico-prescricao": { title: "Histórico de Prescrições", icon: History, description: "Todas as versões de prescrições." },
-    "interacoes": { title: "Interações Medicamentosas", icon: ShieldCheck, description: "Interações entre medicamentos prescritos." },
-    "estoque-paciente": { title: "Estoque por Paciente", icon: Archive, description: "Materiais e medicamentos alocados." },
-    "resultados-exames": { title: "Resultados de Exames", icon: FileText, description: "Resultados liberados." },
-    "imagens": { title: "Exames de Imagem", icon: Eye, description: "Laudos e imagens radiológicas." },
-    "anestesia": { title: "Anestesia", icon: Syringe, description: "Ficha anestésica e recuperação." },
-    "checklist-cirurgico": { title: "Checklist de Segurança Cirúrgica", icon: ShieldCheck, description: "Checklist OMS." },
-    "evolucao-uti": { title: "Evolução UTI", icon: HeartPulse, description: "Evoluções de terapia intensiva." },
-    "ventilacao": { title: "Ventilação Mecânica", icon: Activity, description: "Parâmetros ventilatórios." },
-    "drogas-vasoativas": { title: "Drogas Vasoativas", icon: Thermometer, description: "Infusão de drogas vasoativas." },
-    "hemodinamica": { title: "Hemodinâmica", icon: Zap, description: "Procedimentos de hemodinâmica." },
-    "ccih": { title: "Controle de Infecção", icon: Bug, description: "Culturas e notificações IRAS." },
-    "termos": { title: "Termos de Consentimento", icon: FileText, description: "Termos de consentimento." },
-    "anexos": { title: "Anexos e Arquivos", icon: Link2, description: "Documentos anexados ao prontuário." },
-    "auditoria": { title: "Log de Auditoria", icon: History, description: "Histórico de ações no prontuário." },
-  };
-
   const renderContent = () => {
     switch (activeSection) {
       case "resumo": return renderResumo();
+      case "atendimento": return renderAtendimento();
+      case "admissao": return renderAdmissao();
+      case "transferencias": return renderTransferencias();
+      case "alta-desfecho": return renderAltaDesfecho();
       case "evolucao-medica": return renderEvolution("medica");
+      case "admissao-diagnostico": return renderDiagnosticos();
       case "prescricoes": return renderMedications();
+      case "historico-prescricao": return renderHistoricoPrescricao();
+      case "checagem-enfermagem": return renderChecagem();
       case "evolucao-enfermagem": return renderEvolution("enfermagem");
       case "sinais-vitais": return renderVitaisHistory();
       case "escalas": return renderEscalas();
-      case "evolucao-fisioterapia": return renderEvolution("fisioterapia");
+      case "balanco-hidrico": return renderFluidBalance();
+      case "dispensacao": return renderPharmacy();
+      case "interacoes": return renderInteracoes();
+      case "estoque-paciente": return renderEstoquePaciente();
+      case "pedidos-exames": return renderExams();
+      case "resultados-exames": return renderResultadosExames();
+      case "imagens": return renderImagens();
+      case "bloco-cirurgico": return renderSurgery();
+      case "anestesia": return renderAnestesia();
+      case "checklist-cirurgico": return renderChecklistCirurgico();
+      case "evolucao-uti": return renderUTI("uti", "Evolução UTI", HeartPulse);
+      case "ventilacao": return renderUTI("ventilacao", "Ventilação Mecânica", Activity);
+      case "drogas-vasoativas": return renderUTI("drogas_vasoativas", "Drogas Vasoativas", Thermometer);
+      case "hemodinamica": return renderUTI("hemodinamica", "Hemodinâmica", Zap);
       case "evolucao-nutricao": return renderMulti("nutricao", "Nutrição", Apple);
+      case "dieta": return renderMulti("dieta", "Dieta Prescrita", Apple);
+      case "evolucao-fisioterapia": return renderMulti("fisioterapia", "Fisioterapia", Activity);
       case "evolucao-psicologia": return renderMulti("psicologia", "Psicologia", Brain);
       case "evolucao-fono": return renderMulti("fonoaudiologia", "Fonoaudiologia", Ear);
       case "evolucao-social": return renderMulti("servico_social", "Serviço Social", Users);
       case "terapia-ocupacional": return renderMulti("terapia_ocupacional", "Terapia Ocupacional", Hand);
       case "odontologia": return renderMulti("odontologia", "Odontologia", Smile);
-      case "dieta": return renderMulti("dieta", "Dieta Prescrita", Apple);
-      case "pedidos-exames": return renderExams();
-      case "dispensacao": return renderPharmacy();
-      case "checagem-enfermagem": return renderChecagem();
-      case "balanco-hidrico": return renderFluidBalance();
-      case "bloco-cirurgico": return renderSurgery();
       case "seguranca-paciente": return renderAdverseEvents();
+      case "ccih": return renderCCIH();
+      case "termos": return renderDocumentos("termos", "Termos de Consentimento", FileText);
+      case "anexos": return renderDocumentos("anexos", "Anexos e Arquivos", Link2);
+      case "auditoria": return renderAuditoria();
       case "timeline-clinica": return renderTimeline();
       case "oftalmologia":
         return (<ModuleSection title="Oftalmologia" icon={Eye} onAdd={() => setShowOphthalmologyForm(true)} addLabel="Nova Consulta"><EmptyModule title="Consultas Oftalmológicas" description="Registre consultas oftalmológicas completas." icon={Eye} actionLabel="Nova Consulta" onAction={() => setShowOphthalmologyForm(true)} /></ModuleSection>);
-      default: {
-        const cfg = moduleConfig[activeSection];
-        if (cfg) return (<ModuleSection title={cfg.title} icon={cfg.icon} description={cfg.description}><EmptyModule title={cfg.title} description={cfg.description} icon={cfg.icon} actionLabel={cfg.actionLabel} onAction={cfg.onAction || undefined} /></ModuleSection>);
-        return renderResumo();
-      }
+      default: return renderResumo();
     }
   };
 
@@ -715,6 +1142,7 @@ export default function Prontuario() {
           <AdverseEventForm patientId={id} open={showAdverseForm} onOpenChange={setShowAdverseForm} />
           <DispensationForm patientId={id} open={showDispensationForm} onOpenChange={setShowDispensationForm} />
           <MultidisciplinaryForm patientId={id} specialty={multiSpecialty.key} specialtyLabel={multiSpecialty.label} open={showMultiForm} onOpenChange={setShowMultiForm} />
+          <EditPatientForm patientId={id} open={showPatientForm} onOpenChange={setShowPatientForm} />
         </>
       )}
     </div>
