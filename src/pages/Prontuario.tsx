@@ -121,9 +121,24 @@ export default function Prontuario() {
   const [showSurgeryForm, setShowSurgeryForm] = useState(false);
   const [showAdverseForm, setShowAdverseForm] = useState(false);
   const [showDispensationForm, setShowDispensationForm] = useState(false);
-  const [showMultiForm, setShowMultiForm] = useState(false);
   const [showPatientForm, setShowPatientForm] = useState(false);
-  const [multiSpecialty, setMultiSpecialty] = useState({ key: "nutricao", label: "Nutrição" });
+  const [showTransferForm, setShowTransferForm] = useState(false);
+  const [showDischargeForm, setShowDischargeForm] = useState(false);
+  const [showDiagnosisForm, setShowDiagnosisForm] = useState(false);
+  const [showChecklistForm, setShowChecklistForm] = useState(false);
+  const [showUTIForm, setShowUTIForm] = useState(false);
+  const [utiInitialTab, setUtiInitialTab] = useState<"uti" | "ventilacao" | "drogas_vasoativas" | "hemodinamica">("uti");
+  const [showNutritionForm, setShowNutritionForm] = useState(false);
+  const [nutritionInitialTab, setNutritionInitialTab] = useState<"nutricao" | "dieta">("nutricao");
+  const [showPhysioForm, setShowPhysioForm] = useState(false);
+  const [showPsychologyForm, setShowPsychologyForm] = useState(false);
+  const [showSpeechForm, setShowSpeechForm] = useState(false);
+  const [showSocialForm, setShowSocialForm] = useState(false);
+  const [showOccupationalForm, setShowOccupationalForm] = useState(false);
+  const [showDentistryForm, setShowDentistryForm] = useState(false);
+  const [showCCIHForm, setShowCCIHForm] = useState(false);
+  const [showConsentForm, setShowConsentForm] = useState(false);
+  const [showAttachmentForm, setShowAttachmentForm] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [ophthalmologyMinimized, setOphthalmologyMinimized] = useState(() => {
     if (!id) return false;
