@@ -443,7 +443,7 @@ export default function Prontuario() {
               </div>
             ))}
           </div>
-        ) : <EmptyModule title="Sem Diagnósticos" description="Nenhum diagnóstico registrado." icon={FileText} actionLabel="Novo Diagnóstico" onAction={() => openMultiForm("diagnostico", "Diagnóstico")} />}
+        ) : <EmptyModule title="Sem Diagnósticos" description="Nenhum diagnóstico registrado." icon={FileText} actionLabel="Novo Diagnóstico" onAction={() => setShowDiagnosisForm(true)} />}
       </ModuleSection>
     );
   };
