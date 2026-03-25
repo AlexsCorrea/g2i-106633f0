@@ -196,7 +196,8 @@ export default function Prontuario() {
   const openScalesForm = (tab: "braden" | "morse" | "glasgow") => { setScalesInitialTab(tab); setShowScalesForm(true); };
   const getBradenRisk = (score?: number) => { if (!score) return null; if (score <= 12) return { label: "Alto Risco", color: "text-destructive" }; if (score <= 14) return { label: "Risco Moderado", color: "text-warning" }; return { label: "Baixo Risco", color: "text-success" }; };
   const getMorseRisk = (score?: number) => { if (score === undefined || score === null) return null; if (score >= 45) return { label: "Alto Risco", color: "text-destructive" }; if (score >= 25) return { label: "Risco Moderado", color: "text-warning" }; return { label: "Baixo Risco", color: "text-success" }; };
-  const openMultiForm = (key: string, label: string) => { setMultiSpecialty({ key, label }); setShowMultiForm(true); };
+  const openUTIForm = (tab: "uti" | "ventilacao" | "drogas_vasoativas" | "hemodinamica") => { setUtiInitialTab(tab); setShowUTIForm(true); };
+  const openNutritionForm = (tab: "nutricao" | "dieta") => { setNutritionInitialTab(tab); setShowNutritionForm(true); };
 
   // AI context
   const patientContext = {
