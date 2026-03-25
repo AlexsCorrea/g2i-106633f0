@@ -398,7 +398,7 @@ export default function Prontuario() {
   const renderAltaDesfecho = () => {
     const altaNotes = (multiNotes || []).filter(n => n.specialty === "alta");
     return (
-      <ModuleSection title="Alta e Desfecho" icon={LogOut} onAdd={() => openMultiForm("alta", "Alta / Desfecho")} addLabel="Registrar Alta" recordCount={altaNotes.length}>
+      <ModuleSection title="Alta e Desfecho" icon={LogOut} onAdd={() => setShowDischargeForm(true)} addLabel="Registrar Alta" recordCount={altaNotes.length}>
         <div className="medical-card p-4 mb-3">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Status Atual</h4>
           <Badge className={`${statusColors[patient.status] || "bg-muted"}`}>{patient.status}</Badge>
