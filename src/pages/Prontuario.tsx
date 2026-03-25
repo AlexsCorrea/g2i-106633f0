@@ -911,7 +911,7 @@ export default function Prontuario() {
   const renderCCIH = () => {
     const ccihNotes = (multiNotes || []).filter(n => n.specialty === "ccih");
     return (
-      <ModuleSection title="Controle de Infecção Hospitalar" icon={Bug} onAdd={() => openMultiForm("ccih", "CCIH")} addLabel="Novo Registro" recordCount={ccihNotes.length}>
+      <ModuleSection title="Controle de Infecção Hospitalar" icon={Bug} onAdd={() => setShowCCIHForm(true)} addLabel="Novo Registro" recordCount={ccihNotes.length}>
         {ccihNotes.length > 0 ? (
           <div className="space-y-3">
             {ccihNotes.map(n => (
