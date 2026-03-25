@@ -27,9 +27,23 @@ import { ExamRequestForm } from "@/components/prontuario/forms/ExamRequestForm";
 import { FluidBalanceForm } from "@/components/prontuario/forms/FluidBalanceForm";
 import { SurgicalProcedureForm } from "@/components/prontuario/forms/SurgicalProcedureForm";
 import { AdverseEventForm } from "@/components/prontuario/forms/AdverseEventForm";
-import { MultidisciplinaryForm } from "@/components/prontuario/forms/MultidisciplinaryForm";
 import { DispensationForm } from "@/components/prontuario/forms/DispensationForm";
 import { EditPatientForm } from "@/components/prontuario/forms/EditPatientForm";
+import { TransferForm } from "@/components/prontuario/forms/TransferForm";
+import { DischargeForm } from "@/components/prontuario/forms/DischargeForm";
+import { DiagnosisForm } from "@/components/prontuario/forms/DiagnosisForm";
+import { ChecklistCirurgicoForm } from "@/components/prontuario/forms/ChecklistCirurgicoForm";
+import { UTIForm } from "@/components/prontuario/forms/UTIForm";
+import { NutritionForm } from "@/components/prontuario/forms/NutritionForm";
+import { PhysiotherapyForm } from "@/components/prontuario/forms/PhysiotherapyForm";
+import { PsychologyForm } from "@/components/prontuario/forms/PsychologyForm";
+import { SpeechTherapyForm } from "@/components/prontuario/forms/SpeechTherapyForm";
+import { SocialServiceForm } from "@/components/prontuario/forms/SocialServiceForm";
+import { OccupationalTherapyForm } from "@/components/prontuario/forms/OccupationalTherapyForm";
+import { DentistryForm } from "@/components/prontuario/forms/DentistryForm";
+import { CCIHForm } from "@/components/prontuario/forms/CCIHForm";
+import { ConsentForm } from "@/components/prontuario/forms/ConsentForm";
+import { AttachmentForm } from "@/components/prontuario/forms/AttachmentForm";
 import { ProntuarioSidebar } from "@/components/prontuario/ProntuarioSidebar";
 import { QuickActions } from "@/components/prontuario/QuickActions";
 import { AIChatButton } from "@/components/prontuario/AIChatButton";
@@ -107,9 +121,24 @@ export default function Prontuario() {
   const [showSurgeryForm, setShowSurgeryForm] = useState(false);
   const [showAdverseForm, setShowAdverseForm] = useState(false);
   const [showDispensationForm, setShowDispensationForm] = useState(false);
-  const [showMultiForm, setShowMultiForm] = useState(false);
   const [showPatientForm, setShowPatientForm] = useState(false);
-  const [multiSpecialty, setMultiSpecialty] = useState({ key: "nutricao", label: "Nutrição" });
+  const [showTransferForm, setShowTransferForm] = useState(false);
+  const [showDischargeForm, setShowDischargeForm] = useState(false);
+  const [showDiagnosisForm, setShowDiagnosisForm] = useState(false);
+  const [showChecklistForm, setShowChecklistForm] = useState(false);
+  const [showUTIForm, setShowUTIForm] = useState(false);
+  const [utiInitialTab, setUtiInitialTab] = useState<"uti" | "ventilacao" | "drogas_vasoativas" | "hemodinamica">("uti");
+  const [showNutritionForm, setShowNutritionForm] = useState(false);
+  const [nutritionInitialTab, setNutritionInitialTab] = useState<"nutricao" | "dieta">("nutricao");
+  const [showPhysioForm, setShowPhysioForm] = useState(false);
+  const [showPsychologyForm, setShowPsychologyForm] = useState(false);
+  const [showSpeechForm, setShowSpeechForm] = useState(false);
+  const [showSocialForm, setShowSocialForm] = useState(false);
+  const [showOccupationalForm, setShowOccupationalForm] = useState(false);
+  const [showDentistryForm, setShowDentistryForm] = useState(false);
+  const [showCCIHForm, setShowCCIHForm] = useState(false);
+  const [showConsentForm, setShowConsentForm] = useState(false);
+  const [showAttachmentForm, setShowAttachmentForm] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [ophthalmologyMinimized, setOphthalmologyMinimized] = useState(() => {
     if (!id) return false;
@@ -167,7 +196,8 @@ export default function Prontuario() {
   const openScalesForm = (tab: "braden" | "morse" | "glasgow") => { setScalesInitialTab(tab); setShowScalesForm(true); };
   const getBradenRisk = (score?: number) => { if (!score) return null; if (score <= 12) return { label: "Alto Risco", color: "text-destructive" }; if (score <= 14) return { label: "Risco Moderado", color: "text-warning" }; return { label: "Baixo Risco", color: "text-success" }; };
   const getMorseRisk = (score?: number) => { if (score === undefined || score === null) return null; if (score >= 45) return { label: "Alto Risco", color: "text-destructive" }; if (score >= 25) return { label: "Risco Moderado", color: "text-warning" }; return { label: "Baixo Risco", color: "text-success" }; };
-  const openMultiForm = (key: string, label: string) => { setMultiSpecialty({ key, label }); setShowMultiForm(true); };
+  const openUTIForm = (tab: "uti" | "ventilacao" | "drogas_vasoativas" | "hemodinamica") => { setUtiInitialTab(tab); setShowUTIForm(true); };
+  const openNutritionForm = (tab: "nutricao" | "dieta") => { setNutritionInitialTab(tab); setShowNutritionForm(true); };
 
   // AI context
   const patientContext = {
@@ -337,7 +367,7 @@ export default function Prontuario() {
   const renderTransferencias = () => {
     const transferNotes = (multiNotes || []).filter(n => n.specialty === "transferencia");
     return (
-      <ModuleSection title="Transferências" icon={BedDouble} onAdd={() => openMultiForm("transferencia", "Transferência")} addLabel="Nova Transferência" recordCount={transferNotes.length}>
+      <ModuleSection title="Transferências" icon={BedDouble} onAdd={() => setShowTransferForm(true)} addLabel="Nova Transferência" recordCount={transferNotes.length}>
         {transferNotes.length > 0 ? (
           <div className="space-y-3">
             {transferNotes.map(n => (
@@ -368,7 +398,7 @@ export default function Prontuario() {
   const renderAltaDesfecho = () => {
     const altaNotes = (multiNotes || []).filter(n => n.specialty === "alta");
     return (
-      <ModuleSection title="Alta e Desfecho" icon={LogOut} onAdd={() => openMultiForm("alta", "Alta / Desfecho")} addLabel="Registrar Alta" recordCount={altaNotes.length}>
+      <ModuleSection title="Alta e Desfecho" icon={LogOut} onAdd={() => setShowDischargeForm(true)} addLabel="Registrar Alta" recordCount={altaNotes.length}>
         <div className="medical-card p-4 mb-3">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Status Atual</h4>
           <Badge className={`${statusColors[patient.status] || "bg-muted"}`}>{patient.status}</Badge>
@@ -396,7 +426,7 @@ export default function Prontuario() {
   const renderDiagnosticos = () => {
     const diagNotes = (multiNotes || []).filter(n => n.specialty === "diagnostico");
     return (
-      <ModuleSection title="Diagnósticos (CID-10)" icon={FileText} onAdd={() => openMultiForm("diagnostico", "Diagnóstico")} addLabel="Novo Diagnóstico" recordCount={diagNotes.length}>
+      <ModuleSection title="Diagnósticos (CID-10)" icon={FileText} onAdd={() => setShowDiagnosisForm(true)} addLabel="Novo Diagnóstico" recordCount={diagNotes.length}>
         {diagNotes.length > 0 ? (
           <div className="space-y-3">
             {diagNotes.map(n => (
@@ -413,7 +443,7 @@ export default function Prontuario() {
               </div>
             ))}
           </div>
-        ) : <EmptyModule title="Sem Diagnósticos" description="Nenhum diagnóstico registrado." icon={FileText} actionLabel="Novo Diagnóstico" onAction={() => openMultiForm("diagnostico", "Diagnóstico")} />}
+        ) : <EmptyModule title="Sem Diagnósticos" description="Nenhum diagnóstico registrado." icon={FileText} actionLabel="Novo Diagnóstico" onAction={() => setShowDiagnosisForm(true)} />}
       </ModuleSection>
     );
   };
@@ -804,7 +834,7 @@ export default function Prontuario() {
   const renderChecklistCirurgico = () => {
     const checklistNotes = (multiNotes || []).filter(n => n.specialty === "checklist_cirurgico");
     return (
-      <ModuleSection title="Checklist de Segurança Cirúrgica" icon={ShieldCheck} onAdd={() => openMultiForm("checklist_cirurgico", "Checklist Cirúrgico")} addLabel="Novo Checklist" recordCount={checklistNotes.length}>
+      <ModuleSection title="Checklist de Segurança Cirúrgica" icon={ShieldCheck} onAdd={() => setShowChecklistForm(true)} addLabel="Novo Checklist" recordCount={checklistNotes.length}>
         {checklistNotes.length > 0 ? (
           <div className="space-y-3">
             {checklistNotes.map(n => (
@@ -820,7 +850,7 @@ export default function Prontuario() {
               </div>
             ))}
           </div>
-        ) : <EmptyModule title="Sem Checklists" description="Nenhum checklist de segurança registrado." icon={ShieldCheck} actionLabel="Novo Checklist" onAction={() => openMultiForm("checklist_cirurgico", "Checklist Cirúrgico")} />}
+        ) : <EmptyModule title="Sem Checklists" description="Nenhum checklist de segurança registrado." icon={ShieldCheck} actionLabel="Novo Checklist" onAction={() => setShowChecklistForm(true)} />}
       </ModuleSection>
     );
   };
@@ -828,8 +858,9 @@ export default function Prontuario() {
   // === UTI ===
   const renderUTI = (specialty: string, label: string, icon: React.ElementType) => {
     const notes = (multiNotes || []).filter(n => n.specialty === specialty);
+    const openForm = () => { setUtiInitialTab(specialty as any); setShowUTIForm(true); };
     return (
-      <ModuleSection title={label} icon={icon} onAdd={() => openMultiForm(specialty, label)} addLabel="Novo Registro" recordCount={notes.length}>
+      <ModuleSection title={label} icon={icon} onAdd={openForm} addLabel="Novo Registro" recordCount={notes.length}>
         {notes.length > 0 ? (
           <div className="space-y-3">
             {notes.map(n => (
@@ -841,13 +872,13 @@ export default function Prontuario() {
                     <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteMulti.mutate({ id: n.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
                   </div>
                 </div>
-                <p className="text-sm">{n.content}</p>
+                <p className="text-sm whitespace-pre-line">{n.content}</p>
                 {n.therapeutic_plan && <div className="mt-2 p-2 rounded bg-muted/50"><p className="text-[10px] font-medium text-muted-foreground">Plano</p><p className="text-xs">{n.therapeutic_plan}</p></div>}
                 {n.goals && <div className="mt-1 p-2 rounded bg-muted/50"><p className="text-[10px] font-medium text-muted-foreground">Parâmetros / Metas</p><p className="text-xs">{n.goals}</p></div>}
               </div>
             ))}
           </div>
-        ) : <EmptyModule title={`Sem Registros de ${label}`} description={`Nenhum registro de ${label.toLowerCase()}.`} icon={icon} actionLabel="Novo Registro" onAction={() => openMultiForm(specialty, label)} />}
+        ) : <EmptyModule title={`Sem Registros de ${label}`} description={`Nenhum registro de ${label.toLowerCase()}.`} icon={icon} actionLabel="Novo Registro" onAction={openForm} />}
       </ModuleSection>
     );
   };
@@ -881,7 +912,7 @@ export default function Prontuario() {
   const renderCCIH = () => {
     const ccihNotes = (multiNotes || []).filter(n => n.specialty === "ccih");
     return (
-      <ModuleSection title="Controle de Infecção Hospitalar" icon={Bug} onAdd={() => openMultiForm("ccih", "CCIH")} addLabel="Novo Registro" recordCount={ccihNotes.length}>
+      <ModuleSection title="Controle de Infecção Hospitalar" icon={Bug} onAdd={() => setShowCCIHForm(true)} addLabel="Novo Registro" recordCount={ccihNotes.length}>
         {ccihNotes.length > 0 ? (
           <div className="space-y-3">
             {ccihNotes.map(n => (
@@ -898,16 +929,16 @@ export default function Prontuario() {
               </div>
             ))}
           </div>
-        ) : <EmptyModule title="Sem Registros de CCIH" description="Nenhuma notificação de infecção hospitalar." icon={Bug} actionLabel="Novo Registro" onAction={() => openMultiForm("ccih", "CCIH")} />}
+        ) : <EmptyModule title="Sem Registros de CCIH" description="Nenhuma notificação de infecção hospitalar." icon={Bug} actionLabel="Novo Registro" onAction={() => setShowCCIHForm(true)} />}
       </ModuleSection>
     );
   };
 
   // === DOCUMENTOS / TERMOS / ANEXOS ===
-  const renderDocumentos = (specialty: string, label: string, icon: React.ElementType) => {
-    const notes = (multiNotes || []).filter(n => n.specialty === specialty);
+  const renderTermos = () => {
+    const notes = (multiNotes || []).filter(n => n.specialty === "termos");
     return (
-      <ModuleSection title={label} icon={icon} onAdd={() => openMultiForm(specialty, label)} addLabel="Novo" recordCount={notes.length}>
+      <ModuleSection title="Termos de Consentimento" icon={FileText} onAdd={() => setShowConsentForm(true)} addLabel="Novo Termo" recordCount={notes.length}>
         {notes.length > 0 ? (
           <div className="space-y-3">
             {notes.map(n => (
@@ -923,16 +954,52 @@ export default function Prontuario() {
               </div>
             ))}
           </div>
-        ) : <EmptyModule title={`Sem ${label}`} description={`Nenhum registro de ${label.toLowerCase()}.`} icon={icon} actionLabel="Novo" onAction={() => openMultiForm(specialty, label)} />}
+        ) : <EmptyModule title="Sem Termos" description="Nenhum termo de consentimento registrado." icon={FileText} actionLabel="Novo Termo" onAction={() => setShowConsentForm(true)} />}
       </ModuleSection>
     );
   };
 
-  // === MULTIDISCIPLINARY ===
+  const renderAnexos = () => {
+    const notes = (multiNotes || []).filter(n => n.specialty === "anexos");
+    return (
+      <ModuleSection title="Anexos e Arquivos" icon={Link2} onAdd={() => setShowAttachmentForm(true)} addLabel="Novo Anexo" recordCount={notes.length}>
+        {notes.length > 0 ? (
+          <div className="space-y-3">
+            {notes.map(n => (
+              <div key={n.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">{n.content.split("\n")[0]}</p>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">{format(parseISO(n.created_at), "dd/MM/yyyy HH:mm")}</span>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteMulti.mutate({ id: n.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">{n.profiles?.full_name}</p>
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title="Sem Anexos" description="Nenhum documento anexado." icon={Link2} actionLabel="Novo Anexo" onAction={() => setShowAttachmentForm(true)} />}
+      </ModuleSection>
+    );
+  };
+
+  // === MULTIDISCIPLINARY - each specialty has its own form opener ===
+  const specialtyFormOpeners: Record<string, () => void> = {
+    nutricao: () => openNutritionForm("nutricao"),
+    dieta: () => openNutritionForm("dieta"),
+    fisioterapia: () => setShowPhysioForm(true),
+    psicologia: () => setShowPsychologyForm(true),
+    fonoaudiologia: () => setShowSpeechForm(true),
+    servico_social: () => setShowSocialForm(true),
+    terapia_ocupacional: () => setShowOccupationalForm(true),
+    odontologia: () => setShowDentistryForm(true),
+  };
+
   const renderMulti = (specialty: string, label: string, icon: React.ElementType) => {
     const notes = (multiNotes || []).filter(n => n.specialty === specialty);
+    const openForm = specialtyFormOpeners[specialty] || (() => {});
     return (
-      <ModuleSection title={label} icon={icon} onAdd={() => openMultiForm(specialty, label)} addLabel="Nova Evolução" recordCount={notes.length}>
+      <ModuleSection title={label} icon={icon} onAdd={openForm} addLabel="Nova Evolução" recordCount={notes.length}>
         {notes.length > 0 ? (
           <div className="space-y-3">
             {notes.map((n) => (
@@ -944,13 +1011,13 @@ export default function Prontuario() {
                     <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteMulti.mutate({ id: n.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
                   </div>
                 </div>
-                <p className="text-sm">{n.content}</p>
+                <p className="text-sm whitespace-pre-line">{n.content}</p>
                 {n.therapeutic_plan && <div className="mt-2 p-2 rounded bg-muted/50"><p className="text-[10px] font-medium text-muted-foreground">Plano Terapêutico</p><p className="text-xs">{n.therapeutic_plan}</p></div>}
                 {n.goals && <div className="mt-1 p-2 rounded bg-muted/50"><p className="text-[10px] font-medium text-muted-foreground">Metas</p><p className="text-xs">{n.goals}</p></div>}
               </div>
             ))}
           </div>
-        ) : <EmptyModule title={`Sem Registros de ${label}`} description={`Nenhuma evolução de ${label.toLowerCase()} registrada.`} icon={icon} actionLabel="Nova Evolução" onAction={() => openMultiForm(specialty, label)} />}
+        ) : <EmptyModule title={`Sem Registros de ${label}`} description={`Nenhuma evolução de ${label.toLowerCase()} registrada.`} icon={icon} actionLabel="Nova Evolução" onAction={openForm} />}
       </ModuleSection>
     );
   };
@@ -1083,8 +1150,8 @@ export default function Prontuario() {
       case "odontologia": return renderMulti("odontologia", "Odontologia", Smile);
       case "seguranca-paciente": return renderAdverseEvents();
       case "ccih": return renderCCIH();
-      case "termos": return renderDocumentos("termos", "Termos de Consentimento", FileText);
-      case "anexos": return renderDocumentos("anexos", "Anexos e Arquivos", Link2);
+      case "termos": return renderTermos();
+      case "anexos": return renderAnexos();
       case "auditoria": return renderAuditoria();
       case "timeline-clinica": return renderTimeline();
       case "oftalmologia":
@@ -1141,7 +1208,21 @@ export default function Prontuario() {
           <SurgicalProcedureForm patientId={id} open={showSurgeryForm} onOpenChange={setShowSurgeryForm} />
           <AdverseEventForm patientId={id} open={showAdverseForm} onOpenChange={setShowAdverseForm} />
           <DispensationForm patientId={id} open={showDispensationForm} onOpenChange={setShowDispensationForm} />
-          <MultidisciplinaryForm patientId={id} specialty={multiSpecialty.key} specialtyLabel={multiSpecialty.label} open={showMultiForm} onOpenChange={setShowMultiForm} />
+          <TransferForm patientId={id} open={showTransferForm} onOpenChange={setShowTransferForm} />
+          <DischargeForm patientId={id} open={showDischargeForm} onOpenChange={setShowDischargeForm} />
+          <DiagnosisForm patientId={id} open={showDiagnosisForm} onOpenChange={setShowDiagnosisForm} />
+          <ChecklistCirurgicoForm patientId={id} open={showChecklistForm} onOpenChange={setShowChecklistForm} />
+          <UTIForm patientId={id} open={showUTIForm} onOpenChange={setShowUTIForm} initialTab={utiInitialTab} />
+          <NutritionForm patientId={id} open={showNutritionForm} onOpenChange={setShowNutritionForm} initialTab={nutritionInitialTab} />
+          <PhysiotherapyForm patientId={id} open={showPhysioForm} onOpenChange={setShowPhysioForm} />
+          <PsychologyForm patientId={id} open={showPsychologyForm} onOpenChange={setShowPsychologyForm} />
+          <SpeechTherapyForm patientId={id} open={showSpeechForm} onOpenChange={setShowSpeechForm} />
+          <SocialServiceForm patientId={id} open={showSocialForm} onOpenChange={setShowSocialForm} />
+          <OccupationalTherapyForm patientId={id} open={showOccupationalForm} onOpenChange={setShowOccupationalForm} />
+          <DentistryForm patientId={id} open={showDentistryForm} onOpenChange={setShowDentistryForm} />
+          <CCIHForm patientId={id} open={showCCIHForm} onOpenChange={setShowCCIHForm} />
+          <ConsentForm patientId={id} open={showConsentForm} onOpenChange={setShowConsentForm} />
+          <AttachmentForm patientId={id} open={showAttachmentForm} onOpenChange={setShowAttachmentForm} />
           <EditPatientForm patientId={id} open={showPatientForm} onOpenChange={setShowPatientForm} />
         </>
       )}
