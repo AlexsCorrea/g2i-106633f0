@@ -928,7 +928,7 @@ export default function Prontuario() {
               </div>
             ))}
           </div>
-        ) : <EmptyModule title="Sem Registros de CCIH" description="Nenhuma notificação de infecção hospitalar." icon={Bug} actionLabel="Novo Registro" onAction={() => openMultiForm("ccih", "CCIH")} />}
+        ) : <EmptyModule title="Sem Registros de CCIH" description="Nenhuma notificação de infecção hospitalar." icon={Bug} actionLabel="Novo Registro" onAction={() => setShowCCIHForm(true)} />}
       </ModuleSection>
     );
   };
