@@ -834,7 +834,7 @@ export default function Prontuario() {
   const renderChecklistCirurgico = () => {
     const checklistNotes = (multiNotes || []).filter(n => n.specialty === "checklist_cirurgico");
     return (
-      <ModuleSection title="Checklist de Segurança Cirúrgica" icon={ShieldCheck} onAdd={() => openMultiForm("checklist_cirurgico", "Checklist Cirúrgico")} addLabel="Novo Checklist" recordCount={checklistNotes.length}>
+      <ModuleSection title="Checklist de Segurança Cirúrgica" icon={ShieldCheck} onAdd={() => setShowChecklistForm(true)} addLabel="Novo Checklist" recordCount={checklistNotes.length}>
         {checklistNotes.length > 0 ? (
           <div className="space-y-3">
             {checklistNotes.map(n => (
