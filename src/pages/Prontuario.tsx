@@ -935,10 +935,10 @@ export default function Prontuario() {
   };
 
   // === DOCUMENTOS / TERMOS / ANEXOS ===
-  const renderDocumentos = (specialty: string, label: string, icon: React.ElementType) => {
-    const notes = (multiNotes || []).filter(n => n.specialty === specialty);
+  const renderTermos = () => {
+    const notes = (multiNotes || []).filter(n => n.specialty === "termos");
     return (
-      <ModuleSection title={label} icon={icon} onAdd={() => openMultiForm(specialty, label)} addLabel="Novo" recordCount={notes.length}>
+      <ModuleSection title="Termos de Consentimento" icon={FileText} onAdd={() => setShowConsentForm(true)} addLabel="Novo Termo" recordCount={notes.length}>
         {notes.length > 0 ? (
           <div className="space-y-3">
             {notes.map(n => (
@@ -954,7 +954,31 @@ export default function Prontuario() {
               </div>
             ))}
           </div>
-        ) : <EmptyModule title={`Sem ${label}`} description={`Nenhum registro de ${label.toLowerCase()}.`} icon={icon} actionLabel="Novo" onAction={() => openMultiForm(specialty, label)} />}
+        ) : <EmptyModule title="Sem Termos" description="Nenhum termo de consentimento registrado." icon={FileText} actionLabel="Novo Termo" onAction={() => setShowConsentForm(true)} />}
+      </ModuleSection>
+    );
+  };
+
+  const renderAnexos = () => {
+    const notes = (multiNotes || []).filter(n => n.specialty === "anexos");
+    return (
+      <ModuleSection title="Anexos e Arquivos" icon={Link2} onAdd={() => setShowAttachmentForm(true)} addLabel="Novo Anexo" recordCount={notes.length}>
+        {notes.length > 0 ? (
+          <div className="space-y-3">
+            {notes.map(n => (
+              <div key={n.id} className="medical-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">{n.content.split("\n")[0]}</p>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">{format(parseISO(n.created_at), "dd/MM/yyyy HH:mm")}</span>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteMulti.mutate({ id: n.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">{n.profiles?.full_name}</p>
+              </div>
+            ))}
+          </div>
+        ) : <EmptyModule title="Sem Anexos" description="Nenhum documento anexado." icon={Link2} actionLabel="Novo Anexo" onAction={() => setShowAttachmentForm(true)} />}
       </ModuleSection>
     );
   };
