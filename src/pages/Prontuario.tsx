@@ -1150,8 +1150,8 @@ export default function Prontuario() {
       case "odontologia": return renderMulti("odontologia", "Odontologia", Smile);
       case "seguranca-paciente": return renderAdverseEvents();
       case "ccih": return renderCCIH();
-      case "termos": return renderDocumentos("termos", "Termos de Consentimento", FileText);
-      case "anexos": return renderDocumentos("anexos", "Anexos e Arquivos", Link2);
+      case "termos": return renderTermos();
+      case "anexos": return renderAnexos();
       case "auditoria": return renderAuditoria();
       case "timeline-clinica": return renderTimeline();
       case "oftalmologia":
