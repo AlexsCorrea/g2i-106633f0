@@ -850,7 +850,7 @@ export default function Prontuario() {
               </div>
             ))}
           </div>
-        ) : <EmptyModule title="Sem Checklists" description="Nenhum checklist de segurança registrado." icon={ShieldCheck} actionLabel="Novo Checklist" onAction={() => openMultiForm("checklist_cirurgico", "Checklist Cirúrgico")} />}
+        ) : <EmptyModule title="Sem Checklists" description="Nenhum checklist de segurança registrado." icon={ShieldCheck} actionLabel="Novo Checklist" onAction={() => setShowChecklistForm(true)} />}
       </ModuleSection>
     );
   };
