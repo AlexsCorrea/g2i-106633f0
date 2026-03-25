@@ -367,7 +367,7 @@ export default function Prontuario() {
   const renderTransferencias = () => {
     const transferNotes = (multiNotes || []).filter(n => n.specialty === "transferencia");
     return (
-      <ModuleSection title="Transferências" icon={BedDouble} onAdd={() => openMultiForm("transferencia", "Transferência")} addLabel="Nova Transferência" recordCount={transferNotes.length}>
+      <ModuleSection title="Transferências" icon={BedDouble} onAdd={() => setShowTransferForm(true)} addLabel="Nova Transferência" recordCount={transferNotes.length}>
         {transferNotes.length > 0 ? (
           <div className="space-y-3">
             {transferNotes.map(n => (
