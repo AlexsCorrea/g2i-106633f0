@@ -1208,7 +1208,21 @@ export default function Prontuario() {
           <SurgicalProcedureForm patientId={id} open={showSurgeryForm} onOpenChange={setShowSurgeryForm} />
           <AdverseEventForm patientId={id} open={showAdverseForm} onOpenChange={setShowAdverseForm} />
           <DispensationForm patientId={id} open={showDispensationForm} onOpenChange={setShowDispensationForm} />
-          <MultidisciplinaryForm patientId={id} specialty={multiSpecialty.key} specialtyLabel={multiSpecialty.label} open={showMultiForm} onOpenChange={setShowMultiForm} />
+          <TransferForm patientId={id} open={showTransferForm} onOpenChange={setShowTransferForm} />
+          <DischargeForm patientId={id} open={showDischargeForm} onOpenChange={setShowDischargeForm} />
+          <DiagnosisForm patientId={id} open={showDiagnosisForm} onOpenChange={setShowDiagnosisForm} />
+          <ChecklistCirurgicoForm patientId={id} open={showChecklistForm} onOpenChange={setShowChecklistForm} />
+          <UTIForm patientId={id} open={showUTIForm} onOpenChange={setShowUTIForm} initialTab={utiInitialTab} />
+          <NutritionForm patientId={id} open={showNutritionForm} onOpenChange={setShowNutritionForm} initialTab={nutritionInitialTab} />
+          <PhysiotherapyForm patientId={id} open={showPhysioForm} onOpenChange={setShowPhysioForm} />
+          <PsychologyForm patientId={id} open={showPsychologyForm} onOpenChange={setShowPsychologyForm} />
+          <SpeechTherapyForm patientId={id} open={showSpeechForm} onOpenChange={setShowSpeechForm} />
+          <SocialServiceForm patientId={id} open={showSocialForm} onOpenChange={setShowSocialForm} />
+          <OccupationalTherapyForm patientId={id} open={showOccupationalForm} onOpenChange={setShowOccupationalForm} />
+          <DentistryForm patientId={id} open={showDentistryForm} onOpenChange={setShowDentistryForm} />
+          <CCIHForm patientId={id} open={showCCIHForm} onOpenChange={setShowCCIHForm} />
+          <ConsentForm patientId={id} open={showConsentForm} onOpenChange={setShowConsentForm} />
+          <AttachmentForm patientId={id} open={showAttachmentForm} onOpenChange={setShowAttachmentForm} />
           <EditPatientForm patientId={id} open={showPatientForm} onOpenChange={setShowPatientForm} />
         </>
       )}
