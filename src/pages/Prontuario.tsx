@@ -858,8 +858,9 @@ export default function Prontuario() {
   // === UTI ===
   const renderUTI = (specialty: string, label: string, icon: React.ElementType) => {
     const notes = (multiNotes || []).filter(n => n.specialty === specialty);
+    const openForm = () => { setUtiInitialTab(specialty as any); setShowUTIForm(true); };
     return (
-      <ModuleSection title={label} icon={icon} onAdd={() => openMultiForm(specialty, label)} addLabel="Novo Registro" recordCount={notes.length}>
+      <ModuleSection title={label} icon={icon} onAdd={openForm} addLabel="Novo Registro" recordCount={notes.length}>
         {notes.length > 0 ? (
           <div className="space-y-3">
             {notes.map(n => (
@@ -871,13 +872,13 @@ export default function Prontuario() {
                     <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => id && deleteMulti.mutate({ id: n.id, patientId: id })}><Trash2 className="h-3 w-3" /></Button>
                   </div>
                 </div>
-                <p className="text-sm">{n.content}</p>
+                <p className="text-sm whitespace-pre-line">{n.content}</p>
                 {n.therapeutic_plan && <div className="mt-2 p-2 rounded bg-muted/50"><p className="text-[10px] font-medium text-muted-foreground">Plano</p><p className="text-xs">{n.therapeutic_plan}</p></div>}
                 {n.goals && <div className="mt-1 p-2 rounded bg-muted/50"><p className="text-[10px] font-medium text-muted-foreground">Parâmetros / Metas</p><p className="text-xs">{n.goals}</p></div>}
               </div>
             ))}
           </div>
-        ) : <EmptyModule title={`Sem Registros de ${label}`} description={`Nenhum registro de ${label.toLowerCase()}.`} icon={icon} actionLabel="Novo Registro" onAction={() => openMultiForm(specialty, label)} />}
+        ) : <EmptyModule title={`Sem Registros de ${label}`} description={`Nenhum registro de ${label.toLowerCase()}.`} icon={icon} actionLabel="Novo Registro" onAction={openForm} />}
       </ModuleSection>
     );
   };
