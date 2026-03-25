@@ -426,7 +426,7 @@ export default function Prontuario() {
   const renderDiagnosticos = () => {
     const diagNotes = (multiNotes || []).filter(n => n.specialty === "diagnostico");
     return (
-      <ModuleSection title="Diagnósticos (CID-10)" icon={FileText} onAdd={() => openMultiForm("diagnostico", "Diagnóstico")} addLabel="Novo Diagnóstico" recordCount={diagNotes.length}>
+      <ModuleSection title="Diagnósticos (CID-10)" icon={FileText} onAdd={() => setShowDiagnosisForm(true)} addLabel="Novo Diagnóstico" recordCount={diagNotes.length}>
         {diagNotes.length > 0 ? (
           <div className="space-y-3">
             {diagNotes.map(n => (
