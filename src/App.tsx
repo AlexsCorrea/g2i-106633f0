@@ -12,6 +12,9 @@ import Patients from "./pages/Patients";
 import Prontuario from "./pages/Prontuario";
 import Agenda from "./pages/Agenda";
 import Dashboards from "./pages/Dashboards";
+import Kiosk from "./pages/Kiosk";
+import QueueMobile from "./pages/QueueMobile";
+import QueuePanel from "./pages/QueuePanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
