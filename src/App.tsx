@@ -15,6 +15,7 @@ import Dashboards from "./pages/Dashboards";
 import Kiosk from "./pages/Kiosk";
 import QueueMobile from "./pages/QueueMobile";
 import QueuePanel from "./pages/QueuePanel";
+import Portal from "./pages/Portal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
