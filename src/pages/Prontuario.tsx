@@ -1148,6 +1148,16 @@ export default function Prontuario() {
       case "evolucao-social": return renderMulti("servico_social", "Serviço Social", Users);
       case "terapia-ocupacional": return renderMulti("terapia_ocupacional", "Terapia Ocupacional", Hand);
       case "odontologia": return renderMulti("odontologia", "Odontologia", Smile);
+      case "odontograma": return (
+        <ModuleSection title="Odontograma" icon={Smile} onAdd={() => setShowDentistryForm(true)} addLabel="Novo Registro">
+          <EmptyModule title="Odontograma Digital" description="Registre a condição de cada dente com o odontograma interativo." icon={Smile} actionLabel="Novo Atendimento" onAction={() => setShowDentistryForm(true)} />
+        </ModuleSection>
+      );
+      case "periograma": return (
+        <ModuleSection title="Periograma" icon={Smile} onAdd={() => setShowDentistryForm(true)} addLabel="Novo Registro">
+          <EmptyModule title="Periograma Completo" description="Registre profundidade de sondagem, NCI, sangramento e supuração." icon={Smile} actionLabel="Novo Registro" onAction={() => setShowDentistryForm(true)} />
+        </ModuleSection>
+      );
       case "seguranca-paciente": return renderAdverseEvents();
       case "ccih": return renderCCIH();
       case "termos": return renderTermos();
