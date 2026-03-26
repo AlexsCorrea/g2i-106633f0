@@ -3,170 +3,134 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCreateEvolutionNote } from "@/hooks/useEvolutionNotes";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Stethoscope } from "lucide-react";
+import { SpecialtyFields, MEDICAL_SPECIALTIES, specialtyDataToContent } from "./specialties/SpecialtyFields";
+import type { SpecialtyData } from "./specialties/SpecialtyFields";
 
 interface EvolutionNoteFormProps {
   patientId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialSpecialty?: string;
 }
 
 const noteTypes = [
   { value: "medica", label: "Evolução Médica" },
   { value: "enfermagem", label: "Evolução de Enfermagem" },
-  { value: "fisioterapia", label: "Evolução Fisioterapia" },
-  { value: "nutricao", label: "Evolução Nutricional" },
-  { value: "psicologia", label: "Evolução Psicologia" },
 ];
 
-export function EvolutionNoteForm({ patientId, open, onOpenChange }: EvolutionNoteFormProps) {
+export function EvolutionNoteForm({ patientId, open, onOpenChange, initialSpecialty }: EvolutionNoteFormProps) {
   const { profile } = useAuth();
   const createNote = useCreateEvolutionNote();
-  const [mode, setMode] = useState<"simple" | "soap">("simple");
 
-  const [formData, setFormData] = useState({
-    note_type: "medica",
-    content: "",
-    subjective: "",
-    objective: "",
-    assessment: "",
-    plan: "",
-  });
+  const [noteType, setNoteType] = useState("medica");
+  const [specialty, setSpecialty] = useState(initialSpecialty || "");
+  const [specialtyData, setSpecialtyData] = useState<SpecialtyData>({});
+
+  const handleSpecialtyChange = (newSpec: string) => {
+    setSpecialty(newSpec);
+    setSpecialtyData({});
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
 
-    const content = mode === "soap" 
-      ? `S: ${formData.subjective}\n\nO: ${formData.objective}\n\nA: ${formData.assessment}\n\nP: ${formData.plan}`
-      : formData.content;
+    const content = noteType === "medica" && specialty
+      ? specialtyDataToContent(specialty, specialtyData)
+      : specialtyDataToContent("geral", specialtyData);
 
-    if (!content.trim()) return;
+    if (!content.trim() || content.split("\n").length <= 1) return;
 
     await createNote.mutateAsync({
       patient_id: patientId,
       professional_id: profile.id,
-      note_type: formData.note_type as "medica" | "enfermagem" | "fisioterapia" | "nutricao" | "psicologia",
+      note_type: noteType === "medica" ? "medica" : "enfermagem",
       content,
-      subjective: mode === "soap" ? formData.subjective : null,
-      objective: mode === "soap" ? formData.objective : null,
-      assessment: mode === "soap" ? formData.assessment : null,
-      plan: mode === "soap" ? formData.plan : null,
+      subjective: (specialtyData.subjetivo as string) || null,
+      objective: (specialtyData.objetivo as string) || null,
+      assessment: (specialtyData.avaliacao as string) || (specialtyData.diagnostico as string) || null,
+      plan: (specialtyData.conduta as string) || null,
     });
 
-    setFormData({
-      note_type: "medica",
-      content: "",
-      subjective: "",
-      objective: "",
-      assessment: "",
-      plan: "",
-    });
+    setSpecialtyData({});
+    setSpecialty("");
     onOpenChange(false);
   };
 
+  const selectedSpecLabel = MEDICAL_SPECIALTIES.find(s => s.value === specialty)?.label;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Nova Evolução</DialogTitle>
+      <DialogContent className="max-w-3xl max-h-[92vh] p-0 gap-0">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
+          <DialogTitle className="flex items-center gap-2">
+            <Stethoscope className="h-5 w-5 text-primary" />
+            Nova Evolução
+            {selectedSpecLabel && (
+              <Badge variant="secondary" className="text-xs ml-2">{selectedSpecLabel}</Badge>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Tipo de Evolução</Label>
-            <Select 
-              value={formData.note_type} 
-              onValueChange={(value) => setFormData({ ...formData, note_type: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {noteTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="px-6 py-3 border-b border-border bg-muted/30">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Tipo de Evolução</Label>
+                <Select value={noteType} onValueChange={setNoteType}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {noteTypes.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {noteType === "medica" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Especialidade Médica *</Label>
+                  <Select value={specialty} onValueChange={handleSpecialtyChange}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione a especialidade" /></SelectTrigger>
+                    <SelectContent>
+                      {MEDICAL_SPECIALTIES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </div>
 
-          <Tabs value={mode} onValueChange={(v) => setMode(v as "simple" | "soap")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="simple">Texto Livre</TabsTrigger>
-              <TabsTrigger value="soap">Formato SOAP</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="simple" className="mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="content">Conteúdo da Evolução *</Label>
-                <Textarea
-                  id="content"
-                  placeholder="Descreva a evolução do paciente..."
-                  className="min-h-[200px]"
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+          <ScrollArea className="flex-1 max-h-[55vh]">
+            <div className="px-6 py-4">
+              {noteType === "medica" && !specialty ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Stethoscope className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm font-medium">Selecione uma especialidade</p>
+                  <p className="text-xs mt-1">O formulário será carregado automaticamente conforme a especialidade escolhida.</p>
+                </div>
+              ) : (
+                <SpecialtyFields
+                  specialty={noteType === "medica" ? specialty : "clinica_medica"}
+                  data={specialtyData}
+                  onChange={setSpecialtyData}
                 />
-              </div>
-            </TabsContent>
+              )}
+            </div>
+          </ScrollArea>
 
-            <TabsContent value="soap" className="mt-4 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="subjective">S - Subjetivo</Label>
-                <Textarea
-                  id="subjective"
-                  placeholder="Queixas do paciente, histórico..."
-                  className="min-h-[80px]"
-                  value={formData.subjective}
-                  onChange={(e) => setFormData({ ...formData, subjective: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="objective">O - Objetivo</Label>
-                <Textarea
-                  id="objective"
-                  placeholder="Exame físico, sinais vitais, exames..."
-                  className="min-h-[80px]"
-                  value={formData.objective}
-                  onChange={(e) => setFormData({ ...formData, objective: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="assessment">A - Avaliação</Label>
-                <Textarea
-                  id="assessment"
-                  placeholder="Diagnóstico, impressão clínica..."
-                  className="min-h-[80px]"
-                  value={formData.assessment}
-                  onChange={(e) => setFormData({ ...formData, assessment: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="plan">P - Plano</Label>
-                <Textarea
-                  id="plan"
-                  placeholder="Conduta, orientações, próximos passos..."
-                  className="min-h-[80px]"
-                  value={formData.plan}
-                  onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end gap-3 px-6 py-3 border-t border-border bg-muted/20">
+            <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createNote.isPending}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={createNote.isPending || (noteType === "medica" && !specialty)}
+            >
               {createNote.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Registrar Evolução
             </Button>
