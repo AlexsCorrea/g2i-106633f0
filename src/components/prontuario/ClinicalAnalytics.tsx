@@ -498,35 +498,38 @@ export function ClinicalAnalytics({
 
         {/* Critical summary */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {latest?.heart_rate && <SummaryCard label="FC" value={latest.heart_rate.toString()} unit="bpm" icon={Heart} trend={getTrend(latest.heart_rate, previous?.heart_rate)} status={latest.heart_rate < 50 || latest.heart_rate > 120 ? "critical" : latest.heart_rate < 60 || latest.heart_rate > 100 ? "warning" : "normal"} />}
-          {latest?.blood_pressure_systolic && <SummaryCard label="PA" value={`${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}`} unit="mmHg" icon={Activity} status={latest.blood_pressure_systolic < 90 || latest.blood_pressure_systolic > 160 ? "critical" : "normal"} />}
-          {latest?.oxygen_saturation && <SummaryCard label="SpO₂" value={latest.oxygen_saturation.toString()} unit="%" icon={Droplets} status={latest.oxygen_saturation < 90 ? "critical" : latest.oxygen_saturation < 95 ? "warning" : "normal"} />}
-          {latest?.temperature && <SummaryCard label="Temp" value={Number(latest.temperature).toFixed(1)} unit="°C" icon={Thermometer} status={Number(latest.temperature) > 38.5 ? "critical" : Number(latest.temperature) > 37.8 ? "warning" : "normal"} />}
-          {latest?.respiratory_rate && <SummaryCard label="FR" value={latest.respiratory_rate.toString()} unit="rpm" icon={Activity} status={latest.respiratory_rate > 25 ? "critical" : latest.respiratory_rate > 20 ? "warning" : "normal"} />}
-          {latest?.glucose && <SummaryCard label="Glicemia" value={latest.glucose.toString()} unit="mg/dL" icon={Activity} status={latest.glucose < 70 || latest.glucose > 200 ? "critical" : latest.glucose > 180 ? "warning" : "normal"} />}
+          {latest?.heart_rate && <SummaryCard label="FC" value={latest.heart_rate.toString()} unit="bpm" icon={Heart} trend={getTrend(latest.heart_rate, previous?.heart_rate)} classification={classifyHeartRate(latest.heart_rate, patientAgeYears)} />}
+          {latest?.blood_pressure_systolic && latest?.blood_pressure_diastolic && <SummaryCard label="PA" value={`${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}`} unit="mmHg" icon={Activity} classification={classifyBloodPressure(latest.blood_pressure_systolic, latest.blood_pressure_diastolic)} />}
+          {latest?.oxygen_saturation && <SummaryCard label="SpO₂" value={latest.oxygen_saturation.toString()} unit="%" icon={Droplets} classification={classifyOxygenSaturation(latest.oxygen_saturation)} />}
+          {latest?.temperature && <SummaryCard label="Temp" value={Number(latest.temperature).toFixed(1)} unit="°C" icon={Thermometer} classification={classifyTemperature(Number(latest.temperature))} />}
+          {latest?.respiratory_rate && <SummaryCard label="FR" value={latest.respiratory_rate.toString()} unit="rpm" icon={Activity} classification={classifyRespiratoryRate(latest.respiratory_rate, patientAgeYears)} />}
+          {latest?.glucose && <SummaryCard label="Glicemia" value={latest.glucose.toString()} unit="mg/dL" icon={Activity} classification={classifyGlucose(latest.glucose)} />}
         </div>
 
-        {/* Scales for critical */}
+        {/* Scales for critical with interpretation */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="medical-card p-3">
-            <p className="text-[10px] text-muted-foreground">Glasgow</p>
-            <p className={`text-2xl font-bold ${latestGlasgow?.total_score != null && latestGlasgow.total_score <= 8 ? "text-destructive" : latestGlasgow?.total_score != null && latestGlasgow.total_score <= 12 ? "text-warning" : ""}`}>
-              {latestGlasgow?.total_score ?? "N/A"}<span className="text-sm font-normal text-muted-foreground">/15</span>
-            </p>
-            {latestGlasgow?.total_score != null && latestGlasgow.total_score <= 8 && <Badge variant="destructive" className="text-[10px] mt-1">Grave</Badge>}
-          </div>
-          <div className="medical-card p-3">
-            <p className="text-[10px] text-muted-foreground">Braden (LPP)</p>
-            <p className={`text-2xl font-bold ${latestBraden?.total_score != null && latestBraden.total_score <= 12 ? "text-destructive" : ""}`}>
-              {latestBraden?.total_score ?? "N/A"}<span className="text-sm font-normal text-muted-foreground">/23</span>
-            </p>
-          </div>
-          <div className="medical-card p-3">
-            <p className="text-[10px] text-muted-foreground">Morse (Queda)</p>
-            <p className={`text-2xl font-bold ${latestMorse?.total_score != null && latestMorse.total_score >= 45 ? "text-destructive" : ""}`}>
-              {latestMorse?.total_score ?? "N/A"}
-            </p>
-          </div>
+          {(() => {
+            const gCls = latestGlasgow?.total_score != null ? classifyGlasgow(latestGlasgow.total_score) : null;
+            const bCls = latestBraden?.total_score != null ? classifyBraden(latestBraden.total_score) : null;
+            const mCls = latestMorse?.total_score != null ? classifyMorse(latestMorse.total_score) : null;
+            return (<>
+              <div className="medical-card p-3">
+                <p className="text-[10px] text-muted-foreground">Glasgow</p>
+                <p className={`text-2xl font-bold ${gCls?.color || ""}`}>{latestGlasgow?.total_score ?? "N/A"}<span className="text-sm font-normal text-muted-foreground">/15</span></p>
+                {gCls && <span className={`inline-block mt-1 ${getClassificationBadge(gCls).className}`}>{gCls.label}</span>}
+              </div>
+              <div className="medical-card p-3">
+                <p className="text-[10px] text-muted-foreground">Braden (LPP)</p>
+                <p className={`text-2xl font-bold ${bCls?.color || ""}`}>{latestBraden?.total_score ?? "N/A"}<span className="text-sm font-normal text-muted-foreground">/23</span></p>
+                {bCls && <span className={`inline-block mt-1 ${getClassificationBadge(bCls).className}`}>{bCls.label}</span>}
+              </div>
+              <div className="medical-card p-3">
+                <p className="text-[10px] text-muted-foreground">Morse (Queda)</p>
+                <p className={`text-2xl font-bold ${mCls?.color || ""}`}>{latestMorse?.total_score ?? "N/A"}</p>
+                {mCls && <span className={`inline-block mt-1 ${getClassificationBadge(mCls).className}`}>{mCls.label}</span>}
+              </div>
+            </>);
+          })()}
         </div>
 
         {/* Vital trends for ICU */}
