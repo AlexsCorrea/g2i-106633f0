@@ -35,6 +35,9 @@ function App() {
               <Route path="/prontuario/:id" element={<Prontuario />} />
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/dashboards" element={<Dashboards />} />
+              <Route path="/kiosk" element={<Kiosk />} />
+              <Route path="/fila" element={<QueueMobile />} />
+              <Route path="/painel" element={<QueuePanel />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>
