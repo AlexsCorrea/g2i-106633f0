@@ -1,14 +1,14 @@
 import { useMemo } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, BarChart, Bar, Legend,
+  AreaChart, Area, BarChart, Bar, Legend, ReferenceLine,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Activity, Heart, Thermometer, Droplets, Brain, TrendingUp, TrendingDown,
-  AlertTriangle, Baby, Stethoscope, HeartPulse, BarChart3,
+  AlertTriangle, Baby, Stethoscope, HeartPulse, BarChart3, Ruler,
 } from "lucide-react";
 import { format, parseISO, differenceInMonths, differenceInYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -22,8 +22,9 @@ import {
   getClassificationBadge, type ClinicalClassification,
 } from "@/lib/clinicalRules";
 import {
-  weightReference, heightReference, bmiReference,
+  weightReference, heightReference, bmiReference, headCircumferenceReference,
   buildReferenceCurve, interpolateReference, estimatePercentile,
+  calculateZScore, zScoreToPercentile, detectGrowthAlerts,
   type GrowthReferencePoint,
 } from "@/lib/pediatricGrowthReference";
 
@@ -51,6 +52,7 @@ const chartColors = {
   weight: "hsl(var(--primary))",
   height: "hsl(150, 60%, 45%)",
   bmi: "hsl(30, 90%, 55%)",
+  hc: "hsl(280, 60%, 55%)",
 };
 
 export function ClinicalAnalytics({
@@ -93,7 +95,7 @@ export function ClinicalAnalytics({
       });
   }, [vitalSigns, patientBirthDate]);
 
-  // Pediatric reference curves (always computed, used conditionally in render)
+  // Gender & reference curves
   const gender = (patientGender === "M" || patientGender === "F") ? patientGender : "M";
   const genderKey = gender === "M" ? "male" : "female";
   const ageRange = useMemo(() => {
@@ -103,13 +105,69 @@ export function ClinicalAnalytics({
       max: Math.max(...growthData.map(d => d.ageMonths)) + 6,
     };
   }, [growthData]);
-  const weightRefCurve = useMemo(() => buildReferenceCurve(weightReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
-  const heightRefCurve = useMemo(() => buildReferenceCurve(heightReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
-  const bmiRefCurve = useMemo(() => buildReferenceCurve(bmiReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
+
+  const weightRefCurve = useMemo(() => buildReferenceCurve(weightReference[genderKey], ageRange.min, ageRange.max, 1), [genderKey, ageRange]);
+  const heightRefCurve = useMemo(() => buildReferenceCurve(heightReference[genderKey], ageRange.min, ageRange.max, 1), [genderKey, ageRange]);
+  const bmiRefCurve = useMemo(() => buildReferenceCurve(bmiReference[genderKey], Math.max(24, ageRange.min), ageRange.max, 1), [genderKey, ageRange]);
+  const hcRefCurve = useMemo(() => buildReferenceCurve(headCircumferenceReference[genderKey], ageRange.min, Math.min(36, ageRange.max), 1), [genderKey, ageRange]);
+
+  // Pre-compute pediatric data at top level (hooks can't be inside conditionals)
+  const lastGrowth = growthData.length > 0 ? growthData[growthData.length - 1] : null;
+  const calcPercentileData = (value: number | null | undefined, ageMonths: number, refSet: GrowthReferencePoint[]) => {
+    if (!value) return null;
+    const ref = interpolateReference(ageMonths, refSet);
+    if (!ref) return null;
+    return estimatePercentile(value, ref);
+  };
+  const weightP = lastGrowth ? calcPercentileData(lastGrowth.weight, lastGrowth.ageMonths, weightReference[genderKey]) : null;
+  const heightP = lastGrowth ? calcPercentileData(lastGrowth.height, lastGrowth.ageMonths, heightReference[genderKey]) : null;
+  const bmiP = lastGrowth?.bmi ? calcPercentileData(lastGrowth.bmi, lastGrowth.ageMonths, bmiReference[genderKey]) : null;
+
+  const growthAlerts = useMemo(() =>
+    detectGrowthAlerts(
+      growthData.map(d => ({ ageMonths: d.ageMonths, weight: d.weight, height: d.height })),
+      { weight: weightReference[genderKey], height: heightReference[genderKey] } as any,
+      genderKey
+    ),
+    [growthData, genderKey]
+  );
+
+  const clinicalAnalysis = useMemo(() => {
+    if (!lastGrowth) return null;
+    const lines: string[] = [];
+    if (weightP) {
+      const zStr = weightP.zScore != null ? ` (Z-score: ${weightP.zScore.toFixed(2)}, P${weightP.exactPercentile?.toFixed(0)})` : "";
+      if (weightP.zone === "normal") lines.push(`✅ Peso adequado para idade${zStr}`);
+      else if (weightP.zone === "low") lines.push(`⚠️ Peso na faixa P3-P15 — acompanhar evolução ponderal${zStr}`);
+      else if (weightP.zone === "critical-low") lines.push(`🔴 Peso abaixo do P3 — investigar desnutrição${zStr}`);
+      else if (weightP.zone === "high") lines.push(`⚠️ Peso acima do P85 — atenção para sobrepeso${zStr}`);
+      else if (weightP.zone === "critical-high") lines.push(`🔴 Peso acima do P97 — risco de obesidade infantil${zStr}`);
+    }
+    if (heightP) {
+      const zStr = heightP.zScore != null ? ` (Z-score: ${heightP.zScore.toFixed(2)}, P${heightP.exactPercentile?.toFixed(0)})` : "";
+      if (heightP.zone === "normal") lines.push(`✅ Estatura adequada para idade${zStr}`);
+      else if (heightP.zone === "critical-low") lines.push(`🔴 Baixa estatura — investigar causas${zStr}`);
+      else if (heightP.zone === "low") lines.push(`⚠️ Estatura abaixo do esperado${zStr}`);
+    }
+    if (bmiP) {
+      const zStr = bmiP.zScore != null ? ` (Z-score: ${bmiP.zScore.toFixed(2)}, P${bmiP.exactPercentile?.toFixed(0)})` : "";
+      if (bmiP.zone === "normal") lines.push(`✅ IMC dentro da normalidade${zStr}`);
+      else if (bmiP.zone === "critical-high") lines.push(`🔴 IMC compatível com obesidade${zStr}`);
+      else if (bmiP.zone === "high") lines.push(`⚠️ IMC indicando sobrepeso${zStr}`);
+      else if (bmiP.zone === "critical-low") lines.push(`🔴 IMC indicando magreza acentuada${zStr}`);
+    }
+    if (growthData.length >= 3) {
+      const recent = growthData.slice(-3);
+      const allGrowing = recent.every((d, i) => i === 0 || (d.weight && recent[i-1].weight && d.weight >= recent[i-1].weight!));
+      if (allGrowing) lines.push("📈 Tendência de ganho ponderal contínuo nos últimos registros");
+    }
+    return lines.length > 0 ? lines : null;
+  }, [lastGrowth, weightP, heightP, bmiP, growthData]);
 
   // Summary indicators
   const latest = vitalSigns[0];
   const previous = vitalSigns[1];
+  const patientAgeYears = patientBirthDate ? differenceInYears(new Date(), parseISO(patientBirthDate)) : undefined;
 
   const getTrend = (current?: number | null, prev?: number | null) => {
     if (!current || !prev) return null;
@@ -146,29 +204,24 @@ export function ClinicalAnalytics({
     );
   };
 
-
-
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
       <div className="rounded-lg border bg-card p-2 shadow-md text-xs">
         <p className="font-medium mb-1">{label}</p>
-        {payload.map((p: any, i: number) => (
-          <p key={i} style={{ color: p.color }}>{p.name}: <strong>{p.value}</strong></p>
+        {payload.filter((p: any) => p.value != null).map((p: any, i: number) => (
+          <p key={i} style={{ color: p.color }}>{p.name}: <strong>{typeof p.value === 'number' ? p.value.toFixed(1) : p.value}</strong></p>
         ))}
       </div>
     );
   };
 
-  // === GERAL VIEW ===
-  const patientAgeYears = patientBirthDate ? differenceInYears(new Date(), parseISO(patientBirthDate)) : undefined;
-
+  // ============= GERAL VIEW =============
   if (view === "geral") {
     return (
       <div className="space-y-4">
         <h3 className="text-sm font-semibold flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" />Painel Clínico Geral</h3>
         
-        {/* Summary cards with clinical interpretation */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {latest?.heart_rate && <SummaryCard label="FC" value={latest.heart_rate.toString()} unit="bpm" icon={Heart} trend={getTrend(latest.heart_rate, previous?.heart_rate)} classification={classifyHeartRate(latest.heart_rate, patientAgeYears)} />}
           {latest?.blood_pressure_systolic && latest?.blood_pressure_diastolic && <SummaryCard label="PA" value={`${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}`} unit="mmHg" icon={Activity} classification={classifyBloodPressure(latest.blood_pressure_systolic, latest.blood_pressure_diastolic)} />}
@@ -178,7 +231,6 @@ export function ClinicalAnalytics({
           {latest?.glucose && <SummaryCard label="Glicemia" value={latest.glucose.toString()} unit="mg/dL" icon={Activity} classification={classifyGlucose(latest.glucose)} />}
         </div>
 
-        {/* Alertas */}
         {allergies.length > 0 && (
           <div className="medical-card p-3 border-destructive/30">
             <div className="flex items-center gap-2 mb-2">
@@ -195,7 +247,6 @@ export function ClinicalAnalytics({
           </div>
         )}
 
-        {/* Vital signs chart */}
         {vitalData.length > 1 && (
           <Card>
             <CardHeader className="pb-2">
@@ -221,7 +272,6 @@ export function ClinicalAnalytics({
           </Card>
         )}
 
-        {/* Last evolution */}
         {evolutionNotes.length > 0 && (
           <Card>
             <CardHeader className="pb-2">
@@ -240,7 +290,6 @@ export function ClinicalAnalytics({
           </Card>
         )}
 
-        {/* Scales summary with clinical interpretation */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {latestGlasgow?.total_score != null && (() => {
             const cls = classifyGlasgow(latestGlasgow.total_score);
@@ -280,10 +329,9 @@ export function ClinicalAnalytics({
     );
   }
 
-  // === PEDIATRIA VIEW ===
+  // ============= PEDIATRIA VIEW =============
   if (view === "pediatria") {
-
-    // Merge patient data with reference curve for unified chart
+    // Merge patient data with reference curves
     const mergeWithRef = (patientData: typeof growthData, refCurve: GrowthReferencePoint[], valueKey: "weight" | "height" | "bmi") => {
       const refMap = new Map(refCurve.map(r => [r.ageMonths, r]));
       const patMap = new Map(patientData.filter(d => d[valueKey] != null).map(d => [d.ageMonths, d[valueKey] as number]));
@@ -293,7 +341,7 @@ export function ClinicalAnalytics({
         const patValue = patMap.get(age) ?? null;
         return {
           ageMonths: age,
-          ageLabel: `${age}m`,
+          ageLabel: age % 6 === 0 ? `${age}m` : "",
           value: patValue,
           p3: ref?.p3 ?? null,
           p15: ref?.p15 ?? null,
@@ -307,45 +355,62 @@ export function ClinicalAnalytics({
     const weightChartData = mergeWithRef(growthData, weightRefCurve, "weight");
     const heightChartData = mergeWithRef(growthData, heightRefCurve, "height");
     const bmiChartData = mergeWithRef(growthData, bmiRefCurve, "bmi");
+    
+    // Head circumference data (only for 0-36 months)
+    const showHC = ageRange.max <= 42;
+    const hcChartData = showHC ? (() => {
+      const refMap = new Map(hcRefCurve.map(r => [r.ageMonths, r]));
+      const allAges = [...new Set([...refMap.keys()])].sort((a, b) => a - b);
+      return allAges.map(age => {
+        const ref = refMap.get(age) || interpolateReference(age, hcRefCurve);
+        return {
+          ageMonths: age,
+          ageLabel: age % 3 === 0 ? `${age}m` : "",
+          value: null as number | null,
+          p3: ref?.p3 ?? null, p15: ref?.p15 ?? null, p50: ref?.p50 ?? null, p85: ref?.p85 ?? null, p97: ref?.p97 ?? null,
+        };
+      });
+    })() : [];
 
-    // Latest percentile estimation
-    const lastGrowth = growthData.length > 0 ? growthData[growthData.length - 1] : null;
-    const weightPercentile = lastGrowth?.weight ? (() => {
-      const ref = interpolateReference(lastGrowth.ageMonths, weightReference[genderKey]);
-      return ref ? estimatePercentile(lastGrowth.weight, ref) : null;
-    })() : null;
-    const heightPercentile = lastGrowth?.height ? (() => {
-      const ref = interpolateReference(lastGrowth.ageMonths, heightReference[genderKey]);
-      return ref ? estimatePercentile(lastGrowth.height, ref) : null;
-    })() : null;
-    const bmiPercentile = lastGrowth?.bmi ? (() => {
-      const ref = interpolateReference(lastGrowth.ageMonths, bmiReference[genderKey]);
-      return ref ? estimatePercentile(lastGrowth.bmi, ref) : null;
-    })() : null;
+    // (percentile data and alerts already computed at top level)
 
     const zoneColors: Record<string, string> = {
-      "critical-low": "text-destructive",
-      "low": "text-warning",
-      "normal": "text-success",
-      "high": "text-warning",
-      "critical-high": "text-destructive",
+      "critical-low": "text-destructive", "low": "text-warning", "normal": "text-success", "high": "text-warning", "critical-high": "text-destructive",
     };
     const zoneBg: Record<string, string> = {
-      "critical-low": "bg-destructive/10",
-      "low": "bg-warning/10",
-      "normal": "bg-success/10",
-      "high": "bg-warning/10",
-      "critical-high": "bg-destructive/10",
+      "critical-low": "bg-destructive/10", "low": "bg-warning/10", "normal": "bg-success/10", "high": "bg-warning/10", "critical-high": "bg-destructive/10",
     };
     const zoneLabels: Record<string, string> = {
-      "critical-low": "Muito abaixo (< P3)",
-      "low": "Abaixo (P3-P15)",
-      "normal": "Adequado (P15-P85)",
-      "high": "Acima (P85-P97)",
-      "critical-high": "Muito acima (> P97)",
+      "critical-low": "Muito abaixo (< P3)", "low": "Abaixo (P3-P15)", "normal": "Adequado (P15-P85)", "high": "Acima (P85-P97)", "critical-high": "Muito acima (> P97)",
     };
 
-    const GrowthChart = ({ data, yLabel, title }: { data: typeof weightChartData; yLabel: string; title: string }) => (
+    const PercentileCard = ({ label, value, unit, percentileData, ageLabel }: {
+      label: string; value: number; unit: string; percentileData: ReturnType<typeof estimatePercentile> | null; ageLabel: string;
+    }) => {
+      if (!percentileData) return null;
+      return (
+        <div className="medical-card p-3">
+          <p className="text-[10px] text-muted-foreground">{label} — {ageLabel}</p>
+          <p className="text-xl font-bold">{value}<span className="text-sm font-normal text-muted-foreground ml-1">{unit}</span></p>
+          <div className="flex flex-col gap-1 mt-1">
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${zoneBg[percentileData.zone]} ${zoneColors[percentileData.zone]}`}>
+                {percentileData.percentile}
+              </span>
+              <span className={`text-[10px] ${zoneColors[percentileData.zone]}`}>{zoneLabels[percentileData.zone]}</span>
+            </div>
+            {percentileData.zScore != null && (
+              <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
+                <span className="font-mono bg-muted px-1 rounded">Z: {percentileData.zScore.toFixed(2)}</span>
+                <span>Percentil: {percentileData.exactPercentile?.toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const GrowthChart = ({ data, yLabel, title }: { data: any[]; yLabel: string; title: string }) => (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">{title}</CardTitle>
@@ -354,41 +419,48 @@ export function ClinicalAnalytics({
         <CardContent>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data}>
+              <AreaChart data={data} margin={{ top: 5, right: 10, left: 5, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="ageLabel" tick={{ fontSize: 10 }} label={{ value: "Idade (meses)", position: "insideBottom", offset: -5, fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 10 }} />
+                <XAxis dataKey="ageLabel" tick={{ fontSize: 9 }} interval="preserveStartEnd" label={{ value: "Idade (meses)", position: "insideBottom", offset: -10, fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 9 }} label={{ value: yLabel, angle: -90, position: "insideLeft", offset: 10, fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                 <Tooltip content={({ active, payload, label }: any) => {
                   if (!active || !payload?.length) return null;
+                  const age = payload[0]?.payload?.ageMonths;
                   return (
-                    <div className="rounded-lg border bg-card p-2 shadow-md text-xs">
-                      <p className="font-medium mb-1">{label}</p>
-                      {payload.map((p: any, i: number) => (
-                        <p key={i} style={{ color: p.color }}>{p.name}: <strong>{p.value != null ? p.value : "—"}</strong></p>
+                    <div className="rounded-lg border bg-card p-2.5 shadow-md text-xs max-w-[200px]">
+                      <p className="font-medium mb-1.5 text-foreground">Idade: {age}m</p>
+                      {payload.filter((p: any) => p.value != null && !['p3','p15','p85','p97'].includes(p.dataKey)).map((p: any, i: number) => (
+                        <p key={i} style={{ color: p.color }} className="font-medium">{p.name}: <strong>{typeof p.value === 'number' ? p.value.toFixed(1) : p.value}</strong></p>
                       ))}
+                      {payload.find((p: any) => p.dataKey === 'p50')?.value != null && (
+                        <p className="text-muted-foreground mt-1 border-t border-border pt-1">Mediana (P50): {payload.find((p: any) => p.dataKey === 'p50').value.toFixed(1)}</p>
+                      )}
                     </div>
                   );
                 }} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                {/* P3-P97 band (outer) */}
-                <Area type="monotone" dataKey="p97" name="P97" stroke="none" fill="hsl(var(--primary))" fillOpacity={0.05} connectNulls dot={false} activeDot={false} />
-                <Area type="monotone" dataKey="p3" name="P3" stroke="none" fill="hsl(var(--background))" fillOpacity={1} connectNulls dot={false} activeDot={false} />
-                {/* P15-P85 band (normal zone) */}
-                <Area type="monotone" dataKey="p85" name="P85" stroke="hsl(var(--primary))" strokeWidth={0.5} strokeDasharray="4 4" fill="hsl(var(--primary))" fillOpacity={0.08} connectNulls dot={false} activeDot={false} />
-                <Area type="monotone" dataKey="p15" name="P15" stroke="hsl(var(--primary))" strokeWidth={0.5} strokeDasharray="4 4" fill="hsl(var(--background))" fillOpacity={1} connectNulls dot={false} activeDot={false} />
-                {/* Median line */}
-                <Line type="monotone" dataKey="p50" name="Mediana (P50)" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />
-                {/* Patient data */}
-                <Line type="monotone" dataKey="value" name="Paciente" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }} connectNulls />
+                {/* P3-P97 outer band */}
+                <Area type="monotone" dataKey="p97" stroke="hsl(var(--primary)/0.3)" strokeWidth={0.5} fill="hsl(var(--primary))" fillOpacity={0.04} connectNulls dot={false} activeDot={false} name="P97" legendType="none" />
+                <Area type="monotone" dataKey="p3" stroke="hsl(var(--primary)/0.3)" strokeWidth={0.5} fill="hsl(var(--background))" fillOpacity={1} connectNulls dot={false} activeDot={false} name="P3" legendType="none" />
+                {/* P15-P85 normal band */}
+                <Area type="monotone" dataKey="p85" stroke="hsl(var(--primary)/0.4)" strokeWidth={0.5} strokeDasharray="4 4" fill="hsl(var(--primary))" fillOpacity={0.08} connectNulls dot={false} activeDot={false} name="P85" legendType="none" />
+                <Area type="monotone" dataKey="p15" stroke="hsl(var(--primary)/0.4)" strokeWidth={0.5} strokeDasharray="4 4" fill="hsl(var(--background))" fillOpacity={1} connectNulls dot={false} activeDot={false} name="P15" legendType="none" />
+                {/* Median */}
+                <Line type="monotone" dataKey="p50" name="Mediana (P50)" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls legendType="line" />
+                {/* Patient line */}
+                <Line type="monotone" dataKey="value" name="Paciente" stroke="hsl(var(--primary))" strokeWidth={3} dot={(props: any) => {
+                  if (props.payload?.value == null) return <></>;
+                  return (
+                    <circle cx={props.cx} cy={props.cy} r={6} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={2.5} />
+                  );
+                }} connectNulls activeDot={{ r: 8, strokeWidth: 3 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          {/* Legend explanation */}
-          <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-primary inline-block" /> Paciente</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-muted-foreground inline-block" style={{ borderTop: "1px dashed" }} /> Mediana (P50)</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-2 bg-primary/10 inline-block rounded-sm" /> Faixa P15-P85</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-2 bg-primary/5 inline-block rounded-sm" /> Faixa P3-P97</span>
+          <div className="mt-3 flex flex-wrap gap-4 text-[10px] text-muted-foreground border-t border-border pt-2">
+            <span className="flex items-center gap-1.5"><span className="w-4 h-1 bg-primary rounded-full inline-block" /> Paciente</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-muted-foreground inline-block" style={{ borderTop: "1.5px dashed" }} /> Mediana (P50)</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-3 bg-primary/10 inline-block rounded-sm border border-primary/20" /> Faixa Normal (P15-P85)</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-3 bg-primary/5 inline-block rounded-sm border border-primary/10" /> Limites (P3-P97)</span>
           </div>
         </CardContent>
       </Card>
@@ -396,48 +468,34 @@ export function ClinicalAnalytics({
 
     return (
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold flex items-center gap-2"><Baby className="h-4 w-4 text-primary" />Análise Pediátrica — Curvas de Crescimento</h3>
+        <h3 className="text-sm font-semibold flex items-center gap-2"><Baby className="h-4 w-4 text-primary" />Análise Pediátrica — Curvas de Crescimento OMS/CDC</h3>
 
-        {/* Percentile indicators */}
+        {/* Percentile + Z-score indicators */}
         {lastGrowth && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {lastGrowth.weight && weightPercentile && (
-              <div className="medical-card p-3">
-                <p className="text-[10px] text-muted-foreground">Peso — {lastGrowth.ageLabel}</p>
-                <p className="text-xl font-bold">{lastGrowth.weight}<span className="text-sm font-normal text-muted-foreground ml-1">kg</span></p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${zoneBg[weightPercentile.zone]} ${zoneColors[weightPercentile.zone]}`}>
-                    {weightPercentile.percentile}
-                  </span>
-                  <span className={`text-[10px] ${zoneColors[weightPercentile.zone]}`}>{zoneLabels[weightPercentile.zone]}</span>
-                </div>
-              </div>
-            )}
-            {lastGrowth.height && heightPercentile && (
-              <div className="medical-card p-3">
-                <p className="text-[10px] text-muted-foreground">Estatura — {lastGrowth.ageLabel}</p>
-                <p className="text-xl font-bold">{lastGrowth.height}<span className="text-sm font-normal text-muted-foreground ml-1">cm</span></p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${zoneBg[heightPercentile.zone]} ${zoneColors[heightPercentile.zone]}`}>
-                    {heightPercentile.percentile}
-                  </span>
-                  <span className={`text-[10px] ${zoneColors[heightPercentile.zone]}`}>{zoneLabels[heightPercentile.zone]}</span>
-                </div>
-              </div>
-            )}
-            {lastGrowth.bmi && bmiPercentile && (
-              <div className="medical-card p-3">
-                <p className="text-[10px] text-muted-foreground">IMC — {lastGrowth.ageLabel}</p>
-                <p className="text-xl font-bold">{lastGrowth.bmi}<span className="text-sm font-normal text-muted-foreground ml-1">kg/m²</span></p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${zoneBg[bmiPercentile.zone]} ${zoneColors[bmiPercentile.zone]}`}>
-                    {bmiPercentile.percentile}
-                  </span>
-                  <span className={`text-[10px] ${zoneColors[bmiPercentile.zone]}`}>{zoneLabels[bmiPercentile.zone]}</span>
-                </div>
-              </div>
-            )}
+            {lastGrowth.weight && <PercentileCard label="Peso" value={lastGrowth.weight} unit="kg" percentileData={weightP} ageLabel={lastGrowth.ageLabel} />}
+            {lastGrowth.height && <PercentileCard label="Estatura" value={lastGrowth.height} unit="cm" percentileData={heightP} ageLabel={lastGrowth.ageLabel} />}
+            {lastGrowth.bmi && <PercentileCard label="IMC" value={lastGrowth.bmi} unit="kg/m²" percentileData={bmiP} ageLabel={lastGrowth.ageLabel} />}
           </div>
+        )}
+
+        {/* Clinical AI Analysis */}
+        {clinicalAnalysis && (
+          <Card className="border-primary/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Brain className="h-4 w-4 text-primary" />
+                Análise Clínica Inteligente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1.5">
+                {clinicalAnalysis.map((line, i) => (
+                  <p key={i} className="text-xs text-muted-foreground">{line}</p>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {growthData.length === 0 ? (
@@ -454,6 +512,7 @@ export function ClinicalAnalytics({
               <TabsTrigger value="peso" className="text-xs h-6">Peso × Idade</TabsTrigger>
               <TabsTrigger value="altura" className="text-xs h-6">Altura × Idade</TabsTrigger>
               <TabsTrigger value="imc" className="text-xs h-6">IMC × Idade</TabsTrigger>
+              {showHC && <TabsTrigger value="pc" className="text-xs h-6">PC × Idade</TabsTrigger>}
             </TabsList>
             <TabsContent value="peso">
               <GrowthChart data={weightChartData} yLabel="Peso (kg)" title="Curva de Peso × Idade" />
@@ -464,20 +523,87 @@ export function ClinicalAnalytics({
             <TabsContent value="imc">
               <GrowthChart data={bmiChartData} yLabel="IMC (kg/m²)" title="IMC × Idade" />
             </TabsContent>
+            {showHC && (
+              <TabsContent value="pc">
+                <GrowthChart data={hcChartData} yLabel="PC (cm)" title="Perímetro Cefálico × Idade (0-36m)" />
+              </TabsContent>
+            )}
           </Tabs>
         )}
 
-        {/* Alerts */}
-        {lastGrowth && (weightPercentile?.zone === "critical-low" || weightPercentile?.zone === "critical-high" || heightPercentile?.zone === "critical-low") && (
+        {/* Growth history table with z-scores */}
+        {growthData.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2"><Ruler className="h-4 w-4 text-primary" /> Histórico de Crescimento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="text-left py-1.5 pr-2">Data</th>
+                      <th className="text-center py-1.5 px-1">Idade</th>
+                      <th className="text-center py-1.5 px-1">Peso (kg)</th>
+                      <th className="text-center py-1.5 px-1">Z Peso</th>
+                      <th className="text-center py-1.5 px-1">Altura (cm)</th>
+                      <th className="text-center py-1.5 px-1">Z Altura</th>
+                      <th className="text-center py-1.5 px-1">IMC</th>
+                      <th className="text-center py-1.5 px-1">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {growthData.map((d, i) => {
+                      const wRef = interpolateReference(d.ageMonths, weightReference[genderKey]);
+                      const hRef = interpolateReference(d.ageMonths, heightReference[genderKey]);
+                      const wZ = d.weight && wRef ? calculateZScore(d.weight, wRef) : null;
+                      const hZ = d.height && hRef ? calculateZScore(d.height, hRef) : null;
+                      const wEst = d.weight && wRef ? estimatePercentile(d.weight, wRef) : null;
+                      
+                      const zColor = (z: number | null) => {
+                        if (z == null) return "";
+                        if (z < -2 || z > 2) return "text-destructive font-bold";
+                        if (z < -1 || z > 1) return "text-warning font-medium";
+                        return "text-success";
+                      };
+                      
+                      return (
+                        <tr key={i} className="border-b border-border/50">
+                          <td className="py-1.5 pr-2 text-muted-foreground">{d.date}</td>
+                          <td className="text-center py-1.5 px-1 font-medium">{d.ageLabel}</td>
+                          <td className="text-center py-1.5 px-1">{d.weight ?? "—"}</td>
+                          <td className={`text-center py-1.5 px-1 font-mono text-[10px] ${zColor(wZ)}`}>{wZ != null ? wZ.toFixed(2) : "—"}</td>
+                          <td className="text-center py-1.5 px-1">{d.height ?? "—"}</td>
+                          <td className={`text-center py-1.5 px-1 font-mono text-[10px] ${zColor(hZ)}`}>{hZ != null ? hZ.toFixed(2) : "—"}</td>
+                          <td className="text-center py-1.5 px-1">{d.bmi ?? "—"}</td>
+                          <td className="text-center py-1.5 px-1">
+                            {wEst && (
+                              <span className={`text-[9px] px-1 py-0.5 rounded ${zoneBg[wEst.zone]} ${zoneColors[wEst.zone]}`}>
+                                {wEst.percentile}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Growth alerts */}
+        {growthAlerts.length > 0 && (
           <div className="medical-card p-3 border-destructive/30">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="h-4 w-4 text-destructive" />
               <span className="text-xs font-semibold text-destructive">Alertas de Crescimento</span>
             </div>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              {weightPercentile?.zone === "critical-low" && <p>⚠️ Peso abaixo do percentil 3 — investigar desnutrição ou patologia subjacente.</p>}
-              {weightPercentile?.zone === "critical-high" && <p>⚠️ Peso acima do percentil 97 — avaliar obesidade infantil.</p>}
-              {heightPercentile?.zone === "critical-low" && <p>⚠️ Estatura abaixo do percentil 3 — investigar baixa estatura patológica.</p>}
+            <div className="space-y-1">
+              {growthAlerts.map((alert, i) => (
+                <p key={i} className="text-xs text-muted-foreground">⚠️ {alert}</p>
+              ))}
             </div>
           </div>
         )}
@@ -485,25 +611,21 @@ export function ClinicalAnalytics({
     );
   }
 
-  // === CARDIOLOGIA VIEW ===
+  // ============= CARDIOLOGIA VIEW =============
   if (view === "cardiologia") {
     return (
       <div className="space-y-4">
         <h3 className="text-sm font-semibold flex items-center gap-2"><HeartPulse className="h-4 w-4 text-primary" />Análise Cardiológica</h3>
 
-        {/* PA + FC Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {latest?.heart_rate && <SummaryCard label="FC Atual" value={latest.heart_rate.toString()} unit="bpm" icon={Heart} trend={getTrend(latest.heart_rate, previous?.heart_rate)} classification={classifyHeartRate(latest.heart_rate, patientAgeYears)} />}
           {latest?.blood_pressure_systolic && latest?.blood_pressure_diastolic && <SummaryCard label="PA" value={`${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}`} unit="mmHg" icon={Activity} classification={classifyBloodPressure(latest.blood_pressure_systolic, latest.blood_pressure_diastolic)} />}
           {latest?.oxygen_saturation && <SummaryCard label="SpO₂" value={latest.oxygen_saturation.toString()} unit="%" icon={Droplets} classification={classifyOxygenSaturation(latest.oxygen_saturation)} />}
         </div>
 
-        {/* PA trend */}
         {vitalData.length > 1 && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Tendência Pressão Arterial</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Tendência Pressão Arterial</CardTitle></CardHeader>
             <CardContent>
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
@@ -513,21 +635,23 @@ export function ClinicalAnalytics({
                     <YAxis tick={{ fontSize: 10 }} domain={[40, 200]} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <ReferenceLine y={140} stroke="hsl(var(--destructive))" strokeDasharray="3 3" strokeOpacity={0.5} />
+                    <ReferenceLine y={90} stroke="hsl(var(--destructive))" strokeDasharray="3 3" strokeOpacity={0.3} />
                     <Area type="monotone" dataKey="systolic" name="PAS" stroke={chartColors.systolic} fill={chartColors.systolic} fillOpacity={0.1} strokeWidth={2} dot={{ r: 3 }} connectNulls />
                     <Area type="monotone" dataKey="diastolic" name="PAD" stroke={chartColors.diastolic} fill={chartColors.diastolic} fillOpacity={0.05} strokeWidth={1.5} dot={{ r: 2 }} connectNulls />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+              <div className="mt-2 flex gap-3 text-[9px] text-muted-foreground">
+                <span>— — Limite hipertensão (140/90 mmHg)</span>
+              </div>
             </CardContent>
           </Card>
         )}
 
-        {/* HR trend */}
         {vitalData.length > 1 && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Tendência Frequência Cardíaca</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Tendência Frequência Cardíaca</CardTitle></CardHeader>
             <CardContent>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
@@ -536,20 +660,22 @@ export function ClinicalAnalytics({
                     <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} domain={[40, 150]} />
                     <Tooltip content={<CustomTooltip />} />
+                    <ReferenceLine y={100} stroke="hsl(var(--warning))" strokeDasharray="3 3" strokeOpacity={0.5} />
+                    <ReferenceLine y={60} stroke="hsl(var(--warning))" strokeDasharray="3 3" strokeOpacity={0.5} />
                     <Line type="monotone" dataKey="hr" name="FC (bpm)" stroke={chartColors.hr} strokeWidth={2} dot={{ r: 3 }} connectNulls />
                   </LineChart>
                 </ResponsiveContainer>
+              </div>
+              <div className="mt-2 flex gap-3 text-[9px] text-muted-foreground">
+                <span>— — Faixa normal: 60-100 bpm</span>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* History table */}
         {vitalSigns.length > 0 && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Histórico de Registros</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Histórico de Registros</CardTitle></CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -560,18 +686,25 @@ export function ClinicalAnalytics({
                       <th className="text-center py-1.5 px-2">PAS</th>
                       <th className="text-center py-1.5 px-2">PAD</th>
                       <th className="text-center py-1.5 px-2">SpO₂</th>
+                      <th className="text-center py-1.5 px-2">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {vitalSigns.slice(0, 15).map((vs) => (
-                      <tr key={vs.id} className="border-b border-border/50">
-                        <td className="py-1.5 pr-3 text-muted-foreground">{format(parseISO(vs.recorded_at), "dd/MM HH:mm")}</td>
-                        <td className={`text-center py-1.5 px-2 font-medium ${vs.heart_rate && (vs.heart_rate < 60 || vs.heart_rate > 100) ? "text-destructive" : ""}`}>{vs.heart_rate || "-"}</td>
-                        <td className={`text-center py-1.5 px-2 font-medium ${vs.blood_pressure_systolic && vs.blood_pressure_systolic > 140 ? "text-destructive" : ""}`}>{vs.blood_pressure_systolic || "-"}</td>
-                        <td className={`text-center py-1.5 px-2 font-medium ${vs.blood_pressure_diastolic && vs.blood_pressure_diastolic > 90 ? "text-destructive" : ""}`}>{vs.blood_pressure_diastolic || "-"}</td>
-                        <td className={`text-center py-1.5 px-2 font-medium ${vs.oxygen_saturation && vs.oxygen_saturation < 95 ? "text-destructive" : ""}`}>{vs.oxygen_saturation ? `${vs.oxygen_saturation}%` : "-"}</td>
-                      </tr>
-                    ))}
+                    {vitalSigns.slice(0, 15).map((vs) => {
+                      const bpCls = vs.blood_pressure_systolic && vs.blood_pressure_diastolic ? classifyBloodPressure(vs.blood_pressure_systolic, vs.blood_pressure_diastolic) : null;
+                      return (
+                        <tr key={vs.id} className="border-b border-border/50">
+                          <td className="py-1.5 pr-3 text-muted-foreground">{format(parseISO(vs.recorded_at), "dd/MM HH:mm")}</td>
+                          <td className={`text-center py-1.5 px-2 font-medium ${vs.heart_rate && (vs.heart_rate < 60 || vs.heart_rate > 100) ? "text-destructive" : ""}`}>{vs.heart_rate || "-"}</td>
+                          <td className={`text-center py-1.5 px-2 font-medium ${vs.blood_pressure_systolic && vs.blood_pressure_systolic > 140 ? "text-destructive" : ""}`}>{vs.blood_pressure_systolic || "-"}</td>
+                          <td className={`text-center py-1.5 px-2 font-medium ${vs.blood_pressure_diastolic && vs.blood_pressure_diastolic > 90 ? "text-destructive" : ""}`}>{vs.blood_pressure_diastolic || "-"}</td>
+                          <td className={`text-center py-1.5 px-2 font-medium ${vs.oxygen_saturation && vs.oxygen_saturation < 95 ? "text-destructive" : ""}`}>{vs.oxygen_saturation ? `${vs.oxygen_saturation}%` : "-"}</td>
+                          <td className="text-center py-1.5 px-2">
+                            {bpCls && <span className={`text-[9px] px-1.5 py-0.5 rounded ${bpCls.bgColor} ${bpCls.color}`}>{bpCls.label}</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -582,13 +715,12 @@ export function ClinicalAnalytics({
     );
   }
 
-  // === UTI VIEW ===
+  // ============= UTI VIEW =============
   if (view === "uti") {
     return (
       <div className="space-y-4">
         <h3 className="text-sm font-semibold flex items-center gap-2"><HeartPulse className="h-4 w-4 text-primary" />Indicadores UTI / Paciente Crítico</h3>
 
-        {/* Critical summary */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {latest?.heart_rate && <SummaryCard label="FC" value={latest.heart_rate.toString()} unit="bpm" icon={Heart} trend={getTrend(latest.heart_rate, previous?.heart_rate)} classification={classifyHeartRate(latest.heart_rate, patientAgeYears)} />}
           {latest?.blood_pressure_systolic && latest?.blood_pressure_diastolic && <SummaryCard label="PA" value={`${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}`} unit="mmHg" icon={Activity} classification={classifyBloodPressure(latest.blood_pressure_systolic, latest.blood_pressure_diastolic)} />}
@@ -598,7 +730,6 @@ export function ClinicalAnalytics({
           {latest?.glucose && <SummaryCard label="Glicemia" value={latest.glucose.toString()} unit="mg/dL" icon={Activity} classification={classifyGlucose(latest.glucose)} />}
         </div>
 
-        {/* Scales for critical with interpretation */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {(() => {
             const gCls = latestGlasgow?.total_score != null ? classifyGlasgow(latestGlasgow.total_score) : null;
@@ -624,7 +755,6 @@ export function ClinicalAnalytics({
           })()}
         </div>
 
-        {/* Vital trends for ICU */}
         {vitalData.length > 1 && (
           <Tabs defaultValue="hemodinamico">
             <TabsList className="h-8">
@@ -665,6 +795,7 @@ export function ClinicalAnalytics({
                         <YAxis tick={{ fontSize: 10 }} />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <ReferenceLine y={95} stroke="hsl(var(--warning))" strokeDasharray="3 3" strokeOpacity={0.5} label={{ value: "SpO₂ mín", fontSize: 9 }} />
                         <Line type="monotone" dataKey="spo2" name="SpO₂ (%)" stroke={chartColors.spo2} strokeWidth={2} dot={{ r: 3 }} connectNulls />
                         <Line type="monotone" dataKey="rr" name="FR (rpm)" stroke={chartColors.rr} strokeWidth={2} dot={{ r: 3 }} connectNulls />
                       </LineChart>
@@ -685,6 +816,7 @@ export function ClinicalAnalytics({
                         <YAxis tick={{ fontSize: 10 }} />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <ReferenceLine y={37.5} stroke="hsl(var(--warning))" strokeDasharray="3 3" strokeOpacity={0.5} />
                         <Line type="monotone" dataKey="temp" name="Temp (°C)" stroke={chartColors.temp} strokeWidth={2} dot={{ r: 3 }} connectNulls />
                         <Line type="monotone" dataKey="glucose" name="Glicemia" stroke={chartColors.glucose} strokeWidth={2} dot={{ r: 3 }} connectNulls />
                       </LineChart>
@@ -696,12 +828,9 @@ export function ClinicalAnalytics({
           </Tabs>
         )}
 
-        {/* Active medications */}
         {medications.filter(m => m.status === "ativo").length > 0 && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Medicações Ativas</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Medicações Ativas</CardTitle></CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-1.5">
                 {medications.filter(m => m.status === "ativo").map((m, i) => (
@@ -715,7 +844,7 @@ export function ClinicalAnalytics({
     );
   }
 
-  // === TENDENCIAS VIEW (all vital signs individual charts) ===
+  // ============= TENDENCIAS VIEW =============
   if (view === "tendencias") {
     const charts = [
       { key: "hr", label: "Frequência Cardíaca", unit: "bpm", color: chartColors.hr },
