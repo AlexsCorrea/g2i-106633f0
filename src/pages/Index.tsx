@@ -159,6 +159,10 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
             <Megaphone className="h-4 w-4" />
             Painel de Chamadas
           </Button>
+          <Button variant="outline" onClick={() => navigate("/cme")} className="gap-2">
+            <FlaskConical className="h-4 w-4" />
+            CME
+          </Button>
         </div>
       </div>
 
