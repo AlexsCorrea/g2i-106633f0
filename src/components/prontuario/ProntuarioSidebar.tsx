@@ -4,7 +4,7 @@ import {
   FileText, Scale, ClipboardList, Shield, Users, Scissors, Zap, Link2,
   ChevronDown, ChevronRight, BedDouble, Syringe, Thermometer, FlaskConical,
   HeartPulse, Droplets, Hand, Smile, ShieldCheck, Bug, Archive, History,
-  LogOut, PanelLeftClose, PanelLeftOpen, UserCog,
+  LogOut, PanelLeftClose, PanelLeftOpen, UserCog, BarChart2, Baby, TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
