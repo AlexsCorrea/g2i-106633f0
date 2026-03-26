@@ -138,7 +138,7 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
           <h2 className="text-2xl font-bold text-foreground">Bem-vindo de volta!</h2>
           <p className="text-muted-foreground">Visão geral do sistema</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => navigate("/patients")} className="gap-2">
             <Users className="h-4 w-4" />
             Pacientes
@@ -150,6 +150,14 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
           <Button variant="outline" onClick={() => navigate("/dashboards")} className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Dashboards
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/kiosk")} className="gap-2">
+            <Monitor className="h-4 w-4" />
+            Autoatendimento
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/painel")} className="gap-2">
+            <Megaphone className="h-4 w-4" />
+            Painel de Chamadas
           </Button>
         </div>
       </div>
