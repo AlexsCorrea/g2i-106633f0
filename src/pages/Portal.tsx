@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { Ticket, CalendarCheck, ArrowLeft, Bell, BellOff, Clock, Users, Search, AlertCircle, CheckCircle2, ChevronRight, Crown, UserCheck, Smartphone, Home } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Ticket, CalendarCheck, ArrowLeft, Bell, BellOff, Clock, Users, Search, AlertCircle, CheckCircle2, ChevronRight, Crown, UserCheck, Smartphone, Home, RotateCcw, History, MapPin, Volume2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGenerateTicket, useQueueTicketById, useQueueTickets } from "@/hooks/useQueueTickets";
 
-type PortalStep = "home" | "ticket-category" | "ticket-subtype" | "tracking" | "checkin-identify" | "checkin-confirm" | "checkin-done";
+type PortalStep = "home" | "ticket-category" | "ticket-subtype" | "tracking" | "checkin-identify" | "checkin-confirm" | "checkin-update" | "checkin-done" | "history";
 
 interface TicketCategory {
   id: string;
   label: string;
   description: string;
   color: string;
+  context?: string;
   subtypes?: { id: string; label: string; description: string }[];
 }
 
@@ -37,10 +38,25 @@ interface FoundAppointment {
   patient_id: string; patient_name: string; professional_name: string | null; location: string | null;
 }
 
+interface PatientData {
+  id: string; full_name: string; phone: string | null; health_insurance: string | null;
+  health_insurance_number: string | null; updated_at: string;
+}
+
 export default function Portal() {
   const [step, setStep] = useState<PortalStep>("home");
   const [selectedCategory, setSelectedCategory] = useState<TicketCategory | null>(null);
-  const [ticketId, setTicketId] = useState<string | null>(() => localStorage.getItem("portal_ticket_id"));
+  const [ticketId, setTicketId] = useState<string | null>(() => {
+    const stored = localStorage.getItem("portal_ticket_id");
+    const storedDate = localStorage.getItem("portal_ticket_date");
+    const today = new Date().toISOString().split("T")[0];
+    if (storedDate !== today) {
+      localStorage.removeItem("portal_ticket_id");
+      localStorage.removeItem("portal_ticket_date");
+      return null;
+    }
+    return stored;
+  });
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [cpf, setCpf] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -48,16 +64,24 @@ export default function Portal() {
   const [loading, setLoading] = useState(false);
   const [appointments, setAppointments] = useState<FoundAppointment[]>([]);
   const [checkinResult, setCheckinResult] = useState<{ name: string; ticket: string; time: string } | null>(null);
+  const [patientData, setPatientData] = useState<PatientData | null>(null);
+  const [updateFields, setUpdateFields] = useState({ phone: "", insurance: "", insurance_number: "" });
+  const [todayTickets, setTodayTickets] = useState<any[]>([]);
 
   const generateTicket = useGenerateTicket();
   const { data: myTicket } = useQueueTicketById(ticketId);
   const { data: allTickets } = useQueueTickets({ queue_name: "recepcao", status: "aguardando" });
 
+  // Auto-redirect to tracking if active ticket exists
   useEffect(() => {
-    if (ticketId && myTicket && step === "home") setStep("tracking");
+    if (ticketId && myTicket && step === "home") {
+      if (myTicket.status !== "concluida" && myTicket.status !== "ausente" && myTicket.status !== "cancelada") {
+        setStep("tracking");
+      }
+    }
   }, [ticketId, myTicket]);
 
-  // Notification on call
+  // Notification + vibration on call
   useEffect(() => {
     if (myTicket?.status === "chamada") {
       if (notificationsEnabled && "Notification" in window) {
@@ -76,19 +100,37 @@ export default function Portal() {
     }
   };
 
+  // Load patient's today tickets
+  const loadTodayTickets = async (patientId: string) => {
+    const today = new Date().toISOString().split("T")[0];
+    const { data } = await supabase.from("queue_tickets").select("*")
+      .eq("patient_id", patientId)
+      .gte("created_at", `${today}T00:00:00`).lte("created_at", `${today}T23:59:59`)
+      .order("created_at", { ascending: false });
+    setTodayTickets(data || []);
+  };
+
   const handleGenerateTicket = async (type: string) => {
     await requestNotifications();
     try {
       const ticket = await generateTicket.mutateAsync({
         ticket_type: type, queue_name: "recepcao", source: "celular", notification_enabled: notificationsEnabled,
+        patient_id: patientData?.id,
       });
       setTicketId(ticket.id);
       localStorage.setItem("portal_ticket_id", ticket.id);
+      localStorage.setItem("portal_ticket_date", new Date().toISOString().split("T")[0]);
       setStep("tracking");
     } catch { /* handled */ }
   };
 
   const handleCategoryClick = (cat: TicketCategory) => {
+    // Check for active tickets
+    const activeTicket = todayTickets.find(t => ["aguardando", "chamada", "em_atendimento"].includes(t.status));
+    if (activeTicket) {
+      const confirm = window.confirm(`Você já possui a senha ${activeTicket.ticket_number} (${activeTicket.status === "aguardando" ? "Aguardando" : activeTicket.status === "chamada" ? "Chamada" : "Em atendimento"}). Deseja gerar uma nova senha?`);
+      if (!confirm) return;
+    }
     if (cat.subtypes) { setSelectedCategory(cat); setStep("ticket-subtype"); }
     else handleGenerateTicket(cat.id);
   };
@@ -98,6 +140,14 @@ export default function Portal() {
     return d.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
   };
 
+  const isOutdated = (updatedAt: string) => {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    return new Date(updatedAt) < sixMonthsAgo;
+  };
+
+  const hasMissingCritical = (p: PatientData) => !p.phone;
+
   const handleSearchAppointment = async () => {
     setError("");
     const cleanCpf = cpf.replace(/\D/g, "");
@@ -105,9 +155,27 @@ export default function Portal() {
     if (!birthDate) { setError("Informe a data de nascimento."); return; }
     setLoading(true);
     try {
-      const { data: patients } = await supabase.from("patients").select("id, full_name, birth_date").eq("cpf", cleanCpf);
-      const patient = patients?.find((p) => p.birth_date === birthDate);
+      const { data: patients } = await supabase.from("patients")
+        .select("id, full_name, birth_date, phone, health_insurance, health_insurance_number, updated_at")
+        .eq("cpf", cleanCpf);
+      const patient = patients?.find((p: any) => p.birth_date === birthDate);
       if (!patient) { setError("Paciente não encontrado."); setLoading(false); return; }
+
+      setPatientData(patient as PatientData);
+      await loadTodayTickets(patient.id);
+
+      // Check if cadastral update needed
+      if (hasMissingCritical(patient as PatientData) || isOutdated(patient.updated_at)) {
+        setUpdateFields({
+          phone: patient.phone || "",
+          insurance: (patient as any).health_insurance || "",
+          insurance_number: (patient as any).health_insurance_number || "",
+        });
+        setStep("checkin-update");
+        setLoading(false);
+        return;
+      }
+
       const today = new Date().toISOString().split("T")[0];
       const { data: appts } = await supabase.from("appointments").select("*, profiles(full_name)")
         .eq("patient_id", patient.id).gte("scheduled_at", `${today}T00:00:00`).lte("scheduled_at", `${today}T23:59:59`)
@@ -116,6 +184,32 @@ export default function Portal() {
       setAppointments(appts.map((a: any) => ({
         id: a.id, title: a.title, scheduled_at: a.scheduled_at, appointment_type: a.appointment_type,
         patient_id: patient.id, patient_name: patient.full_name,
+        professional_name: a.profiles?.full_name || null, location: a.location,
+      })));
+      setStep("checkin-confirm");
+    } catch (err: any) { setError(err.message); } finally { setLoading(false); }
+  };
+
+  const handleUpdateAndContinue = async () => {
+    if (!patientData) return;
+    if (!updateFields.phone.trim()) { setError("Telefone é obrigatório."); return; }
+    setLoading(true);
+    setError("");
+    try {
+      await supabase.from("patients").update({
+        phone: updateFields.phone,
+        health_insurance: updateFields.insurance || null,
+        health_insurance_number: updateFields.insurance_number || null,
+      }).eq("id", patientData.id);
+
+      const today = new Date().toISOString().split("T")[0];
+      const { data: appts } = await supabase.from("appointments").select("*, profiles(full_name)")
+        .eq("patient_id", patientData.id).gte("scheduled_at", `${today}T00:00:00`).lte("scheduled_at", `${today}T23:59:59`)
+        .in("status", ["agendado", "confirmado"]);
+      if (!appts?.length) { setError("Nenhum agendamento encontrado para hoje."); setLoading(false); return; }
+      setAppointments(appts.map((a: any) => ({
+        id: a.id, title: a.title, scheduled_at: a.scheduled_at, appointment_type: a.appointment_type,
+        patient_id: patientData.id, patient_name: patientData.full_name,
         professional_name: a.profiles?.full_name || null, location: a.location,
       })));
       setStep("checkin-confirm");
@@ -131,6 +225,9 @@ export default function Portal() {
         queue_name: "recepcao", source: "celular",
         checkin_data: { checkin_at: new Date().toISOString(), source: "mobile" },
       });
+      setTicketId(ticket.id);
+      localStorage.setItem("portal_ticket_id", ticket.id);
+      localStorage.setItem("portal_ticket_date", new Date().toISOString().split("T")[0]);
       setCheckinResult({
         name: appt.patient_name, ticket: ticket.ticket_number,
         time: new Date(appt.scheduled_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
@@ -141,10 +238,12 @@ export default function Portal() {
 
   const resetAll = () => {
     localStorage.removeItem("portal_ticket_id");
+    localStorage.removeItem("portal_ticket_date");
     setTicketId(null);
     setSelectedCategory(null);
     setCpf(""); setBirthDate(""); setError("");
     setAppointments([]); setCheckinResult(null);
+    setPatientData(null); setTodayTickets([]);
     setStep("home");
   };
 
@@ -152,10 +251,11 @@ export default function Portal() {
 
   const statusInfo: Record<string, { label: string; emoji: string; color: string }> = {
     aguardando: { label: "Aguardando", emoji: "⏳", color: "text-primary" },
-    chamada: { label: "Sua vez!", emoji: "🔔", color: "text-green-600" },
+    chamada: { label: "SUA VEZ!", emoji: "🔔", color: "text-green-600" },
     em_atendimento: { label: "Em atendimento", emoji: "👨‍⚕️", color: "text-blue-600" },
-    concluida: { label: "Concluída", emoji: "✅", color: "text-muted-foreground" },
+    concluida: { label: "Atendimento concluído", emoji: "✅", color: "text-muted-foreground" },
     ausente: { label: "Ausente", emoji: "❌", color: "text-destructive" },
+    cancelada: { label: "Cancelada", emoji: "🚫", color: "text-muted-foreground" },
   };
 
   const BackBtn = ({ onClick }: { onClick: () => void }) => (
@@ -167,11 +267,12 @@ export default function Portal() {
   // ── TRACKING ──
   if (step === "tracking" && myTicket) {
     const st = statusInfo[myTicket.status] || statusInfo.aguardando;
-    const isDone = myTicket.status === "concluida" || myTicket.status === "ausente";
+    const isDone = ["concluida", "ausente", "cancelada"].includes(myTicket.status);
+    const isCalled = myTicket.status === "chamada";
     return (
       <Wrapper>
         <h1 className="text-lg font-bold text-white text-center">Portal Solaris</h1>
-        <div className="bg-white rounded-3xl p-8 shadow-2xl text-center space-y-4">
+        <div className={`bg-white rounded-3xl p-8 shadow-2xl text-center space-y-4 ${isCalled ? "ring-4 ring-green-400 animate-pulse" : ""}`}>
           <p className="text-5xl">{st.emoji}</p>
           <p className={`text-sm uppercase tracking-wider font-semibold ${st.color}`}>{st.label}</p>
           <p className={`text-5xl font-black tracking-wider ${st.color}`}>{myTicket.ticket_number}</p>
@@ -181,11 +282,14 @@ export default function Portal() {
               <span className="flex items-center gap-1"><Clock className="w-4 h-4" />~{queuePosition * 5} min</span>
             </div>
           )}
-          {myTicket.status === "chamada" && (
-            <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 animate-pulse">
-              <p className="font-bold text-green-700 text-lg">Dirija-se ao atendimento!</p>
-              {myTicket.called_to && <p className="text-green-600 text-sm">Local: {myTicket.called_to}</p>}
+          {isCalled && (
+            <div className="bg-green-50 border-2 border-green-400 rounded-xl p-4">
+              <p className="font-black text-green-700 text-2xl">DIRIJA-SE AO ATENDIMENTO!</p>
+              {myTicket.called_to && <p className="text-green-600 font-medium mt-1 flex items-center justify-center gap-1"><MapPin className="w-4 h-4" />{myTicket.called_to}</p>}
             </div>
+          )}
+          {myTicket.status === "em_atendimento" && (
+            <p className="text-blue-600 font-medium text-sm">Você está sendo atendido</p>
           )}
         </div>
         <button onClick={() => setNotificationsEnabled(v => !v)} className="flex items-center justify-center gap-2 text-white/70 text-sm mx-auto">
@@ -193,8 +297,64 @@ export default function Portal() {
           {notificationsEnabled ? "Notificações ativas" : "Ativar notificações"}
         </button>
         {isDone && (
-          <button onClick={resetAll} className="w-full h-12 bg-white text-primary font-bold rounded-xl">Nova operação</button>
+          <div className="space-y-3">
+            <p className="text-white/60 text-sm text-center">Última senha: {myTicket.ticket_number} ({st.label})</p>
+            <button onClick={() => { resetAll(); setStep("ticket-category"); }}
+              className="w-full h-12 bg-white text-primary font-bold rounded-xl flex items-center justify-center gap-2">
+              <Ticket className="w-5 h-5" />Gerar Nova Senha
+            </button>
+            <button onClick={resetAll}
+              className="w-full h-12 bg-white/10 border border-white/30 text-white font-medium rounded-xl flex items-center justify-center gap-2">
+              <Home className="w-5 h-5" />Voltar ao Início
+            </button>
+          </div>
         )}
+      </Wrapper>
+    );
+  }
+
+  // ── CHECKIN UPDATE ──
+  if (step === "checkin-update") {
+    return (
+      <Wrapper>
+        <BackBtn onClick={() => setStep("checkin-identify")} />
+        <div className="text-center space-y-2">
+          <AlertCircle className="w-10 h-10 text-yellow-300 mx-auto" />
+          <h1 className="text-xl font-bold text-white">Dados desatualizados</h1>
+          <p className="text-white/70 text-sm">Atualize seus dados para continuar</p>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-lg space-y-4">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-foreground">Telefone *</label>
+            <input type="tel" inputMode="tel" value={updateFields.phone}
+              onChange={e => setUpdateFields(f => ({ ...f, phone: e.target.value }))}
+              placeholder="(11) 99999-9999"
+              className="w-full h-12 text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-foreground">Convênio</label>
+            <input type="text" value={updateFields.insurance}
+              onChange={e => setUpdateFields(f => ({ ...f, insurance: e.target.value }))}
+              placeholder="Nome do convênio"
+              className="w-full h-12 text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-foreground">Nº Carteirinha</label>
+            <input type="text" value={updateFields.insurance_number}
+              onChange={e => setUpdateFields(f => ({ ...f, insurance_number: e.target.value }))}
+              placeholder="Número do plano"
+              className="w-full h-12 text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+          {error && (
+            <div className="flex items-center gap-2 text-destructive bg-red-50 rounded-xl p-3">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" /><span className="text-sm">{error}</span>
+            </div>
+          )}
+          <button onClick={handleUpdateAndContinue} disabled={loading}
+            className="w-full h-12 bg-primary text-white font-bold rounded-xl active:scale-[0.98] disabled:opacity-50">
+            {loading ? "Salvando..." : "Atualizar e Continuar"}
+          </button>
+        </div>
       </Wrapper>
     );
   }
@@ -212,9 +372,14 @@ export default function Portal() {
           <p className="text-4xl font-black text-primary">{checkinResult.ticket}</p>
           <p className="text-muted-foreground text-sm flex items-center justify-center gap-1"><Clock className="w-4 h-4" />{checkinResult.time}</p>
         </div>
-        <button onClick={resetAll} className="w-full h-12 bg-white text-primary font-bold rounded-xl flex items-center justify-center gap-2">
-          <Home className="w-5 h-5" />Voltar ao início
-        </button>
+        <div className="space-y-3">
+          <button onClick={() => setStep("tracking")} className="w-full h-12 bg-white text-primary font-bold rounded-xl flex items-center justify-center gap-2">
+            <Clock className="w-5 h-5" />Acompanhar Fila
+          </button>
+          <button onClick={resetAll} className="w-full h-12 bg-white/10 border border-white/30 text-white font-medium rounded-xl flex items-center justify-center gap-2">
+            <Home className="w-5 h-5" />Voltar ao início
+          </button>
+        </div>
       </Wrapper>
     );
   }
