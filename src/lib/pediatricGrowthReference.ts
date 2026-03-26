@@ -359,8 +359,8 @@ export function detectGrowthAlerts(
     const curr = sorted[i];
 
     if (prev.weight && curr.weight) {
-      const prevRef = interpolateReference(prev.ageMonths, refData.weight ?? weightReference[genderKey]);
-      const currRef = interpolateReference(curr.ageMonths, refData.weight ?? weightReference[genderKey]);
+      const prevRef = interpolateReference(prev.ageMonths, weightReference[genderKey]);
+      const currRef = interpolateReference(curr.ageMonths, weightReference[genderKey]);
       if (prevRef && currRef) {
         const prevEst = estimatePercentile(prev.weight, prevRef);
         const currEst = estimatePercentile(curr.weight, currRef);
