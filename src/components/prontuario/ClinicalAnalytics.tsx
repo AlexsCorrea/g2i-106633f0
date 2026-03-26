@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Activity, Heart, Thermometer, Droplets, Brain, TrendingUp, TrendingDown,
-  AlertTriangle, Baby, Stethoscope, HeartPulse, BarChart3, Ruler,
+  AlertTriangle, Baby, Stethoscope, HeartPulse, BarChart3, Ruler, Gauge,
 } from "lucide-react";
 import { format, parseISO, differenceInMonths, differenceInYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -55,6 +55,13 @@ const chartColors = {
   hc: "hsl(280, 60%, 55%)",
 };
 
+// Extract head circumference from notes field (stored as "PC: XXcm")
+function extractHCFromNotes(notes: string | null): number | null {
+  if (!notes) return null;
+  const match = notes.match(/PC:\s*([\d.]+)\s*cm/i);
+  return match ? parseFloat(match[1]) : null;
+}
+
 export function ClinicalAnalytics({
   view, vitalSigns = [], evolutionNotes = [], patientBirthDate,
   patientGender, latestGlasgow, latestBraden, latestMorse,
@@ -78,7 +85,7 @@ export function ClinicalAnalytics({
     [vitalSigns]
   );
 
-  // Pediatric growth data
+  // Pediatric growth data with HC extraction
   const growthData = useMemo(() => {
     if (!patientBirthDate) return [];
     const birthDate = parseISO(patientBirthDate);
@@ -91,7 +98,11 @@ export function ClinicalAnalytics({
         const w = vs.weight ? Number(vs.weight) : null;
         const h = vs.height ? Number(vs.height) : null;
         const bmi = w && h && h > 0 ? Number((w / ((h / 100) ** 2)).toFixed(1)) : null;
-        return { ageMonths, ageLabel: `${ageMonths}m`, weight: w, height: h, bmi, date: format(recordDate, "dd/MM/yyyy") };
+        const hc = extractHCFromNotes(vs.notes);
+        return {
+          ageMonths, ageLabel: `${ageMonths}m`, weight: w, height: h, bmi, hc,
+          date: format(recordDate, "dd/MM/yyyy"),
+        };
       });
   }, [vitalSigns, patientBirthDate]);
 
@@ -111,7 +122,7 @@ export function ClinicalAnalytics({
   const bmiRefCurve = useMemo(() => buildReferenceCurve(bmiReference[genderKey], Math.max(24, ageRange.min), ageRange.max, 1), [genderKey, ageRange]);
   const hcRefCurve = useMemo(() => buildReferenceCurve(headCircumferenceReference[genderKey], ageRange.min, Math.min(36, ageRange.max), 1), [genderKey, ageRange]);
 
-  // Pre-compute pediatric data at top level (hooks can't be inside conditionals)
+  // Pre-compute pediatric data
   const lastGrowth = growthData.length > 0 ? growthData[growthData.length - 1] : null;
   const calcPercentileData = (value: number | null | undefined, ageMonths: number, refSet: GrowthReferencePoint[]) => {
     if (!value) return null;
@@ -122,6 +133,7 @@ export function ClinicalAnalytics({
   const weightP = lastGrowth ? calcPercentileData(lastGrowth.weight, lastGrowth.ageMonths, weightReference[genderKey]) : null;
   const heightP = lastGrowth ? calcPercentileData(lastGrowth.height, lastGrowth.ageMonths, heightReference[genderKey]) : null;
   const bmiP = lastGrowth?.bmi ? calcPercentileData(lastGrowth.bmi, lastGrowth.ageMonths, bmiReference[genderKey]) : null;
+  const hcP = lastGrowth?.hc ? calcPercentileData(lastGrowth.hc, lastGrowth.ageMonths, headCircumferenceReference[genderKey]) : null;
 
   const growthAlerts = useMemo(() =>
     detectGrowthAlerts(
@@ -132,11 +144,36 @@ export function ClinicalAnalytics({
     [growthData, genderKey]
   );
 
+  // Growth velocity calculation
+  const growthVelocity = useMemo(() => {
+    if (growthData.length < 2) return null;
+    const sorted = [...growthData].sort((a, b) => a.ageMonths - b.ageMonths);
+    const velocities: { period: string; heightVelocity: number | null; weightVelocity: number | null; ageMonths: number }[] = [];
+    
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1];
+      const curr = sorted[i];
+      const monthsDiff = curr.ageMonths - prev.ageMonths;
+      if (monthsDiff <= 0) continue;
+      
+      const hVel = prev.height && curr.height ? ((curr.height - prev.height) / monthsDiff) * 12 : null;
+      const wVel = prev.weight && curr.weight ? ((curr.weight - prev.weight) / monthsDiff) * 12 : null;
+      
+      velocities.push({
+        period: `${prev.ageMonths}m → ${curr.ageMonths}m`,
+        heightVelocity: hVel ? Number(hVel.toFixed(1)) : null,
+        weightVelocity: wVel ? Number(wVel.toFixed(2)) : null,
+        ageMonths: curr.ageMonths,
+      });
+    }
+    return velocities;
+  }, [growthData]);
+
   const clinicalAnalysis = useMemo(() => {
     if (!lastGrowth) return null;
     const lines: string[] = [];
     if (weightP) {
-      const zStr = weightP.zScore != null ? ` (Z-score: ${weightP.zScore.toFixed(2)}, P${weightP.exactPercentile?.toFixed(0)})` : "";
+      const zStr = weightP.zScore != null ? ` (Z: ${weightP.zScore.toFixed(2)}, P${weightP.exactPercentile?.toFixed(0)})` : "";
       if (weightP.zone === "normal") lines.push(`✅ Peso adequado para idade${zStr}`);
       else if (weightP.zone === "low") lines.push(`⚠️ Peso na faixa P3-P15 — acompanhar evolução ponderal${zStr}`);
       else if (weightP.zone === "critical-low") lines.push(`🔴 Peso abaixo do P3 — investigar desnutrição${zStr}`);
@@ -144,17 +181,40 @@ export function ClinicalAnalytics({
       else if (weightP.zone === "critical-high") lines.push(`🔴 Peso acima do P97 — risco de obesidade infantil${zStr}`);
     }
     if (heightP) {
-      const zStr = heightP.zScore != null ? ` (Z-score: ${heightP.zScore.toFixed(2)}, P${heightP.exactPercentile?.toFixed(0)})` : "";
+      const zStr = heightP.zScore != null ? ` (Z: ${heightP.zScore.toFixed(2)}, P${heightP.exactPercentile?.toFixed(0)})` : "";
       if (heightP.zone === "normal") lines.push(`✅ Estatura adequada para idade${zStr}`);
       else if (heightP.zone === "critical-low") lines.push(`🔴 Baixa estatura — investigar causas${zStr}`);
       else if (heightP.zone === "low") lines.push(`⚠️ Estatura abaixo do esperado${zStr}`);
     }
     if (bmiP) {
-      const zStr = bmiP.zScore != null ? ` (Z-score: ${bmiP.zScore.toFixed(2)}, P${bmiP.exactPercentile?.toFixed(0)})` : "";
+      const zStr = bmiP.zScore != null ? ` (Z: ${bmiP.zScore.toFixed(2)}, P${bmiP.exactPercentile?.toFixed(0)})` : "";
       if (bmiP.zone === "normal") lines.push(`✅ IMC dentro da normalidade${zStr}`);
       else if (bmiP.zone === "critical-high") lines.push(`🔴 IMC compatível com obesidade${zStr}`);
       else if (bmiP.zone === "high") lines.push(`⚠️ IMC indicando sobrepeso${zStr}`);
       else if (bmiP.zone === "critical-low") lines.push(`🔴 IMC indicando magreza acentuada${zStr}`);
+    }
+    if (hcP) {
+      const zStr = hcP.zScore != null ? ` (Z: ${hcP.zScore.toFixed(2)}, P${hcP.exactPercentile?.toFixed(0)})` : "";
+      if (hcP.zone === "normal") lines.push(`✅ Perímetro cefálico adequado${zStr}`);
+      else if (hcP.zone === "critical-low") lines.push(`🔴 Microcefalia — investigar${zStr}`);
+      else if (hcP.zone === "critical-high") lines.push(`🔴 Macrocefalia — investigar${zStr}`);
+    }
+    // Growth velocity analysis
+    if (growthVelocity && growthVelocity.length > 0) {
+      const lastVel = growthVelocity[growthVelocity.length - 1];
+      if (lastVel.heightVelocity != null) {
+        const ageM = lastVel.ageMonths;
+        let expected = 25; // cm/year first year
+        if (ageM > 12 && ageM <= 36) expected = 10;
+        else if (ageM > 36 && ageM <= 120) expected = 6;
+        else if (ageM > 120) expected = 5;
+        
+        if (lastVel.heightVelocity < expected * 0.5) {
+          lines.push(`📉 Velocidade de crescimento reduzida: ${lastVel.heightVelocity} cm/ano (esperado ~${expected} cm/ano)`);
+        } else {
+          lines.push(`📈 Velocidade de crescimento: ${lastVel.heightVelocity} cm/ano`);
+        }
+      }
     }
     if (growthData.length >= 3) {
       const recent = growthData.slice(-3);
@@ -162,7 +222,7 @@ export function ClinicalAnalytics({
       if (allGrowing) lines.push("📈 Tendência de ganho ponderal contínuo nos últimos registros");
     }
     return lines.length > 0 ? lines : null;
-  }, [lastGrowth, weightP, heightP, bmiP, growthData]);
+  }, [lastGrowth, weightP, heightP, bmiP, hcP, growthData, growthVelocity]);
 
   // Summary indicators
   const latest = vitalSigns[0];
@@ -332,22 +392,31 @@ export function ClinicalAnalytics({
   // ============= PEDIATRIA VIEW =============
   if (view === "pediatria") {
     // Merge patient data with reference curves
-    const mergeWithRef = (patientData: typeof growthData, refCurve: GrowthReferencePoint[], valueKey: "weight" | "height" | "bmi") => {
+    const mergeWithRef = (patientData: typeof growthData, refCurve: GrowthReferencePoint[], valueKey: "weight" | "height" | "bmi" | "hc") => {
       const refMap = new Map(refCurve.map(r => [r.ageMonths, r]));
       const patMap = new Map(patientData.filter(d => d[valueKey] != null).map(d => [d.ageMonths, d[valueKey] as number]));
       const allAges = [...new Set([...refMap.keys(), ...patMap.keys()])].sort((a, b) => a - b);
       return allAges.map(age => {
         const ref = refMap.get(age) || interpolateReference(age, refCurve);
         const patValue = patMap.get(age) ?? null;
+        // Calculate z-score and percentile for patient data points
+        let zScore: number | null = null;
+        let pctile: number | null = null;
+        if (patValue != null && ref) {
+          zScore = calculateZScore(patValue, ref);
+          pctile = zScore != null ? zScoreToPercentile(zScore) : null;
+        }
         return {
           ageMonths: age,
-          ageLabel: age % 6 === 0 ? `${age}m` : "",
+          ageLabel: `${age}m`,
           value: patValue,
           p3: ref?.p3 ?? null,
           p15: ref?.p15 ?? null,
           p50: ref?.p50 ?? null,
           p85: ref?.p85 ?? null,
           p97: ref?.p97 ?? null,
+          zScore,
+          percentile: pctile,
         };
       });
     };
@@ -356,23 +425,9 @@ export function ClinicalAnalytics({
     const heightChartData = mergeWithRef(growthData, heightRefCurve, "height");
     const bmiChartData = mergeWithRef(growthData, bmiRefCurve, "bmi");
     
-    // Head circumference data (only for 0-36 months)
+    // Head circumference data with patient values
     const showHC = ageRange.max <= 42;
-    const hcChartData = showHC ? (() => {
-      const refMap = new Map(hcRefCurve.map(r => [r.ageMonths, r]));
-      const allAges = [...new Set([...refMap.keys()])].sort((a, b) => a - b);
-      return allAges.map(age => {
-        const ref = refMap.get(age) || interpolateReference(age, hcRefCurve);
-        return {
-          ageMonths: age,
-          ageLabel: age % 3 === 0 ? `${age}m` : "",
-          value: null as number | null,
-          p3: ref?.p3 ?? null, p15: ref?.p15 ?? null, p50: ref?.p50 ?? null, p85: ref?.p85 ?? null, p97: ref?.p97 ?? null,
-        };
-      });
-    })() : [];
-
-    // (percentile data and alerts already computed at top level)
+    const hcChartData = showHC ? mergeWithRef(growthData, hcRefCurve, "hc") : [];
 
     const zoneColors: Record<string, string> = {
       "critical-low": "text-destructive", "low": "text-warning", "normal": "text-success", "high": "text-warning", "critical-high": "text-destructive",
@@ -384,104 +439,199 @@ export function ClinicalAnalytics({
       "critical-low": "Muito abaixo (< P3)", "low": "Abaixo (P3-P15)", "normal": "Adequado (P15-P85)", "high": "Acima (P85-P97)", "critical-high": "Muito acima (> P97)",
     };
 
-    const PercentileCard = ({ label, value, unit, percentileData, ageLabel }: {
-      label: string; value: number; unit: string; percentileData: ReturnType<typeof estimatePercentile> | null; ageLabel: string;
+    const PercentileCard = ({ label, value, unit, percentileData, ageLabel, icon: Icon }: {
+      label: string; value: number; unit: string; percentileData: ReturnType<typeof estimatePercentile> | null; ageLabel: string; icon?: React.ElementType;
     }) => {
       if (!percentileData) return null;
+      const IconComp = Icon || Ruler;
       return (
         <div className="medical-card p-3">
+          <div className="flex items-center justify-between mb-1">
+            <IconComp className="h-4 w-4 text-muted-foreground" />
+            <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${zoneBg[percentileData.zone]} ${zoneColors[percentileData.zone]}`}>
+              {zoneLabels[percentileData.zone]}
+            </span>
+          </div>
           <p className="text-[10px] text-muted-foreground">{label} — {ageLabel}</p>
           <p className="text-xl font-bold">{value}<span className="text-sm font-normal text-muted-foreground ml-1">{unit}</span></p>
-          <div className="flex flex-col gap-1 mt-1">
-            <div className="flex items-center gap-2">
-              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${zoneBg[percentileData.zone]} ${zoneColors[percentileData.zone]}`}>
-                {percentileData.percentile}
-              </span>
-              <span className={`text-[10px] ${zoneColors[percentileData.zone]}`}>{zoneLabels[percentileData.zone]}</span>
-            </div>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${zoneBg[percentileData.zone]} ${zoneColors[percentileData.zone]}`}>
+              {percentileData.percentile}
+            </span>
             {percentileData.zScore != null && (
-              <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
-                <span className="font-mono bg-muted px-1 rounded">Z: {percentileData.zScore.toFixed(2)}</span>
-                <span>Percentil: {percentileData.exactPercentile?.toFixed(1)}%</span>
-              </div>
+              <span className="text-[9px] text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+                Z: {percentileData.zScore.toFixed(2)} | P{percentileData.exactPercentile?.toFixed(1)}
+              </span>
             )}
           </div>
         </div>
       );
     };
 
-    const GrowthChart = ({ data, yLabel, title }: { data: any[]; yLabel: string; title: string }) => (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{title}</CardTitle>
-          <p className="text-[10px] text-muted-foreground">Referência OMS/CDC — Sexo {gender === "M" ? "Masculino" : "Feminino"}</p>
-        </CardHeader>
-        <CardContent>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data} margin={{ top: 5, right: 10, left: 5, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="ageLabel" tick={{ fontSize: 9 }} interval="preserveStartEnd" label={{ value: "Idade (meses)", position: "insideBottom", offset: -10, fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 9 }} label={{ value: yLabel, angle: -90, position: "insideLeft", offset: 10, fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                <Tooltip content={({ active, payload, label }: any) => {
-                  if (!active || !payload?.length) return null;
-                  const age = payload[0]?.payload?.ageMonths;
-                  return (
-                    <div className="rounded-lg border bg-card p-2.5 shadow-md text-xs max-w-[200px]">
-                      <p className="font-medium mb-1.5 text-foreground">Idade: {age}m</p>
-                      {payload.filter((p: any) => p.value != null && !['p3','p15','p85','p97'].includes(p.dataKey)).map((p: any, i: number) => (
-                        <p key={i} style={{ color: p.color }} className="font-medium">{p.name}: <strong>{typeof p.value === 'number' ? p.value.toFixed(1) : p.value}</strong></p>
-                      ))}
-                      {payload.find((p: any) => p.dataKey === 'p50')?.value != null && (
-                        <p className="text-muted-foreground mt-1 border-t border-border pt-1">Mediana (P50): {payload.find((p: any) => p.dataKey === 'p50').value.toFixed(1)}</p>
-                      )}
-                    </div>
-                  );
-                }} />
-                {/* P3-P97 outer band */}
-                <Area type="monotone" dataKey="p97" stroke="hsl(var(--primary)/0.3)" strokeWidth={0.5} fill="hsl(var(--primary))" fillOpacity={0.04} connectNulls dot={false} activeDot={false} name="P97" legendType="none" />
-                <Area type="monotone" dataKey="p3" stroke="hsl(var(--primary)/0.3)" strokeWidth={0.5} fill="hsl(var(--background))" fillOpacity={1} connectNulls dot={false} activeDot={false} name="P3" legendType="none" />
-                {/* P15-P85 normal band */}
-                <Area type="monotone" dataKey="p85" stroke="hsl(var(--primary)/0.4)" strokeWidth={0.5} strokeDasharray="4 4" fill="hsl(var(--primary))" fillOpacity={0.08} connectNulls dot={false} activeDot={false} name="P85" legendType="none" />
-                <Area type="monotone" dataKey="p15" stroke="hsl(var(--primary)/0.4)" strokeWidth={0.5} strokeDasharray="4 4" fill="hsl(var(--background))" fillOpacity={1} connectNulls dot={false} activeDot={false} name="P15" legendType="none" />
-                {/* Median */}
-                <Line type="monotone" dataKey="p50" name="Mediana (P50)" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls legendType="line" />
-                {/* Patient line */}
-                <Line type="monotone" dataKey="value" name="Paciente" stroke="hsl(var(--primary))" strokeWidth={3} dot={(props: any) => {
-                  if (props.payload?.value == null) return <></>;
-                  return (
-                    <circle cx={props.cx} cy={props.cy} r={6} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={2.5} />
-                  );
-                }} connectNulls activeDot={{ r: 8, strokeWidth: 3 }} />
-              </AreaChart>
-            </ResponsiveContainer>
+    // Enhanced growth chart tooltip with z-score
+    const GrowthTooltip = ({ active, payload }: any) => {
+      if (!active || !payload?.length) return null;
+      const data = payload[0]?.payload;
+      if (!data) return null;
+      const hasValue = data.value != null;
+      
+      return (
+        <div className="rounded-lg border-2 border-primary/20 bg-card p-3 shadow-lg text-xs min-w-[180px]">
+          <p className="font-bold text-foreground mb-2 border-b border-border pb-1.5">
+            Idade: {data.ageMonths} meses
+          </p>
+          {hasValue && (
+            <div className="mb-2 pb-2 border-b border-border">
+              <p className="text-primary font-bold text-sm">
+                Paciente: {data.value?.toFixed(1)}
+              </p>
+              {data.zScore != null && (
+                <div className="flex gap-2 mt-1">
+                  <span className="font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px]">
+                    Z: {data.zScore.toFixed(2)}
+                  </span>
+                  <span className="bg-muted px-1.5 py-0.5 rounded text-[10px]">
+                    P{data.percentile?.toFixed(1)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="space-y-0.5 text-muted-foreground">
+            {data.p97 != null && <p>P97: {data.p97.toFixed(1)}</p>}
+            {data.p85 != null && <p>P85: {data.p85.toFixed(1)}</p>}
+            {data.p50 != null && <p className="font-medium text-foreground">P50: {data.p50.toFixed(1)}</p>}
+            {data.p15 != null && <p>P15: {data.p15.toFixed(1)}</p>}
+            {data.p3 != null && <p>P3: {data.p3.toFixed(1)}</p>}
           </div>
-          <div className="mt-3 flex flex-wrap gap-4 text-[10px] text-muted-foreground border-t border-border pt-2">
-            <span className="flex items-center gap-1.5"><span className="w-4 h-1 bg-primary rounded-full inline-block" /> Paciente</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-muted-foreground inline-block" style={{ borderTop: "1.5px dashed" }} /> Mediana (P50)</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-3 bg-primary/10 inline-block rounded-sm border border-primary/20" /> Faixa Normal (P15-P85)</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-3 bg-primary/5 inline-block rounded-sm border border-primary/10" /> Limites (P3-P97)</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
+        </div>
+      );
+    };
+
+    const GrowthChart = ({ data, yLabel, title }: { data: any[]; yLabel: string; title: string }) => {
+      // Filter tick labels to avoid crowding
+      const tickInterval = Math.max(1, Math.floor(data.length / 15));
+      
+      return (
+        <Card className="border-primary/10">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">{title}</CardTitle>
+              <Badge variant="outline" className="text-[9px]">
+                Ref. OMS/CDC — {gender === "M" ? "♂ Masculino" : "♀ Feminino"}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data} margin={{ top: 10, right: 15, left: 5, bottom: 25 }}>
+                  <defs>
+                    <linearGradient id="normalBand" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.15} />
+                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.05} />
+                    </linearGradient>
+                    <linearGradient id="outerBand" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.08} />
+                      <stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                  <XAxis 
+                    dataKey="ageMonths" 
+                    tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} 
+                    tickFormatter={(v) => `${v}m`}
+                    interval={tickInterval}
+                    label={{ value: "Idade (meses)", position: "insideBottom", offset: -15, fontSize: 10, fill: "hsl(var(--muted-foreground))" }} 
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} 
+                    label={{ value: yLabel, angle: -90, position: "insideLeft", offset: 10, fontSize: 10, fill: "hsl(var(--muted-foreground))" }} 
+                  />
+                  <Tooltip content={<GrowthTooltip />} />
+                  
+                  {/* P3-P97 outer band */}
+                  <Area type="monotone" dataKey="p97" stroke="hsl(var(--muted-foreground))" strokeWidth={0.8} strokeDasharray="2 4" fill="url(#outerBand)" connectNulls dot={false} activeDot={false} name="P97" legendType="none" />
+                  <Area type="monotone" dataKey="p3" stroke="hsl(var(--muted-foreground))" strokeWidth={0.8} strokeDasharray="2 4" fill="hsl(var(--background))" fillOpacity={1} connectNulls dot={false} activeDot={false} name="P3" legendType="none" />
+                  
+                  {/* P15-P85 normal band */}
+                  <Area type="monotone" dataKey="p85" stroke="hsl(var(--primary))" strokeWidth={0.8} strokeOpacity={0.4} fill="url(#normalBand)" connectNulls dot={false} activeDot={false} name="P85" legendType="none" />
+                  <Area type="monotone" dataKey="p15" stroke="hsl(var(--primary))" strokeWidth={0.8} strokeOpacity={0.4} fill="hsl(var(--background))" fillOpacity={1} connectNulls dot={false} activeDot={false} name="P15" legendType="none" />
+                  
+                  {/* Median P50 */}
+                  <Line type="monotone" dataKey="p50" name="Mediana (P50)" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls legendType="line" />
+                  
+                  {/* Patient line - PROMINENT */}
+                  <Line 
+                    type="monotone" 
+                    dataKey="value" 
+                    name="Paciente" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={3.5} 
+                    dot={(props: any) => {
+                      if (props.payload?.value == null) return <></>;
+                      return (
+                        <g>
+                          <circle cx={props.cx} cy={props.cy} r={8} fill="hsl(var(--primary))" fillOpacity={0.15} />
+                          <circle cx={props.cx} cy={props.cy} r={5} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={2.5} />
+                        </g>
+                      );
+                    }} 
+                    connectNulls 
+                    activeDot={{ r: 9, strokeWidth: 3, stroke: "hsl(var(--primary))", fill: "hsl(var(--background))" }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Custom legend */}
+            <div className="mt-3 flex flex-wrap gap-5 text-[10px] text-muted-foreground border-t border-border pt-3">
+              <span className="flex items-center gap-2">
+                <span className="w-5 h-1 bg-primary rounded-full inline-block" style={{ boxShadow: '0 0 4px hsl(var(--primary))' }} />
+                <span className="font-medium text-foreground">Paciente</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-5 h-0.5 bg-muted-foreground inline-block" style={{ borderTop: "1.5px dashed hsl(var(--muted-foreground))" }} />
+                Mediana (P50)
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-5 h-4 inline-block rounded-sm" style={{ background: 'linear-gradient(180deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))' }} />
+                Normal (P15-P85)
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-5 h-4 inline-block rounded-sm" style={{ background: 'hsl(var(--muted-foreground) / 0.06)', border: '1px dashed hsl(var(--muted-foreground) / 0.3)' }} />
+                Limites (P3-P97)
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    };
 
     return (
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold flex items-center gap-2"><Baby className="h-4 w-4 text-primary" />Análise Pediátrica — Curvas de Crescimento OMS/CDC</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Baby className="h-4 w-4 text-primary" />
+            Análise Pediátrica — Curvas de Crescimento OMS/CDC
+          </h3>
+          <Badge variant="secondary" className="text-[10px]">
+            {gender === "M" ? "♂ Masculino" : "♀ Feminino"}
+          </Badge>
+        </div>
 
         {/* Percentile + Z-score indicators */}
         {lastGrowth && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {lastGrowth.weight && <PercentileCard label="Peso" value={lastGrowth.weight} unit="kg" percentileData={weightP} ageLabel={lastGrowth.ageLabel} />}
             {lastGrowth.height && <PercentileCard label="Estatura" value={lastGrowth.height} unit="cm" percentileData={heightP} ageLabel={lastGrowth.ageLabel} />}
             {lastGrowth.bmi && <PercentileCard label="IMC" value={lastGrowth.bmi} unit="kg/m²" percentileData={bmiP} ageLabel={lastGrowth.ageLabel} />}
+            {lastGrowth.hc && <PercentileCard label="Per. Cefálico" value={lastGrowth.hc} unit="cm" percentileData={hcP} ageLabel={lastGrowth.ageLabel} icon={Brain} />}
           </div>
         )}
 
         {/* Clinical AI Analysis */}
         {clinicalAnalysis && (
-          <Card className="border-primary/20">
+          <Card className="border-primary/20 bg-primary/[0.02]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Brain className="h-4 w-4 text-primary" />
@@ -491,7 +641,7 @@ export function ClinicalAnalytics({
             <CardContent>
               <div className="space-y-1.5">
                 {clinicalAnalysis.map((line, i) => (
-                  <p key={i} className="text-xs text-muted-foreground">{line}</p>
+                  <p key={i} className="text-xs">{line}</p>
                 ))}
               </div>
             </CardContent>
@@ -513,6 +663,7 @@ export function ClinicalAnalytics({
               <TabsTrigger value="altura" className="text-xs h-6">Altura × Idade</TabsTrigger>
               <TabsTrigger value="imc" className="text-xs h-6">IMC × Idade</TabsTrigger>
               {showHC && <TabsTrigger value="pc" className="text-xs h-6">PC × Idade</TabsTrigger>}
+              <TabsTrigger value="velocidade" className="text-xs h-6">Velocidade</TabsTrigger>
             </TabsList>
             <TabsContent value="peso">
               <GrowthChart data={weightChartData} yLabel="Peso (kg)" title="Curva de Peso × Idade" />
@@ -528,6 +679,67 @@ export function ClinicalAnalytics({
                 <GrowthChart data={hcChartData} yLabel="PC (cm)" title="Perímetro Cefálico × Idade (0-36m)" />
               </TabsContent>
             )}
+            <TabsContent value="velocidade">
+              <Card className="border-primary/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Gauge className="h-4 w-4 text-primary" />
+                    Velocidade de Crescimento
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {growthVelocity && growthVelocity.length > 0 ? (
+                    <>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={growthVelocity} margin={{ top: 5, right: 10, left: 5, bottom: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                            <XAxis dataKey="period" tick={{ fontSize: 8 }} angle={-20} textAnchor="end" />
+                            <YAxis tick={{ fontSize: 9 }} label={{ value: "cm/ano", angle: -90, position: "insideLeft", fontSize: 10 }} />
+                            <Tooltip content={({ active, payload }: any) => {
+                              if (!active || !payload?.length) return null;
+                              const d = payload[0]?.payload;
+                              return (
+                                <div className="rounded-lg border bg-card p-2.5 shadow-md text-xs">
+                                  <p className="font-medium mb-1">{d?.period}</p>
+                                  {d?.heightVelocity != null && <p className="text-primary">Estatura: <strong>{d.heightVelocity} cm/ano</strong></p>}
+                                  {d?.weightVelocity != null && <p className="text-success">Peso: <strong>{d.weightVelocity} kg/ano</strong></p>}
+                                </div>
+                              );
+                            }} />
+                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                            <Bar dataKey="heightVelocity" name="Estatura (cm/ano)" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="weightVelocity" name="Peso (kg/ano)" fill="hsl(150, 60%, 45%)" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="mt-3 overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-border text-muted-foreground">
+                              <th className="text-left py-1.5 pr-2">Período</th>
+                              <th className="text-center py-1.5 px-2">Vel. Estatura</th>
+                              <th className="text-center py-1.5 px-2">Vel. Peso</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {growthVelocity.map((v, i) => (
+                              <tr key={i} className="border-b border-border/50">
+                                <td className="py-1.5 pr-2 text-muted-foreground">{v.period}</td>
+                                <td className="text-center py-1.5 px-2 font-medium">{v.heightVelocity != null ? `${v.heightVelocity} cm/ano` : "—"}</td>
+                                <td className="text-center py-1.5 px-2 font-medium">{v.weightVelocity != null ? `${v.weightVelocity} kg/ano` : "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">Mínimo de 2 registros para calcular velocidade de crescimento.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         )}
 
@@ -544,11 +756,12 @@ export function ClinicalAnalytics({
                     <tr className="border-b border-border text-muted-foreground">
                       <th className="text-left py-1.5 pr-2">Data</th>
                       <th className="text-center py-1.5 px-1">Idade</th>
-                      <th className="text-center py-1.5 px-1">Peso (kg)</th>
+                      <th className="text-center py-1.5 px-1">Peso</th>
                       <th className="text-center py-1.5 px-1">Z Peso</th>
-                      <th className="text-center py-1.5 px-1">Altura (cm)</th>
+                      <th className="text-center py-1.5 px-1">Altura</th>
                       <th className="text-center py-1.5 px-1">Z Altura</th>
                       <th className="text-center py-1.5 px-1">IMC</th>
+                      <th className="text-center py-1.5 px-1">PC</th>
                       <th className="text-center py-1.5 px-1">Status</th>
                     </tr>
                   </thead>
@@ -576,6 +789,7 @@ export function ClinicalAnalytics({
                           <td className="text-center py-1.5 px-1">{d.height ?? "—"}</td>
                           <td className={`text-center py-1.5 px-1 font-mono text-[10px] ${zColor(hZ)}`}>{hZ != null ? hZ.toFixed(2) : "—"}</td>
                           <td className="text-center py-1.5 px-1">{d.bmi ?? "—"}</td>
+                          <td className="text-center py-1.5 px-1">{d.hc ?? "—"}</td>
                           <td className="text-center py-1.5 px-1">
                             {wEst && (
                               <span className={`text-[9px] px-1 py-0.5 rounded ${zoneBg[wEst.zone]} ${zoneColors[wEst.zone]}`}>
