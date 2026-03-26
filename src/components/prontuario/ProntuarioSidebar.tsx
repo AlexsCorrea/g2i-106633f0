@@ -4,7 +4,7 @@ import {
   FileText, Scale, ClipboardList, Shield, Users, Scissors, Zap, Link2,
   ChevronDown, ChevronRight, BedDouble, Syringe, Thermometer, FlaskConical,
   HeartPulse, Droplets, Hand, Smile, ShieldCheck, Bug, Archive, History,
-  LogOut, PanelLeftClose, PanelLeftOpen, UserCog,
+  LogOut, PanelLeftClose, PanelLeftOpen, UserCog, BarChart2, Baby, TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -151,6 +151,18 @@ const sections: SidebarSection[] = [
     children: [
       { id: "termos", label: "Termos de Consentimento", icon: FileText },
       { id: "anexos", label: "Anexos e Arquivos", icon: Link2 },
+    ],
+  },
+  {
+    id: "analise-clinica",
+    label: "Análise Clínica",
+    icon: BarChart2,
+    children: [
+      { id: "analise-geral", label: "Painel Geral", icon: BarChart2 },
+      { id: "analise-pediatria", label: "Pediatria", icon: Baby },
+      { id: "analise-cardiologia", label: "Cardiologia", icon: HeartPulse },
+      { id: "analise-uti", label: "UTI / Críticos", icon: HeartPulse },
+      { id: "analise-tendencias", label: "Tendências", icon: TrendingUp },
     ],
   },
   {
