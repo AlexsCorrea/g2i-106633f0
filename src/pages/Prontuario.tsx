@@ -50,6 +50,7 @@ import { AIChatButton } from "@/components/prontuario/AIChatButton";
 import { AIAssistantPanel } from "@/components/prontuario/AIAssistantPanel";
 import { ModuleSection, EmptyModule } from "@/components/prontuario/sections/ModuleSection";
 import { ClinicalAnalytics } from "@/components/prontuario/ClinicalAnalytics";
+import { ExamGallery } from "@/components/prontuario/ExamGallery";
 import {
   classifyHeartRate, classifyBloodPressure, classifyTemperature,
   classifyOxygenSaturation, classifyGlucose, getClassificationBadge,
