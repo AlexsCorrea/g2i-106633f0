@@ -40,6 +40,7 @@ function App() {
               <Route path="/kiosk" element={<Kiosk />} />
               <Route path="/fila" element={<QueueMobile />} />
               <Route path="/portal" element={<Portal />} />
+              <Route path="/cme" element={<CME />} />
               <Route path="/painel" element={<QueuePanel />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
