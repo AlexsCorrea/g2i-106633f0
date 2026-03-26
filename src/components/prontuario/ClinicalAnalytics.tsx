@@ -111,6 +111,59 @@ export function ClinicalAnalytics({
   const bmiRefCurve = useMemo(() => buildReferenceCurve(bmiReference[genderKey], Math.max(24, ageRange.min), ageRange.max, 1), [genderKey, ageRange]);
   const hcRefCurve = useMemo(() => buildReferenceCurve(headCircumferenceReference[genderKey], ageRange.min, Math.min(36, ageRange.max), 1), [genderKey, ageRange]);
 
+  // Pre-compute pediatric data at top level (hooks can't be inside conditionals)
+  const lastGrowth = growthData.length > 0 ? growthData[growthData.length - 1] : null;
+  const calcPercentileData = (value: number | null | undefined, ageMonths: number, refSet: GrowthReferencePoint[]) => {
+    if (!value) return null;
+    const ref = interpolateReference(ageMonths, refSet);
+    if (!ref) return null;
+    return estimatePercentile(value, ref);
+  };
+  const weightP = lastGrowth ? calcPercentileData(lastGrowth.weight, lastGrowth.ageMonths, weightReference[genderKey]) : null;
+  const heightP = lastGrowth ? calcPercentileData(lastGrowth.height, lastGrowth.ageMonths, heightReference[genderKey]) : null;
+  const bmiP = lastGrowth?.bmi ? calcPercentileData(lastGrowth.bmi, lastGrowth.ageMonths, bmiReference[genderKey]) : null;
+
+  const growthAlerts = useMemo(() =>
+    detectGrowthAlerts(
+      growthData.map(d => ({ ageMonths: d.ageMonths, weight: d.weight, height: d.height })),
+      { weight: weightReference[genderKey], height: heightReference[genderKey] } as any,
+      genderKey
+    ),
+    [growthData, genderKey]
+  );
+
+  const clinicalAnalysis = useMemo(() => {
+    if (!lastGrowth) return null;
+    const lines: string[] = [];
+    if (weightP) {
+      const zStr = weightP.zScore != null ? ` (Z-score: ${weightP.zScore.toFixed(2)}, P${weightP.exactPercentile?.toFixed(0)})` : "";
+      if (weightP.zone === "normal") lines.push(`✅ Peso adequado para idade${zStr}`);
+      else if (weightP.zone === "low") lines.push(`⚠️ Peso na faixa P3-P15 — acompanhar evolução ponderal${zStr}`);
+      else if (weightP.zone === "critical-low") lines.push(`🔴 Peso abaixo do P3 — investigar desnutrição${zStr}`);
+      else if (weightP.zone === "high") lines.push(`⚠️ Peso acima do P85 — atenção para sobrepeso${zStr}`);
+      else if (weightP.zone === "critical-high") lines.push(`🔴 Peso acima do P97 — risco de obesidade infantil${zStr}`);
+    }
+    if (heightP) {
+      const zStr = heightP.zScore != null ? ` (Z-score: ${heightP.zScore.toFixed(2)}, P${heightP.exactPercentile?.toFixed(0)})` : "";
+      if (heightP.zone === "normal") lines.push(`✅ Estatura adequada para idade${zStr}`);
+      else if (heightP.zone === "critical-low") lines.push(`🔴 Baixa estatura — investigar causas${zStr}`);
+      else if (heightP.zone === "low") lines.push(`⚠️ Estatura abaixo do esperado${zStr}`);
+    }
+    if (bmiP) {
+      const zStr = bmiP.zScore != null ? ` (Z-score: ${bmiP.zScore.toFixed(2)}, P${bmiP.exactPercentile?.toFixed(0)})` : "";
+      if (bmiP.zone === "normal") lines.push(`✅ IMC dentro da normalidade${zStr}`);
+      else if (bmiP.zone === "critical-high") lines.push(`🔴 IMC compatível com obesidade${zStr}`);
+      else if (bmiP.zone === "high") lines.push(`⚠️ IMC indicando sobrepeso${zStr}`);
+      else if (bmiP.zone === "critical-low") lines.push(`🔴 IMC indicando magreza acentuada${zStr}`);
+    }
+    if (growthData.length >= 3) {
+      const recent = growthData.slice(-3);
+      const allGrowing = recent.every((d, i) => i === 0 || (d.weight && recent[i-1].weight && d.weight >= recent[i-1].weight!));
+      if (allGrowing) lines.push("📈 Tendência de ganho ponderal contínuo nos últimos registros");
+    }
+    return lines.length > 0 ? lines : null;
+  }, [lastGrowth, weightP, heightP, bmiP, growthData]);
+
   // Summary indicators
   const latest = vitalSigns[0];
   const previous = vitalSigns[1];
