@@ -50,6 +50,10 @@ import { AIChatButton } from "@/components/prontuario/AIChatButton";
 import { AIAssistantPanel } from "@/components/prontuario/AIAssistantPanel";
 import { ModuleSection, EmptyModule } from "@/components/prontuario/sections/ModuleSection";
 import { ClinicalAnalytics } from "@/components/prontuario/ClinicalAnalytics";
+import {
+  classifyHeartRate, classifyBloodPressure, classifyTemperature,
+  classifyOxygenSaturation, classifyGlucose, getClassificationBadge,
+} from "@/lib/clinicalRules";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -222,7 +226,7 @@ export default function Prontuario() {
             <h3 className="section-header mb-0"><Activity className="h-4 w-4 text-primary" />Sinais Vitais</h3>
             <Button size="sm" variant="outline" onClick={() => setShowVitalsForm(true)} className="gap-1 text-xs h-7"><Plus className="h-3 w-3" />Registrar</Button>
           </div>
-          {formatVitals().length > 0 ? <VitalsCard vitals={formatVitals()} lastUpdate={latestVitals ? format(parseISO(latestVitals.recorded_at), "dd/MM 'às' HH:mm", { locale: ptBR }) : "-"} /> : <p className="text-muted-foreground text-sm">Nenhum registro</p>}
+          {formatVitals().length > 0 ? <VitalsCard vitals={formatVitals()} lastUpdate={latestVitals ? format(parseISO(latestVitals.recorded_at), "dd/MM 'às' HH:mm", { locale: ptBR }) : "-"} patientAge={patientAge} /> : <p className="text-muted-foreground text-sm">Nenhum registro</p>}
         </div>
         <div className="medical-card p-4">
           <div className="flex items-center justify-between mb-3">
@@ -460,12 +464,12 @@ export default function Prontuario() {
                 <span className="text-[10px] text-muted-foreground">{vs.profiles?.full_name}</span>
               </div>
               <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-sm">
-                {vs.temperature && <div><p className="text-muted-foreground text-[10px]">Temp</p><p className="font-medium text-xs">{Number(vs.temperature).toFixed(1)}°C</p></div>}
-                {vs.heart_rate && <div><p className="text-muted-foreground text-[10px]">FC</p><p className="font-medium text-xs">{vs.heart_rate} bpm</p></div>}
-                {vs.blood_pressure_systolic && vs.blood_pressure_diastolic && <div><p className="text-muted-foreground text-[10px]">PA</p><p className="font-medium text-xs">{vs.blood_pressure_systolic}/{vs.blood_pressure_diastolic}</p></div>}
+                {vs.temperature && (() => { const c = classifyTemperature(Number(vs.temperature)); const b = getClassificationBadge(c); return <div><p className="text-muted-foreground text-[10px]">Temp</p><p className="font-medium text-xs">{Number(vs.temperature).toFixed(1)}°C</p><span className={`text-[8px] ${b.className}`}>{b.text}</span></div>; })()}
+                {vs.heart_rate && (() => { const c = classifyHeartRate(vs.heart_rate, patientAge); const b = getClassificationBadge(c); return <div><p className="text-muted-foreground text-[10px]">FC</p><p className="font-medium text-xs">{vs.heart_rate} bpm</p><span className={`text-[8px] ${b.className}`}>{b.text}</span></div>; })()}
+                {vs.blood_pressure_systolic && vs.blood_pressure_diastolic && (() => { const c = classifyBloodPressure(vs.blood_pressure_systolic!, vs.blood_pressure_diastolic!); const b = getClassificationBadge(c); return <div><p className="text-muted-foreground text-[10px]">PA</p><p className="font-medium text-xs">{vs.blood_pressure_systolic}/{vs.blood_pressure_diastolic}</p><span className={`text-[8px] ${b.className}`}>{b.text}</span></div>; })()}
                 {vs.respiratory_rate && <div><p className="text-muted-foreground text-[10px]">FR</p><p className="font-medium text-xs">{vs.respiratory_rate} rpm</p></div>}
-                {vs.oxygen_saturation && <div><p className="text-muted-foreground text-[10px]">SpO₂</p><p className="font-medium text-xs">{vs.oxygen_saturation}%</p></div>}
-                {vs.glucose && <div><p className="text-muted-foreground text-[10px]">Glicemia</p><p className="font-medium text-xs">{vs.glucose} mg/dL</p></div>}
+                {vs.oxygen_saturation && (() => { const c = classifyOxygenSaturation(vs.oxygen_saturation!); const b = getClassificationBadge(c); return <div><p className="text-muted-foreground text-[10px]">SpO₂</p><p className="font-medium text-xs">{vs.oxygen_saturation}%</p><span className={`text-[8px] ${b.className}`}>{b.text}</span></div>; })()}
+                {vs.glucose && (() => { const c = classifyGlucose(vs.glucose!); const b = getClassificationBadge(c); return <div><p className="text-muted-foreground text-[10px]">Glicemia</p><p className="font-medium text-xs">{vs.glucose} mg/dL</p><span className={`text-[8px] ${b.className}`}>{b.text}</span></div>; })()}
               </div>
             </div>
           ))}
