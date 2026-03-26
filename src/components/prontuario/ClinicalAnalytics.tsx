@@ -99,20 +99,33 @@ export function ClinicalAnalytics({
     return "stable";
   };
 
-  const SummaryCard = ({ label, value, unit, icon: Icon, trend, status }: {
+  const SummaryCard = ({ label, value, unit, icon: Icon, trend, status, classification }: {
     label: string; value: string; unit: string; icon: React.ElementType;
     trend?: "up" | "down" | "stable" | null; status?: "normal" | "warning" | "critical";
-  }) => (
-    <div className="medical-card p-3">
-      <div className="flex items-center justify-between mb-1">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <div className="flex items-center gap-1">
-          {trend === "up" && <TrendingUp className="h-3 w-3 text-destructive" />}
-          {trend === "down" && <TrendingDown className="h-3 w-3 text-success" />}
-          {status && (
-            <div className={`w-2 h-2 rounded-full ${
-              status === "normal" ? "bg-success" : status === "warning" ? "bg-warning" : "bg-destructive animate-pulse"
-            }`} />
+    classification?: ClinicalClassification | null;
+  }) => {
+    const effectiveStatus = classification?.level || status;
+    const badge = classification ? getClassificationBadge(classification) : null;
+    return (
+      <div className="medical-card p-3">
+        <div className="flex items-center justify-between mb-1">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-1">
+            {trend === "up" && <TrendingUp className="h-3 w-3 text-destructive" />}
+            {trend === "down" && <TrendingDown className="h-3 w-3 text-success" />}
+            {effectiveStatus && (
+              <div className={`w-2 h-2 rounded-full ${
+                effectiveStatus === "normal" ? "bg-success" : effectiveStatus === "warning" ? "bg-warning" : "bg-destructive animate-pulse"
+              }`} />
+            )}
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground">{label}</p>
+        <p className="text-lg font-bold">{value}<span className="text-xs font-normal text-muted-foreground ml-1">{unit}</span></p>
+        {badge && <span className={`inline-block mt-1 ${badge.className}`}>{badge.text}</span>}
+      </div>
+    );
+  };
           )}
         </div>
       </div>
