@@ -227,8 +227,7 @@ export function KioskCheckin({ onBack, onResult }: Props) {
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Data de Nascimento</label>
-          <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)}
-            className="w-full h-14 text-lg text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" />
+          <DateMaskInput value={birthDate} onChange={setBirthDate} />
         </div>
         {error && (
           <div className="flex items-center gap-2 text-destructive bg-red-50 rounded-xl p-3">
