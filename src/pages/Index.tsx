@@ -146,6 +146,10 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
             <Calendar className="h-4 w-4" />
             Agenda
           </Button>
+          <Button variant="outline" onClick={() => navigate("/dashboards")} className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Dashboards
+          </Button>
         </div>
       </div>
 

@@ -31,6 +31,7 @@ function App() {
               <Route path="/patients" element={<Patients />} />
               <Route path="/prontuario/:id" element={<Prontuario />} />
               <Route path="/agenda" element={<Agenda />} />
+              <Route path="/dashboards" element={<Dashboards />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>
