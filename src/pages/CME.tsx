@@ -14,7 +14,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   ArrowLeft, Package, FlaskConical, Thermometer, Archive, Truck, RotateCcw,
   AlertTriangle, Plus, Search, Shield, ClipboardList, Settings, BarChart3,
-  CheckCircle2, XCircle, Clock, Activity, Box, Wrench
+  CheckCircle2, XCircle, Clock, Activity, Box, Wrench, FileText, GitBranch,
+  Stethoscope, PieChart
 } from "lucide-react";
 import {
   useCmeDashboardStats, useCmeMateriais, useCmeKits, useCmeRecebimentos,
@@ -26,6 +27,7 @@ import {
 } from "@/hooks/useCME";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell, Legend, LineChart, Line } from "recharts";
 
 const statusColors: Record<string, string> = {
   recebido_expurgo: "bg-red-100 text-red-800",
@@ -57,29 +59,15 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabel: Record<string, string> = {
-  recebido_expurgo: "Recebido Expurgo",
-  em_triagem: "Em Triagem",
-  em_limpeza_manual: "Limpeza Manual",
-  em_limpeza_automatizada: "Limpeza Automática",
-  aguardando_preparo: "Aguardando Preparo",
-  em_preparo: "Em Preparo",
-  em_esterilizacao: "Em Esterilização",
-  em_quarentena: "Quarentena",
-  liberado: "Liberado",
-  distribuido: "Distribuído",
-  reprocessar: "Reprocessar",
-  nao_conforme: "Não Conforme",
-  em_andamento: "Em Andamento",
-  aprovado: "Aprovado",
-  reprovado: "Reprovado",
-  disponivel: "Disponível",
-  reservado: "Reservado",
-  aberta: "Aberta",
-  resolvida: "Resolvida",
-  separado: "Separado",
-  entregue: "Entregue",
-  pendente: "Pendente",
-  conforme: "Conforme",
+  recebido_expurgo: "Recebido Expurgo", em_triagem: "Em Triagem",
+  em_limpeza_manual: "Limpeza Manual", em_limpeza_automatizada: "Limpeza Automática",
+  aguardando_preparo: "Aguardando Preparo", em_preparo: "Em Preparo",
+  em_esterilizacao: "Em Esterilização", em_quarentena: "Quarentena",
+  liberado: "Liberado", distribuido: "Distribuído", reprocessar: "Reprocessar",
+  nao_conforme: "Não Conforme", em_andamento: "Em Andamento",
+  aprovado: "Aprovado", reprovado: "Reprovado", disponivel: "Disponível",
+  reservado: "Reservado", aberta: "Aberta", resolvida: "Resolvida",
+  separado: "Separado", entregue: "Entregue", pendente: "Pendente", conforme: "Conforme",
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -94,6 +82,8 @@ function formatDate(d: string | null) {
   if (!d) return "—";
   try { return format(new Date(d), "dd/MM/yy HH:mm", { locale: ptBR }); } catch { return d; }
 }
+
+const CHART_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#f97316"];
 
 export default function CME() {
   const navigate = useNavigate();
@@ -144,6 +134,9 @@ export default function CME() {
             <TabsTrigger value="distribuicao" className="gap-1"><Truck className="h-3.5 w-3.5" />Distribuição</TabsTrigger>
             <TabsTrigger value="equipamentos" className="gap-1"><Settings className="h-3.5 w-3.5" />Equipamentos</TabsTrigger>
             <TabsTrigger value="naoconformidade" className="gap-1"><AlertTriangle className="h-3.5 w-3.5" />NC</TabsTrigger>
+            <TabsTrigger value="rastreabilidade" className="gap-1"><GitBranch className="h-3.5 w-3.5" />Rastreabilidade</TabsTrigger>
+            <TabsTrigger value="requisicoes" className="gap-1"><Stethoscope className="h-3.5 w-3.5" />Requisições CC</TabsTrigger>
+            <TabsTrigger value="relatorios" className="gap-1"><PieChart className="h-3.5 w-3.5" />Relatórios</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard"><DashboardTab /></TabsContent>
@@ -156,6 +149,9 @@ export default function CME() {
           <TabsContent value="distribuicao"><DistribuicaoTab search={search} /></TabsContent>
           <TabsContent value="equipamentos"><EquipamentosTab search={search} /></TabsContent>
           <TabsContent value="naoconformidade"><NaoConformidadeTab /></TabsContent>
+          <TabsContent value="rastreabilidade"><RastreabilidadeTab search={search} /></TabsContent>
+          <TabsContent value="requisicoes"><RequisicoesCCTab /></TabsContent>
+          <TabsContent value="relatorios"><RelatoriosTab /></TabsContent>
         </Tabs>
       </main>
     </div>
@@ -428,12 +424,9 @@ function ExpurgoTab({ search }: { search: string }) {
 
   const advanceStatus = (id: string, currentStatus: string) => {
     const flow: Record<string, string> = {
-      recebido_expurgo: "em_triagem",
-      em_triagem: "em_limpeza_manual",
-      em_limpeza_manual: "aguardando_preparo",
-      em_limpeza_automatizada: "aguardando_preparo",
-      aguardando_preparo: "em_preparo",
-      em_preparo: "liberado",
+      recebido_expurgo: "em_triagem", em_triagem: "em_limpeza_manual",
+      em_limpeza_manual: "aguardando_preparo", em_limpeza_automatizada: "aguardando_preparo",
+      aguardando_preparo: "em_preparo", em_preparo: "liberado",
     };
     const next = flow[currentStatus];
     if (next) updateRecebimento.mutate({ id, status: next });
@@ -506,7 +499,7 @@ function ExpurgoTab({ search }: { search: string }) {
                   <TableCell>{r.setor_origem}</TableCell>
                   <TableCell className="capitalize">{r.tipo_material}</TableCell>
                   <TableCell>{r.quantidade}</TableCell>
-                  <TableCell><Badge variant={r.prioridade === "urgente" ? "destructive" : r.prioridade === "emergencia" ? "destructive" : "secondary"}>{r.prioridade}</Badge></TableCell>
+                  <TableCell><Badge variant={r.prioridade === "urgente" || r.prioridade === "emergencia" ? "destructive" : "secondary"}>{r.prioridade}</Badge></TableCell>
                   <TableCell><StatusBadge status={r.status} /></TableCell>
                   <TableCell>
                     {!["liberado", "distribuido"].includes(r.status) && (
@@ -627,7 +620,6 @@ function EsterilizacaoTab({ search }: { search: string }) {
 function QualidadeTab() {
   const { data: testes, isLoading } = useCmeTestes();
   const { data: cargas } = useCmeCargas();
-  const { data: equipamentos } = useCmeEquipamentos();
   const createTeste = useCreateCmeTeste();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -756,7 +748,6 @@ function ArmazenamentoTab({ search }: { search: string }) {
 // =================== DISTRIBUIÇÃO ===================
 function DistribuicaoTab({ search }: { search: string }) {
   const { data: distrib, isLoading } = useCmeDistribuicoes();
-  const { data: armaz } = useCmeArmazenamento();
   const createDistribuicao = useCreateCmeDistribuicao();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -978,6 +969,327 @@ function NaoConformidadeTab() {
               ))}
             </TableBody>
           </Table>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// =================== RASTREABILIDADE ===================
+function RastreabilidadeTab({ search }: { search: string }) {
+  const { data: recebimentos } = useCmeRecebimentos();
+  const { data: cargas } = useCmeCargas();
+  const { data: distribuicoes } = useCmeDistribuicoes();
+  const { data: testes } = useCmeTestes();
+  const [selectedLote, setSelectedLote] = useState("");
+
+  // Build unique lotes from cargas and distribuicoes
+  const lotes = Array.from(new Set([
+    ...(cargas || []).map((c: any) => c.lote),
+    ...(distribuicoes || []).map((d: any) => d.lote),
+  ])).filter(Boolean).sort();
+
+  const filteredLotes = lotes.filter(l => !search || l.toLowerCase().includes(search.toLowerCase()));
+
+  // Build timeline for selected lote
+  const timeline: { date: string; action: string; detail: string; status: string }[] = [];
+  if (selectedLote) {
+    const carga = (cargas || []).find((c: any) => c.lote === selectedLote);
+    const distList = (distribuicoes || []).filter((d: any) => d.lote === selectedLote);
+
+    // Recebimento (approximate - link to carga)
+    if (carga) {
+      timeline.push({ date: carga.data_inicio, action: "Esterilização iniciada", detail: `Carga ${carga.numero_carga} — ${carga.metodo}`, status: "em_andamento" });
+      if (carga.data_fim) {
+        timeline.push({ date: carga.data_fim, action: carga.resultado === "aprovado" ? "Carga aprovada" : "Carga reprovada", detail: `Temp: ${carga.temperatura}°C / ${carga.tempo_minutos}min`, status: carga.resultado });
+      }
+      if (carga.data_liberacao) {
+        timeline.push({ date: carga.data_liberacao, action: "Liberado para armazenamento", detail: "Material liberado após testes", status: "liberado" });
+      }
+    }
+
+    distList.forEach((d: any) => {
+      timeline.push({ date: d.data_distribuicao, action: "Distribuído", detail: `${d.setor_destino} — ${d.profissional_solicitante || "N/I"}`, status: d.status });
+    });
+
+    timeline.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Rastreabilidade por Lote</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="md:col-span-1">
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Lotes Registrados</CardTitle></CardHeader>
+          <CardContent className="space-y-1 max-h-[500px] overflow-y-auto">
+            {filteredLotes.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum lote</p> :
+              filteredLotes.map(l => (
+                <button key={l} onClick={() => setSelectedLote(l)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-mono transition-colors ${selectedLote === l ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
+                  {l}
+                </button>
+              ))
+            }
+          </CardContent>
+        </Card>
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Timeline — {selectedLote || "Selecione um lote"}</CardTitle></CardHeader>
+          <CardContent>
+            {!selectedLote ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">Selecione um lote para ver a rastreabilidade completa</p>
+            ) : timeline.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">Nenhum evento registrado para este lote</p>
+            ) : (
+              <div className="relative pl-6 space-y-6">
+                <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-border" />
+                {timeline.map((ev, i) => (
+                  <div key={i} className="relative">
+                    <div className={`absolute -left-4 top-1 w-3 h-3 rounded-full border-2 border-background ${ev.status === "aprovado" || ev.status === "liberado" || ev.status === "entregue" ? "bg-green-500" : ev.status === "reprovado" ? "bg-red-500" : "bg-primary"}`} />
+                    <div>
+                      <p className="text-xs text-muted-foreground">{formatDate(ev.date)}</p>
+                      <p className="font-medium text-sm">{ev.action}</p>
+                      <p className="text-xs text-muted-foreground">{ev.detail}</p>
+                      <StatusBadge status={ev.status} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// =================== REQUISIÇÕES CENTRO CIRÚRGICO ===================
+function RequisicoesCCTab() {
+  const { data: kits } = useCmeKits();
+  const { data: armaz } = useCmeArmazenamento();
+  const { data: distrib } = useCmeDistribuicoes();
+  const createDistribuicao = useCreateCmeDistribuicao();
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ kit_id: "", sala: "", procedimento: "", cirurgiao: "", data_procedimento: "" });
+
+  // CC requests are distribuicoes to Centro Cirúrgico
+  const ccDistrib = (distrib || []).filter((d: any) => d.setor_destino === "Centro Cirúrgico");
+
+  const handleSave = () => {
+    if (!form.procedimento) return;
+    const kit = (kits || []).find((k: any) => k.id === form.kit_id);
+    // Find available lote for this kit
+    const avail = (armaz || []).find((a: any) => a.status === "disponivel");
+    createDistribuicao.mutate({
+      setor_destino: "Centro Cirúrgico",
+      kit_id: form.kit_id || undefined,
+      profissional_solicitante: form.cirurgiao,
+      lote: avail?.lote || "A-DEFINIR",
+      quantidade: 1,
+      finalidade: `${form.procedimento}${form.sala ? ` — Sala ${form.sala}` : ""}`,
+      entregue_por: user?.id,
+    }, { onSuccess: () => setOpen(false) });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold">Requisições — Centro Cirúrgico</h2>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" />Nova Requisição CC</Button></DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Requisição de Material — Centro Cirúrgico</DialogTitle></DialogHeader>
+            <div className="grid grid-cols-2 gap-3">
+              {kits && kits.length > 0 && (
+                <Select value={form.kit_id} onValueChange={(v) => setForm({ ...form, kit_id: v })}>
+                  <SelectTrigger className="col-span-2"><SelectValue placeholder="Kit / Caixa Cirúrgica" /></SelectTrigger>
+                  <SelectContent>
+                    {kits.filter((k: any) => k.status === "ativo").map((k: any) => (
+                      <SelectItem key={k.id} value={k.id}>{k.nome} {k.especialidade ? `(${k.especialidade})` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <Input placeholder="Sala Cirúrgica" value={form.sala} onChange={(e) => setForm({ ...form, sala: e.target.value })} />
+              <Input placeholder="Cirurgião" value={form.cirurgiao} onChange={(e) => setForm({ ...form, cirurgiao: e.target.value })} />
+              <Input placeholder="Procedimento *" className="col-span-2" value={form.procedimento} onChange={(e) => setForm({ ...form, procedimento: e.target.value })} />
+              <Input type="date" className="col-span-2" value={form.data_procedimento} onChange={(e) => setForm({ ...form, data_procedimento: e.target.value })} />
+            </div>
+            <Button onClick={handleSave} disabled={createDistribuicao.isPending} className="w-full mt-2">Enviar Requisição</Button>
+          </DialogContent>
+        </Dialog>
+      </div>
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Data</TableHead><TableHead>Procedimento</TableHead><TableHead>Cirurgião</TableHead>
+              <TableHead>Lote</TableHead><TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {ccDistrib.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma requisição do CC</TableCell></TableRow>
+            ) : ccDistrib.map((d: any) => (
+              <TableRow key={d.id}>
+                <TableCell className="text-xs">{formatDate(d.data_distribuicao)}</TableCell>
+                <TableCell>{d.finalidade || "—"}</TableCell>
+                <TableCell>{d.profissional_solicitante || "—"}</TableCell>
+                <TableCell className="font-mono text-xs">{d.lote}</TableCell>
+                <TableCell><StatusBadge status={d.status} /></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
+  );
+}
+
+// =================== RELATÓRIOS E GRÁFICOS ===================
+function RelatoriosTab() {
+  const { data: recebimentos } = useCmeRecebimentos();
+  const { data: cargas } = useCmeCargas();
+  const { data: distribuicoes } = useCmeDistribuicoes();
+  const { data: ncs } = useCmeNaoConformidades();
+  const { data: testes } = useCmeTestes();
+
+  // Distribution by sector
+  const distBySector: Record<string, number> = {};
+  (distribuicoes || []).forEach((d: any) => {
+    distBySector[d.setor_destino] = (distBySector[d.setor_destino] || 0) + d.quantidade;
+  });
+  const sectorData = Object.entries(distBySector).map(([name, value]) => ({ name, value }));
+
+  // Cargas por resultado
+  const cargaResults: Record<string, number> = {};
+  (cargas || []).forEach((c: any) => {
+    const r = statusLabel[c.resultado] || c.resultado;
+    cargaResults[r] = (cargaResults[r] || 0) + 1;
+  });
+  const cargaData = Object.entries(cargaResults).map(([name, value]) => ({ name, value }));
+
+  // Recebimentos por setor
+  const recBySector: Record<string, number> = {};
+  (recebimentos || []).forEach((r: any) => {
+    recBySector[r.setor_origem] = (recBySector[r.setor_origem] || 0) + r.quantidade;
+  });
+  const recSectorData = Object.entries(recBySector).map(([name, value]) => ({ name, value }));
+
+  // NC by type
+  const ncByType: Record<string, number> = {};
+  (ncs || []).forEach((nc: any) => {
+    const t = nc.tipo?.replace(/_/g, " ") || "Outros";
+    ncByType[t] = (ncByType[t] || 0) + 1;
+  });
+  const ncData = Object.entries(ncByType).map(([name, value]) => ({ name, value }));
+
+  // Testes summary
+  const testeResults: Record<string, number> = {};
+  (testes || []).forEach((t: any) => {
+    const r = statusLabel[t.resultado] || t.resultado;
+    testeResults[r] = (testeResults[r] || 0) + 1;
+  });
+  const testeData = Object.entries(testeResults).map(([name, value]) => ({ name, value }));
+
+  // KPIs
+  const totalCargas = (cargas || []).length;
+  const aprovadas = (cargas || []).filter((c: any) => c.resultado === "aprovado").length;
+  const taxaAprovacao = totalCargas > 0 ? ((aprovadas / totalCargas) * 100).toFixed(1) : "0";
+  const totalDistribuido = (distribuicoes || []).reduce((s: number, d: any) => s + (d.quantidade || 0), 0);
+  const ncAbertas = (ncs || []).filter((nc: any) => nc.status === "aberta").length;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-semibold">Relatórios e Indicadores CME</h2>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card><CardContent className="p-4 text-center"><p className="text-3xl font-bold text-primary">{totalCargas}</p><p className="text-xs text-muted-foreground">Total de Cargas</p></CardContent></Card>
+        <Card><CardContent className="p-4 text-center"><p className="text-3xl font-bold text-green-600">{taxaAprovacao}%</p><p className="text-xs text-muted-foreground">Taxa Aprovação</p></CardContent></Card>
+        <Card><CardContent className="p-4 text-center"><p className="text-3xl font-bold text-blue-600">{totalDistribuido}</p><p className="text-xs text-muted-foreground">Itens Distribuídos</p></CardContent></Card>
+        <Card><CardContent className="p-4 text-center"><p className="text-3xl font-bold text-red-600">{ncAbertas}</p><p className="text-xs text-muted-foreground">NC Abertas</p></CardContent></Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Distribuição por setor */}
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Distribuição por Setor</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <RPieChart>
+                <Pie data={sectorData} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+                  {sectorData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                </Pie>
+                <Tooltip />
+              </RPieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Cargas por resultado */}
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Cargas por Resultado</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={cargaData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#6366f1" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Recebimentos por setor */}
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Recebimentos por Setor de Origem</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={recSectorData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" allowDecimals={false} />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={120} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#22c55e" radius={[0,4,4,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Testes de qualidade */}
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Testes de Qualidade</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <RPieChart>
+                <Pie data={testeData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label>
+                  {testeData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                </Pie>
+                <Tooltip /><Legend />
+              </RPieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* NC by type */}
+      {ncData.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Não Conformidades por Tipo</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={ncData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#ef4444" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
         </Card>
       )}
     </div>
