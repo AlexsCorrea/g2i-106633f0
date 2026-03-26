@@ -1164,8 +1164,7 @@ export default function Prontuario() {
       case "anexos": return renderAnexos();
       case "auditoria": return renderAuditoria();
       case "timeline-clinica": return renderTimeline();
-      case "oftalmologia":
-        return (<ModuleSection title="Oftalmologia" icon={Eye} onAdd={() => setShowOphthalmologyForm(true)} addLabel="Nova Consulta"><EmptyModule title="Consultas Oftalmológicas" description="Registre consultas oftalmológicas completas." icon={Eye} actionLabel="Nova Consulta" onAction={() => setShowOphthalmologyForm(true)} /></ModuleSection>);
+      default: return renderResumo();
       default: return renderResumo();
     }
   };

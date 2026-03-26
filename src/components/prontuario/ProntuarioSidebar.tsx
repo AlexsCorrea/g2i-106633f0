@@ -103,7 +103,14 @@ const sections: SidebarSection[] = [
       { id: "drogas-vasoativas", label: "Drogas Vasoativas", icon: Thermometer },
     ],
   },
-  { id: "hemodinamica", label: "Hemodinâmica", icon: Zap },
+  {
+    id: "hemodinamica-area",
+    label: "Hemodinâmica",
+    icon: Zap,
+    children: [
+      { id: "hemodinamica", label: "Procedimentos", icon: Zap },
+    ],
+  },
   {
     id: "multidisciplinar",
     label: "Equipe Multidisciplinar",
