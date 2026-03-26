@@ -15,6 +15,7 @@ import Dashboards from "./pages/Dashboards";
 import Kiosk from "./pages/Kiosk";
 import QueueMobile from "./pages/QueueMobile";
 import QueuePanel from "./pages/QueuePanel";
+import Portal from "./pages/Portal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ function App() {
               <Route path="/dashboards" element={<Dashboards />} />
               <Route path="/kiosk" element={<Kiosk />} />
               <Route path="/fila" element={<QueueMobile />} />
+              <Route path="/portal" element={<Portal />} />
               <Route path="/painel" element={<QueuePanel />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
