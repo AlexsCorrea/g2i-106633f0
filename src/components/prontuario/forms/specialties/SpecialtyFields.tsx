@@ -722,7 +722,7 @@ export function specialtyDataToContent(specialty: string, data: SpecialtyData): 
   lines.push(`[${specLabel}]`);
   
   Object.entries(data).forEach(([key, value]) => {
-    if (value && value !== false) {
+    if (value) {
       const label = key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
       if (typeof value === "boolean") {
         lines.push(`${label}: Sim`);
