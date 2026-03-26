@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Patients from "./pages/Patients";
 import Prontuario from "./pages/Prontuario";
 import Agenda from "./pages/Agenda";
+import Dashboards from "./pages/Dashboards";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
