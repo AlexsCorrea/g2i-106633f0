@@ -176,11 +176,8 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
       </div>
 
       {/* Quick Access */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <Card 
-          className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
-          onClick={() => navigate("/patients")}
-        >
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <Card className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all" onClick={() => navigate("/patients")}>
           <CardHeader className="pb-3">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
               <Users className="h-5 w-5 text-primary" />
@@ -189,10 +186,7 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
             <CardDescription className="text-xs">Cadastrar, editar e buscar</CardDescription>
           </CardHeader>
         </Card>
-        <Card 
-          className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
-          onClick={() => navigate("/agenda")}
-        >
+        <Card className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all" onClick={() => navigate("/agenda")}>
           <CardHeader className="pb-3">
             <div className="h-10 w-10 rounded-lg bg-emerald-50 flex items-center justify-center mb-2">
               <Calendar className="h-5 w-5 text-emerald-600" />
@@ -210,10 +204,7 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
             <CardDescription className="text-xs">Selecione um paciente</CardDescription>
           </CardHeader>
         </Card>
-        <Card 
-          className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
-          onClick={() => navigate("/kiosk")}
-        >
+        <Card className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all" onClick={() => navigate("/kiosk")}>
           <CardHeader className="pb-3">
             <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center mb-2">
               <Monitor className="h-5 w-5 text-blue-600" />
@@ -222,16 +213,22 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
             <CardDescription className="text-xs">Totem de senhas e check-in</CardDescription>
           </CardHeader>
         </Card>
-        <Card 
-          className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
-          onClick={() => navigate("/painel")}
-        >
+        <Card className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all" onClick={() => navigate("/painel")}>
           <CardHeader className="pb-3">
             <div className="h-10 w-10 rounded-lg bg-orange-50 flex items-center justify-center mb-2">
               <Megaphone className="h-5 w-5 text-orange-600" />
             </div>
             <CardTitle className="text-base">Painel de Chamadas</CardTitle>
             <CardDescription className="text-xs">Gestão e chamada de senhas</CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all" onClick={() => navigate("/cme")}>
+          <CardHeader className="pb-3">
+            <div className="h-10 w-10 rounded-lg bg-purple-50 flex items-center justify-center mb-2">
+              <FlaskConical className="h-5 w-5 text-purple-600" />
+            </div>
+            <CardTitle className="text-base">CME</CardTitle>
+            <CardDescription className="text-xs">Central de Material Esterilizado</CardDescription>
           </CardHeader>
         </Card>
       </div>
