@@ -405,7 +405,6 @@ export function ClinicalAnalytics({
           {latest?.blood_pressure_systolic && latest?.blood_pressure_diastolic && <SummaryCard label="PA" value={`${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}`} unit="mmHg" icon={Activity} classification={classifyBloodPressure(latest.blood_pressure_systolic, latest.blood_pressure_diastolic)} />}
           {latest?.oxygen_saturation && <SummaryCard label="SpO₂" value={latest.oxygen_saturation.toString()} unit="%" icon={Droplets} classification={classifyOxygenSaturation(latest.oxygen_saturation)} />}
         </div>
-        </div>
 
         {/* PA trend */}
         {vitalData.length > 1 && (
