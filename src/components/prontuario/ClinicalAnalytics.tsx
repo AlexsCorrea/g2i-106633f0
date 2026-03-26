@@ -126,13 +126,8 @@ export function ClinicalAnalytics({
       </div>
     );
   };
-          )}
-        </div>
-      </div>
-      <p className="text-[10px] text-muted-foreground">{label}</p>
-      <p className="text-lg font-bold">{value}<span className="text-xs font-normal text-muted-foreground ml-1">{unit}</span></p>
-    </div>
-  );
+
+
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
