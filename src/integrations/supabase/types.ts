@@ -245,6 +245,922 @@ export type Database = {
           },
         ]
       }
+      cme_armazenamento: {
+        Row: {
+          carga_id: string | null
+          created_at: string
+          data_esterilizacao: string
+          data_validade: string
+          id: string
+          kit_id: string | null
+          local_armazenamento: string | null
+          lote: string
+          material_id: string | null
+          prateleira: string | null
+          quantidade: number
+          reservado_para: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          carga_id?: string | null
+          created_at?: string
+          data_esterilizacao: string
+          data_validade: string
+          id?: string
+          kit_id?: string | null
+          local_armazenamento?: string | null
+          lote: string
+          material_id?: string | null
+          prateleira?: string | null
+          quantidade?: number
+          reservado_para?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          carga_id?: string | null
+          created_at?: string
+          data_esterilizacao?: string
+          data_validade?: string
+          id?: string
+          kit_id?: string | null
+          local_armazenamento?: string | null
+          lote?: string
+          material_id?: string | null
+          prateleira?: string | null
+          quantidade?: number
+          reservado_para?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cme_armazenamento_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "cme_cargas_esterilizacao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_armazenamento_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "cme_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_armazenamento_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "cme_materiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cme_carga_itens: {
+        Row: {
+          carga_id: string
+          created_at: string
+          id: string
+          kit_id: string | null
+          material_id: string | null
+          quantidade: number
+          recebimento_id: string | null
+        }
+        Insert: {
+          carga_id: string
+          created_at?: string
+          id?: string
+          kit_id?: string | null
+          material_id?: string | null
+          quantidade?: number
+          recebimento_id?: string | null
+        }
+        Update: {
+          carga_id?: string
+          created_at?: string
+          id?: string
+          kit_id?: string | null
+          material_id?: string | null
+          quantidade?: number
+          recebimento_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cme_carga_itens_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "cme_cargas_esterilizacao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_carga_itens_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "cme_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_carga_itens_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "cme_materiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_carga_itens_recebimento_id_fkey"
+            columns: ["recebimento_id"]
+            isOneToOne: false
+            referencedRelation: "cme_recebimentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cme_cargas_esterilizacao: {
+        Row: {
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          data_liberacao: string | null
+          equipamento_id: string | null
+          id: string
+          indicador_biologico: string | null
+          indicador_quimico: string | null
+          integrador: string | null
+          liberado_por: string | null
+          lote: string
+          metodo: string
+          numero_carga: string
+          observacoes: string | null
+          operador_id: string | null
+          pressao: number | null
+          resultado: string | null
+          temperatura: number | null
+          tempo_minutos: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          data_liberacao?: string | null
+          equipamento_id?: string | null
+          id?: string
+          indicador_biologico?: string | null
+          indicador_quimico?: string | null
+          integrador?: string | null
+          liberado_por?: string | null
+          lote: string
+          metodo?: string
+          numero_carga: string
+          observacoes?: string | null
+          operador_id?: string | null
+          pressao?: number | null
+          resultado?: string | null
+          temperatura?: number | null
+          tempo_minutos?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          data_liberacao?: string | null
+          equipamento_id?: string | null
+          id?: string
+          indicador_biologico?: string | null
+          indicador_quimico?: string | null
+          integrador?: string | null
+          liberado_por?: string | null
+          lote?: string
+          metodo?: string
+          numero_carga?: string
+          observacoes?: string | null
+          operador_id?: string | null
+          pressao?: number | null
+          resultado?: string | null
+          temperatura?: number | null
+          tempo_minutos?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cme_cargas_esterilizacao_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "cme_equipamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_cargas_esterilizacao_liberado_por_fkey"
+            columns: ["liberado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_cargas_esterilizacao_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cme_devolucoes: {
+        Row: {
+          created_at: string
+          data_devolucao: string
+          destino_final: string | null
+          distribuicao_id: string | null
+          id: string
+          material_danificado: boolean | null
+          motivo: string
+          observacoes: string | null
+          responsavel_id: string | null
+          setor_devolvente: string
+          usado: boolean | null
+          validade_expirada: boolean | null
+          violacao_embalagem: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          data_devolucao?: string
+          destino_final?: string | null
+          distribuicao_id?: string | null
+          id?: string
+          material_danificado?: boolean | null
+          motivo: string
+          observacoes?: string | null
+          responsavel_id?: string | null
+          setor_devolvente: string
+          usado?: boolean | null
+          validade_expirada?: boolean | null
+          violacao_embalagem?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          data_devolucao?: string
+          destino_final?: string | null
+          distribuicao_id?: string | null
+          id?: string
+          material_danificado?: boolean | null
+          motivo?: string
+          observacoes?: string | null
+          responsavel_id?: string | null
+          setor_devolvente?: string
+          usado?: boolean | null
+          validade_expirada?: boolean | null
+          violacao_embalagem?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cme_devolucoes_distribuicao_id_fkey"
+            columns: ["distribuicao_id"]
+            isOneToOne: false
+            referencedRelation: "cme_distribuicoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_devolucoes_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cme_distribuicoes: {
+        Row: {
+          armazenamento_id: string | null
+          created_at: string
+          data_distribuicao: string
+          entregue_por: string | null
+          finalidade: string | null
+          id: string
+          kit_id: string | null
+          lote: string
+          material_id: string | null
+          observacoes: string | null
+          profissional_solicitante: string | null
+          quantidade: number
+          recebido_por: string | null
+          setor_destino: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          armazenamento_id?: string | null
+          created_at?: string
+          data_distribuicao?: string
+          entregue_por?: string | null
+          finalidade?: string | null
+          id?: string
+          kit_id?: string | null
+          lote: string
+          material_id?: string | null
+          observacoes?: string | null
+          profissional_solicitante?: string | null
+          quantidade?: number
+          recebido_por?: string | null
+          setor_destino: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          armazenamento_id?: string | null
+          created_at?: string
+          data_distribuicao?: string
+          entregue_por?: string | null
+          finalidade?: string | null
+          id?: string
+          kit_id?: string | null
+          lote?: string
+          material_id?: string | null
+          observacoes?: string | null
+          profissional_solicitante?: string | null
+          quantidade?: number
+          recebido_por?: string | null
+          setor_destino?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cme_distribuicoes_armazenamento_id_fkey"
+            columns: ["armazenamento_id"]
+            isOneToOne: false
+            referencedRelation: "cme_armazenamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_distribuicoes_entregue_por_fkey"
+            columns: ["entregue_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_distribuicoes_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "cme_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_distribuicoes_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "cme_materiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cme_equipamentos: {
+        Row: {
+          created_at: string
+          fabricante: string | null
+          id: string
+          localizacao: string | null
+          modelo: string | null
+          nome: string
+          numero_serie: string | null
+          observacoes: string | null
+          proxima_manutencao: string | null
+          status: string
+          tipo: string
+          ultima_manutencao: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fabricante?: string | null
+          id?: string
+          localizacao?: string | null
+          modelo?: string | null
+          nome: string
+          numero_serie?: string | null
+          observacoes?: string | null
+          proxima_manutencao?: string | null
+          status?: string
+          tipo?: string
+          ultima_manutencao?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fabricante?: string | null
+          id?: string
+          localizacao?: string | null
+          modelo?: string | null
+          nome?: string
+          numero_serie?: string | null
+          observacoes?: string | null
+          proxima_manutencao?: string | null
+          status?: string
+          tipo?: string
+          ultima_manutencao?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cme_etapas_processamento: {
+        Row: {
+          checklist: Json | null
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          embalagem_utilizada: string | null
+          equipamento_utilizado: string | null
+          etapa: string
+          id: string
+          inspecao_visual: boolean | null
+          integridade_ok: boolean | null
+          observacoes: string | null
+          recebimento_id: string
+          responsavel_id: string | null
+          selagem_ok: boolean | null
+          tipo_limpeza: string | null
+        }
+        Insert: {
+          checklist?: Json | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          embalagem_utilizada?: string | null
+          equipamento_utilizado?: string | null
+          etapa: string
+          id?: string
+          inspecao_visual?: boolean | null
+          integridade_ok?: boolean | null
+          observacoes?: string | null
+          recebimento_id: string
+          responsavel_id?: string | null
+          selagem_ok?: boolean | null
+          tipo_limpeza?: string | null
+        }
+        Update: {
+          checklist?: Json | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          embalagem_utilizada?: string | null
+          equipamento_utilizado?: string | null
+          etapa?: string
+          id?: string
+          inspecao_visual?: boolean | null
+          integridade_ok?: boolean | null
+          observacoes?: string | null
+          recebimento_id?: string
+          responsavel_id?: string | null
+          selagem_ok?: boolean | null
+          tipo_limpeza?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cme_etapas_processamento_recebimento_id_fkey"
+            columns: ["recebimento_id"]
+            isOneToOne: false
+            referencedRelation: "cme_recebimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_etapas_processamento_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cme_kit_itens: {
+        Row: {
+          created_at: string
+          id: string
+          kit_id: string
+          material_id: string
+          obrigatorio: boolean | null
+          observacoes: string | null
+          quantidade: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kit_id: string
+          material_id: string
+          obrigatorio?: boolean | null
+          observacoes?: string | null
+          quantidade?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kit_id?: string
+          material_id?: string
+          obrigatorio?: boolean | null
+          observacoes?: string | null
+          quantidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cme_kit_itens_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "cme_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_kit_itens_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "cme_materiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cme_kits: {
+        Row: {
+          codigo: string | null
+          created_at: string
+          especialidade: string | null
+          id: string
+          instrucoes_montagem: string | null
+          metodo_esterilizacao: string | null
+          nome: string
+          observacoes: string | null
+          setores_uso: string | null
+          status: string
+          tipo_embalagem: string | null
+          updated_at: string
+        }
+        Insert: {
+          codigo?: string | null
+          created_at?: string
+          especialidade?: string | null
+          id?: string
+          instrucoes_montagem?: string | null
+          metodo_esterilizacao?: string | null
+          nome: string
+          observacoes?: string | null
+          setores_uso?: string | null
+          status?: string
+          tipo_embalagem?: string | null
+          updated_at?: string
+        }
+        Update: {
+          codigo?: string | null
+          created_at?: string
+          especialidade?: string | null
+          id?: string
+          instrucoes_montagem?: string | null
+          metodo_esterilizacao?: string | null
+          nome?: string
+          observacoes?: string | null
+          setores_uso?: string | null
+          status?: string
+          tipo_embalagem?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cme_logs_rastreabilidade: {
+        Row: {
+          acao: string
+          created_at: string
+          detalhes: Json | null
+          entidade_id: string
+          entidade_tipo: string
+          id: string
+          usuario_id: string | null
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          detalhes?: Json | null
+          entidade_id: string
+          entidade_tipo: string
+          id?: string
+          usuario_id?: string | null
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          detalhes?: Json | null
+          entidade_id?: string
+          entidade_tipo?: string
+          id?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cme_logs_rastreabilidade_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cme_materiais: {
+        Row: {
+          categoria: string | null
+          codigo: string
+          complexidade: string | null
+          created_at: string
+          criticidade: string
+          descricao: string | null
+          embalagem_especifica: boolean | null
+          especialidade: string | null
+          id: string
+          metodo_esterilizacao: string | null
+          necessita_montagem_kit: boolean | null
+          nome: string
+          observacoes: string | null
+          setor_principal: string | null
+          status: string
+          tempo_processamento_min: number | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string | null
+          codigo: string
+          complexidade?: string | null
+          created_at?: string
+          criticidade?: string
+          descricao?: string | null
+          embalagem_especifica?: boolean | null
+          especialidade?: string | null
+          id?: string
+          metodo_esterilizacao?: string | null
+          necessita_montagem_kit?: boolean | null
+          nome: string
+          observacoes?: string | null
+          setor_principal?: string | null
+          status?: string
+          tempo_processamento_min?: number | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string | null
+          codigo?: string
+          complexidade?: string | null
+          created_at?: string
+          criticidade?: string
+          descricao?: string | null
+          embalagem_especifica?: boolean | null
+          especialidade?: string | null
+          id?: string
+          metodo_esterilizacao?: string | null
+          necessita_montagem_kit?: boolean | null
+          nome?: string
+          observacoes?: string | null
+          setor_principal?: string | null
+          status?: string
+          tempo_processamento_min?: number | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cme_nao_conformidades: {
+        Row: {
+          acao_corretiva: string | null
+          carga_id: string | null
+          created_at: string
+          data_ocorrencia: string
+          data_resolucao: string | null
+          descricao: string
+          equipamento_id: string | null
+          id: string
+          kit_id: string | null
+          material_id: string | null
+          observacoes: string | null
+          responsavel_id: string | null
+          severidade: string
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          acao_corretiva?: string | null
+          carga_id?: string | null
+          created_at?: string
+          data_ocorrencia?: string
+          data_resolucao?: string | null
+          descricao: string
+          equipamento_id?: string | null
+          id?: string
+          kit_id?: string | null
+          material_id?: string | null
+          observacoes?: string | null
+          responsavel_id?: string | null
+          severidade?: string
+          status?: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          acao_corretiva?: string | null
+          carga_id?: string | null
+          created_at?: string
+          data_ocorrencia?: string
+          data_resolucao?: string | null
+          descricao?: string
+          equipamento_id?: string | null
+          id?: string
+          kit_id?: string | null
+          material_id?: string | null
+          observacoes?: string | null
+          responsavel_id?: string | null
+          severidade?: string
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cme_nao_conformidades_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "cme_cargas_esterilizacao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_nao_conformidades_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "cme_equipamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_nao_conformidades_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "cme_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_nao_conformidades_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "cme_materiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_nao_conformidades_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cme_recebimentos: {
+        Row: {
+          created_at: string
+          data_recebimento: string
+          id: string
+          kit_id: string | null
+          material_id: string | null
+          observacoes: string | null
+          prioridade: string | null
+          profissional_entregou: string | null
+          quantidade: number
+          recebido_por: string | null
+          setor_origem: string
+          situacao_sujidade: string | null
+          status: string
+          tipo_material: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_recebimento?: string
+          id?: string
+          kit_id?: string | null
+          material_id?: string | null
+          observacoes?: string | null
+          prioridade?: string | null
+          profissional_entregou?: string | null
+          quantidade?: number
+          recebido_por?: string | null
+          setor_origem: string
+          situacao_sujidade?: string | null
+          status?: string
+          tipo_material: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_recebimento?: string
+          id?: string
+          kit_id?: string | null
+          material_id?: string | null
+          observacoes?: string | null
+          prioridade?: string | null
+          profissional_entregou?: string | null
+          quantidade?: number
+          recebido_por?: string | null
+          setor_origem?: string
+          situacao_sujidade?: string | null
+          status?: string
+          tipo_material?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cme_recebimentos_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "cme_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_recebimentos_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "cme_materiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_recebimentos_recebido_por_fkey"
+            columns: ["recebido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cme_testes_qualidade: {
+        Row: {
+          acao_corretiva: string | null
+          carga_id: string | null
+          created_at: string
+          data_teste: string
+          equipamento_id: string | null
+          id: string
+          lote_indicador: string | null
+          observacoes: string | null
+          responsavel_id: string | null
+          resultado: string
+          situacao: string | null
+          tipo_teste: string
+        }
+        Insert: {
+          acao_corretiva?: string | null
+          carga_id?: string | null
+          created_at?: string
+          data_teste?: string
+          equipamento_id?: string | null
+          id?: string
+          lote_indicador?: string | null
+          observacoes?: string | null
+          responsavel_id?: string | null
+          resultado?: string
+          situacao?: string | null
+          tipo_teste: string
+        }
+        Update: {
+          acao_corretiva?: string | null
+          carga_id?: string | null
+          created_at?: string
+          data_teste?: string
+          equipamento_id?: string | null
+          id?: string
+          lote_indicador?: string | null
+          observacoes?: string | null
+          responsavel_id?: string | null
+          resultado?: string
+          situacao?: string | null
+          tipo_teste?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cme_testes_qualidade_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "cme_cargas_esterilizacao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_testes_qualidade_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "cme_equipamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cme_testes_qualidade_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evolution_notes: {
         Row: {
           assessment: string | null
