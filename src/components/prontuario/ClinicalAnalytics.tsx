@@ -282,17 +282,6 @@ export function ClinicalAnalytics({
 
   // === PEDIATRIA VIEW ===
   if (view === "pediatria") {
-    const gender = (patientGender === "M" || patientGender === "F") ? patientGender : "M";
-    const genderKey = gender === "M" ? "male" : "female";
-
-    // Build reference curves covering patient data range
-    const ageRange = growthData.length > 0
-      ? { min: Math.max(0, Math.min(...growthData.map(d => d.ageMonths)) - 3), max: Math.max(...growthData.map(d => d.ageMonths)) + 6 }
-      : { min: 0, max: 60 };
-
-    const weightRefCurve = useMemo(() => buildReferenceCurve(weightReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
-    const heightRefCurve = useMemo(() => buildReferenceCurve(heightReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
-    const bmiRefCurve = useMemo(() => buildReferenceCurve(bmiReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
 
     // Merge patient data with reference curve for unified chart
     const mergeWithRef = (patientData: typeof growthData, refCurve: GrowthReferencePoint[], valueKey: "weight" | "height" | "bmi") => {
