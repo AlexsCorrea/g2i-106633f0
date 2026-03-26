@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Users, Calendar, FileText, LogIn, LogOut, 
-  Heart, Activity, Pill, ClipboardList, Shield, BarChart3
+  Heart, Activity, Pill, ClipboardList, Shield, BarChart3,
+  Monitor, Megaphone
 } from "lucide-react";
 import WhatsNewModal from "@/components/WhatsNewModal";
 import { StatsCards } from "@/components/dashboard/StatsCards";
