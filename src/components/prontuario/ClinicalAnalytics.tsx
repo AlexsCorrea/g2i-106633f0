@@ -401,10 +401,10 @@ export function ClinicalAnalytics({
 
         {/* PA + FC Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {latest?.heart_rate && <SummaryCard label="FC Atual" value={latest.heart_rate.toString()} unit="bpm" icon={Heart} trend={getTrend(latest.heart_rate, previous?.heart_rate)} status={latest.heart_rate < 60 || latest.heart_rate > 100 ? "warning" : "normal"} />}
-          {latest?.blood_pressure_systolic && <SummaryCard label="PAS" value={latest.blood_pressure_systolic.toString()} unit="mmHg" icon={Activity} status={latest.blood_pressure_systolic > 140 ? "warning" : "normal"} />}
-          {latest?.blood_pressure_diastolic && <SummaryCard label="PAD" value={latest.blood_pressure_diastolic.toString()} unit="mmHg" icon={Activity} status={latest.blood_pressure_diastolic > 90 ? "warning" : "normal"} />}
-          {latest?.oxygen_saturation && <SummaryCard label="SpO₂" value={latest.oxygen_saturation.toString()} unit="%" icon={Droplets} status={latest.oxygen_saturation < 95 ? "warning" : "normal"} />}
+          {latest?.heart_rate && <SummaryCard label="FC Atual" value={latest.heart_rate.toString()} unit="bpm" icon={Heart} trend={getTrend(latest.heart_rate, previous?.heart_rate)} classification={classifyHeartRate(latest.heart_rate, patientAgeYears)} />}
+          {latest?.blood_pressure_systolic && latest?.blood_pressure_diastolic && <SummaryCard label="PA" value={`${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}`} unit="mmHg" icon={Activity} classification={classifyBloodPressure(latest.blood_pressure_systolic, latest.blood_pressure_diastolic)} />}
+          {latest?.oxygen_saturation && <SummaryCard label="SpO₂" value={latest.oxygen_saturation.toString()} unit="%" icon={Droplets} classification={classifyOxygenSaturation(latest.oxygen_saturation)} />}
+        </div>
         </div>
 
         {/* PA trend */}
