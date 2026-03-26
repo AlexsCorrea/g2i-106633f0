@@ -115,21 +115,23 @@ export function useGenerateTicket() {
 
       const ticket_number = `${prefix}${String(nextNumber).padStart(3, "0")}`;
 
+      const insertData: Record<string, unknown> = {
+        ticket_number,
+        ticket_type: params.ticket_type,
+        priority,
+        queue_name: params.queue_name,
+        sector: params.sector || "geral",
+        source: params.source || "totem",
+        status: "aguardando",
+        notification_enabled: params.notification_enabled || false,
+        checkin_data: params.checkin_data || null,
+      };
+      if (params.patient_id) insertData.patient_id = params.patient_id;
+      if (params.appointment_id) insertData.appointment_id = params.appointment_id;
+
       const { data, error } = await supabase
         .from("queue_tickets")
-        .insert({
-          patient_id: params.patient_id || null,
-          appointment_id: params.appointment_id || null,
-          ticket_number,
-          ticket_type: params.ticket_type,
-          priority,
-          queue_name: params.queue_name,
-          sector: params.sector || "geral",
-          source: params.source || "totem",
-          status: "aguardando",
-          notification_enabled: params.notification_enabled || false,
-          checkin_data: params.checkin_data || null,
-        })
+        .insert(insertData as any)
         .select()
         .single();
 
