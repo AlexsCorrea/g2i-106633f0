@@ -1165,7 +1165,6 @@ export default function Prontuario() {
       case "auditoria": return renderAuditoria();
       case "timeline-clinica": return renderTimeline();
       default: return renderResumo();
-      default: return renderResumo();
     }
   };
 
