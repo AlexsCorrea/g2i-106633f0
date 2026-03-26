@@ -40,7 +40,6 @@ const sections: SidebarSection[] = [
     children: [
       { id: "evolucao-medica", label: "Evolução Médica", icon: ClipboardList },
       { id: "admissao-diagnostico", label: "Diagnósticos (CID)", icon: FileText },
-      { id: "oftalmologia", label: "Oftalmologia", icon: Eye },
     ],
   },
   {
