@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Ticket, CalendarCheck, ArrowLeft, Bell, BellOff, Clock, Users, Search, AlertCircle, CheckCircle2, ChevronRight, Crown, UserCheck, Smartphone, Home, RotateCcw, History, MapPin, Volume2 } from "lucide-react";
+import { DateMaskInput } from "@/components/ui/date-mask-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGenerateTicket, useQueueTicketById, useQueueTickets } from "@/hooks/useQueueTickets";
 
