@@ -464,12 +464,12 @@ export default function Prontuario() {
                 <span className="text-[10px] text-muted-foreground">{vs.profiles?.full_name}</span>
               </div>
               <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-sm">
-                {vs.temperature && <div><p className="text-muted-foreground text-[10px]">Temp</p><p className="font-medium text-xs">{Number(vs.temperature).toFixed(1)}°C</p></div>}
-                {vs.heart_rate && <div><p className="text-muted-foreground text-[10px]">FC</p><p className="font-medium text-xs">{vs.heart_rate} bpm</p></div>}
-                {vs.blood_pressure_systolic && vs.blood_pressure_diastolic && <div><p className="text-muted-foreground text-[10px]">PA</p><p className="font-medium text-xs">{vs.blood_pressure_systolic}/{vs.blood_pressure_diastolic}</p></div>}
+                {vs.temperature && (() => { const c = classifyTemperature(Number(vs.temperature)); const b = getClassificationBadge(c); return <div><p className="text-muted-foreground text-[10px]">Temp</p><p className="font-medium text-xs">{Number(vs.temperature).toFixed(1)}°C</p><span className={`text-[8px] ${b.className}`}>{b.text}</span></div>; })()}
+                {vs.heart_rate && (() => { const c = classifyHeartRate(vs.heart_rate, patientAge); const b = getClassificationBadge(c); return <div><p className="text-muted-foreground text-[10px]">FC</p><p className="font-medium text-xs">{vs.heart_rate} bpm</p><span className={`text-[8px] ${b.className}`}>{b.text}</span></div>; })()}
+                {vs.blood_pressure_systolic && vs.blood_pressure_diastolic && (() => { const c = classifyBloodPressure(vs.blood_pressure_systolic!, vs.blood_pressure_diastolic!); const b = getClassificationBadge(c); return <div><p className="text-muted-foreground text-[10px]">PA</p><p className="font-medium text-xs">{vs.blood_pressure_systolic}/{vs.blood_pressure_diastolic}</p><span className={`text-[8px] ${b.className}`}>{b.text}</span></div>; })()}
                 {vs.respiratory_rate && <div><p className="text-muted-foreground text-[10px]">FR</p><p className="font-medium text-xs">{vs.respiratory_rate} rpm</p></div>}
-                {vs.oxygen_saturation && <div><p className="text-muted-foreground text-[10px]">SpO₂</p><p className="font-medium text-xs">{vs.oxygen_saturation}%</p></div>}
-                {vs.glucose && <div><p className="text-muted-foreground text-[10px]">Glicemia</p><p className="font-medium text-xs">{vs.glucose} mg/dL</p></div>}
+                {vs.oxygen_saturation && (() => { const c = classifyOxygenSaturation(vs.oxygen_saturation!); const b = getClassificationBadge(c); return <div><p className="text-muted-foreground text-[10px]">SpO₂</p><p className="font-medium text-xs">{vs.oxygen_saturation}%</p><span className={`text-[8px] ${b.className}`}>{b.text}</span></div>; })()}
+                {vs.glucose && (() => { const c = classifyGlucose(vs.glucose!); const b = getClassificationBadge(c); return <div><p className="text-muted-foreground text-[10px]">Glicemia</p><p className="font-medium text-xs">{vs.glucose} mg/dL</p><span className={`text-[8px] ${b.className}`}>{b.text}</span></div>; })()}
               </div>
             </div>
           ))}
