@@ -142,24 +142,21 @@ export function ClinicalAnalytics({
   };
 
   // === GERAL VIEW ===
-  if (view === "geral") {
-    const getHrStatus = (hr?: number | null) => !hr ? undefined : hr < 60 || hr > 100 ? "warning" : "normal";
-    const getBpStatus = (s?: number | null, d?: number | null) => !s || !d ? undefined : s > 140 || d > 90 ? "warning" : s > 160 || d > 100 ? "critical" : "normal";
-    const getSpo2Status = (v?: number | null) => !v ? undefined : v < 90 ? "critical" : v < 95 ? "warning" : "normal";
-    const getTempStatus = (t?: number | null) => !t ? undefined : Number(t) > 38 ? "warning" : Number(t) > 39 ? "critical" : Number(t) < 35.5 ? "warning" : "normal";
+  const patientAgeYears = patientBirthDate ? differenceInYears(new Date(), parseISO(patientBirthDate)) : undefined;
 
+  if (view === "geral") {
     return (
       <div className="space-y-4">
         <h3 className="text-sm font-semibold flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" />Painel Clínico Geral</h3>
         
-        {/* Summary cards */}
+        {/* Summary cards with clinical interpretation */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {latest?.heart_rate && <SummaryCard label="FC" value={latest.heart_rate.toString()} unit="bpm" icon={Heart} trend={getTrend(latest.heart_rate, previous?.heart_rate)} status={getHrStatus(latest.heart_rate)} />}
-          {latest?.blood_pressure_systolic && <SummaryCard label="PA" value={`${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}`} unit="mmHg" icon={Activity} status={getBpStatus(latest.blood_pressure_systolic, latest.blood_pressure_diastolic)} />}
-          {latest?.oxygen_saturation && <SummaryCard label="SpO₂" value={latest.oxygen_saturation.toString()} unit="%" icon={Droplets} trend={getTrend(latest.oxygen_saturation, previous?.oxygen_saturation)} status={getSpo2Status(latest.oxygen_saturation)} />}
-          {latest?.temperature && <SummaryCard label="Temp" value={Number(latest.temperature).toFixed(1)} unit="°C" icon={Thermometer} status={getTempStatus(latest.temperature)} />}
-          {latest?.respiratory_rate && <SummaryCard label="FR" value={latest.respiratory_rate.toString()} unit="rpm" icon={Activity} />}
-          {latest?.glucose && <SummaryCard label="Glicemia" value={latest.glucose.toString()} unit="mg/dL" icon={Activity} />}
+          {latest?.heart_rate && <SummaryCard label="FC" value={latest.heart_rate.toString()} unit="bpm" icon={Heart} trend={getTrend(latest.heart_rate, previous?.heart_rate)} classification={classifyHeartRate(latest.heart_rate, patientAgeYears)} />}
+          {latest?.blood_pressure_systolic && latest?.blood_pressure_diastolic && <SummaryCard label="PA" value={`${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}`} unit="mmHg" icon={Activity} classification={classifyBloodPressure(latest.blood_pressure_systolic, latest.blood_pressure_diastolic)} />}
+          {latest?.oxygen_saturation && <SummaryCard label="SpO₂" value={latest.oxygen_saturation.toString()} unit="%" icon={Droplets} trend={getTrend(latest.oxygen_saturation, previous?.oxygen_saturation)} classification={classifyOxygenSaturation(latest.oxygen_saturation)} />}
+          {latest?.temperature && <SummaryCard label="Temp" value={Number(latest.temperature).toFixed(1)} unit="°C" icon={Thermometer} classification={classifyTemperature(Number(latest.temperature))} />}
+          {latest?.respiratory_rate && <SummaryCard label="FR" value={latest.respiratory_rate.toString()} unit="rpm" icon={Activity} classification={classifyRespiratoryRate(latest.respiratory_rate, patientAgeYears)} />}
+          {latest?.glucose && <SummaryCard label="Glicemia" value={latest.glucose.toString()} unit="mg/dL" icon={Activity} classification={classifyGlucose(latest.glucose)} />}
         </div>
 
         {/* Alertas */}
