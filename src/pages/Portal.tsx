@@ -432,8 +432,7 @@ export default function Portal() {
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">Data de Nascimento</label>
-            <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)}
-              className="w-full h-12 text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary" />
+            <DateMaskInput value={birthDate} onChange={setBirthDate} className="h-12 text-lg" />
           </div>
           {error && (
             <div className="flex items-center gap-2 text-destructive bg-red-50 rounded-xl p-3">
