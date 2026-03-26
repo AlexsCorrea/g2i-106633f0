@@ -288,6 +288,27 @@ export default function Portal() {
     </button>
   );
 
+  // ── FULLSCREEN CALL ALERT ──
+  if (showCallAlert && myTicket?.status === "chamada") {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-green-500 flex flex-col items-center justify-center p-6 animate-pulse">
+        <p className="text-white/80 text-lg font-medium mb-2">🔔 ATENÇÃO</p>
+        <p className="text-white text-6xl md:text-8xl font-black mb-4">SUA VEZ!</p>
+        <p className="text-white text-5xl md:text-7xl font-black tracking-widest mb-6">{myTicket.ticket_number}</p>
+        {myTicket.called_to && (
+          <div className="flex items-center gap-2 text-white/90 text-xl mb-2">
+            <MapPin className="w-6 h-6" /><span>{myTicket.called_to}</span>
+          </div>
+        )}
+        <p className="text-white/80 text-lg mb-10">Dirija-se ao atendimento</p>
+        <button onClick={() => setShowCallAlert(false)}
+          className="px-10 py-4 bg-white text-green-700 font-black text-xl rounded-2xl shadow-2xl active:scale-95 transition-transform">
+          OK, ENTENDI
+        </button>
+      </div>
+    );
+  }
+
   // ── TRACKING ──
   if (step === "tracking" && myTicket) {
     const st = statusInfo[myTicket.status] || statusInfo.aguardando;
