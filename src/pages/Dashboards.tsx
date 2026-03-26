@@ -1,0 +1,79 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Activity, HeartPulse, TrendingUp, Gauge, RefreshCw } from "lucide-react";
+import { OperationalDashboard } from "@/components/dashboards/OperationalDashboard";
+import { ClinicalDashboard } from "@/components/dashboards/ClinicalDashboard";
+import { ProductionDashboard } from "@/components/dashboards/ProductionDashboard";
+import { PerformanceDashboard } from "@/components/dashboards/PerformanceDashboard";
+import { useQueryClient } from "@tanstack/react-query";
+
+const Dashboards = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("operacional");
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["dashboard-operational"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-clinical"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-production"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-performance"] });
+  };
+
+  if (!user) {
+    navigate("/auth");
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-[1400px] mx-auto px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-lg font-bold text-foreground">Dashboards Hospitalares</h1>
+              <p className="text-xs text-muted-foreground">Gestão e indicadores em tempo real</p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Atualizar
+          </Button>
+        </div>
+      </header>
+
+      <main className="max-w-[1400px] mx-auto px-6 py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid grid-cols-4 w-full max-w-2xl mb-6">
+            <TabsTrigger value="operacional" className="gap-2 text-xs">
+              <Activity className="h-4 w-4" /> Operacional
+            </TabsTrigger>
+            <TabsTrigger value="clinico" className="gap-2 text-xs">
+              <HeartPulse className="h-4 w-4" /> Clínico
+            </TabsTrigger>
+            <TabsTrigger value="producao" className="gap-2 text-xs">
+              <TrendingUp className="h-4 w-4" /> Produção
+            </TabsTrigger>
+            <TabsTrigger value="performance" className="gap-2 text-xs">
+              <Gauge className="h-4 w-4" /> Performance
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="operacional"><OperationalDashboard /></TabsContent>
+          <TabsContent value="clinico"><ClinicalDashboard /></TabsContent>
+          <TabsContent value="producao"><ProductionDashboard /></TabsContent>
+          <TabsContent value="performance"><PerformanceDashboard /></TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+};
+
+export default Dashboards;

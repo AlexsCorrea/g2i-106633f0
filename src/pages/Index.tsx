@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Users, Calendar, FileText, LogIn, LogOut, 
-  Heart, Activity, Pill, ClipboardList, Shield
+  Heart, Activity, Pill, ClipboardList, Shield, BarChart3
 } from "lucide-react";
 import WhatsNewModal from "@/components/WhatsNewModal";
 import { StatsCards } from "@/components/dashboard/StatsCards";
@@ -145,6 +145,10 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
           <Button onClick={() => navigate("/agenda")} className="gap-2">
             <Calendar className="h-4 w-4" />
             Agenda
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/dashboards")} className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Dashboards
           </Button>
         </div>
       </div>

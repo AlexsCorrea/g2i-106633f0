@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Patients from "./pages/Patients";
 import Prontuario from "./pages/Prontuario";
 import Agenda from "./pages/Agenda";
+import Dashboards from "./pages/Dashboards";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ function App() {
               <Route path="/patients" element={<Patients />} />
               <Route path="/prontuario/:id" element={<Prontuario />} />
               <Route path="/agenda" element={<Agenda />} />
+              <Route path="/dashboards" element={<Dashboards />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>
