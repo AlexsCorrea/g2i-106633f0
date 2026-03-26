@@ -16,6 +16,7 @@ import Kiosk from "./pages/Kiosk";
 import QueueMobile from "./pages/QueueMobile";
 import QueuePanel from "./pages/QueuePanel";
 import Portal from "./pages/Portal";
+import CME from "./pages/CME";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
