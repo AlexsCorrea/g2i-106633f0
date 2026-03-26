@@ -355,30 +355,40 @@ export function ClinicalAnalytics({
           </Tabs>
         )}
 
-        {/* Latest measurements */}
-        {growthData.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {growthData[growthData.length - 1].weight && (
-              <div className="medical-card p-3">
-                <p className="text-[10px] text-muted-foreground">Último Peso</p>
-                <p className="text-xl font-bold">{growthData[growthData.length - 1].weight}<span className="text-sm font-normal text-muted-foreground ml-1">kg</span></p>
-                <p className="text-[10px] text-muted-foreground">{growthData[growthData.length - 1].date} • {growthData[growthData.length - 1].ageLabel}</p>
-              </div>
-            )}
-            {growthData[growthData.length - 1].height && (
-              <div className="medical-card p-3">
-                <p className="text-[10px] text-muted-foreground">Última Estatura</p>
-                <p className="text-xl font-bold">{growthData[growthData.length - 1].height}<span className="text-sm font-normal text-muted-foreground ml-1">cm</span></p>
-              </div>
-            )}
-            {growthData[growthData.length - 1].bmi && (
-              <div className="medical-card p-3">
-                <p className="text-[10px] text-muted-foreground">Último IMC</p>
-                <p className="text-xl font-bold">{growthData[growthData.length - 1].bmi}<span className="text-sm font-normal text-muted-foreground ml-1">kg/m²</span></p>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Latest measurements with classification */}
+        {growthData.length > 0 && (() => {
+          const last = growthData[growthData.length - 1];
+          const gender = (patientGender === "M" || patientGender === "F") ? patientGender : "M";
+          const weightCls = last.weight ? classifyPediatricWeight(last.weight, last.ageMonths, gender as "M" | "F") : null;
+          const heightCls = last.height ? classifyPediatricHeight(last.height, last.ageMonths, gender as "M" | "F") : null;
+          const bmiCls = last.bmi ? classifyBMI(last.bmi, patientAgeYears) : null;
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {last.weight && (
+                <div className="medical-card p-3">
+                  <p className="text-[10px] text-muted-foreground">Último Peso</p>
+                  <p className="text-xl font-bold">{last.weight}<span className="text-sm font-normal text-muted-foreground ml-1">kg</span></p>
+                  <p className="text-[10px] text-muted-foreground">{last.date} • {last.ageLabel}</p>
+                  {weightCls && <span className={`inline-block mt-1 ${getClassificationBadge(weightCls).className}`}>{weightCls.label}</span>}
+                </div>
+              )}
+              {last.height && (
+                <div className="medical-card p-3">
+                  <p className="text-[10px] text-muted-foreground">Última Estatura</p>
+                  <p className="text-xl font-bold">{last.height}<span className="text-sm font-normal text-muted-foreground ml-1">cm</span></p>
+                  {heightCls && <span className={`inline-block mt-1 ${getClassificationBadge(heightCls).className}`}>{heightCls.label}</span>}
+                </div>
+              )}
+              {last.bmi && (
+                <div className="medical-card p-3">
+                  <p className="text-[10px] text-muted-foreground">Último IMC</p>
+                  <p className="text-xl font-bold">{last.bmi}<span className="text-sm font-normal text-muted-foreground ml-1">kg/m²</span></p>
+                  {bmiCls && <span className={`inline-block mt-1 ${getClassificationBadge(bmiCls).className}`}>{bmiCls.label}</span>}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   }
