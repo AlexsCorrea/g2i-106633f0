@@ -439,7 +439,7 @@ export default function Portal() {
               <AlertCircle className="w-4 h-4 flex-shrink-0" /><span className="text-sm">{error}</span>
             </div>
           )}
-          <button onClick={handleSearchAppointment} disabled={loading}
+          <button onClick={handleSearchAppointment} disabled={loading || !birthDate || cpf.replace(/\D/g, "").length < 11}
             className="w-full h-12 bg-primary text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50">
             <Search className="w-5 h-5" />{loading ? "Buscando..." : "Buscar Agendamento"}
           </button>
