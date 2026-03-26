@@ -1165,6 +1165,11 @@ export default function Prontuario() {
       case "anexos": return renderAnexos();
       case "auditoria": return renderAuditoria();
       case "timeline-clinica": return renderTimeline();
+      case "analise-geral": return <ClinicalAnalytics view="geral" vitalSigns={vitalSigns} evolutionNotes={evolutionNotes} latestGlasgow={latestGlasgow} latestBraden={latestBraden} latestMorse={latestMorse} medications={medications} allergies={allergies} patientBirthDate={patient.birth_date} />;
+      case "analise-pediatria": return <ClinicalAnalytics view="pediatria" vitalSigns={vitalSigns} patientBirthDate={patient.birth_date} patientGender={patient.gender} />;
+      case "analise-cardiologia": return <ClinicalAnalytics view="cardiologia" vitalSigns={vitalSigns} />;
+      case "analise-uti": return <ClinicalAnalytics view="uti" vitalSigns={vitalSigns} latestGlasgow={latestGlasgow} latestBraden={latestBraden} latestMorse={latestMorse} medications={medications} allergies={allergies} />;
+      case "analise-tendencias": return <ClinicalAnalytics view="tendencias" vitalSigns={vitalSigns} />;
       default: return renderResumo();
     }
   };
