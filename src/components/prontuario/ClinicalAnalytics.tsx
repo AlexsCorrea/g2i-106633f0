@@ -14,6 +14,13 @@ import { format, parseISO, differenceInMonths, differenceInYears } from "date-fn
 import { ptBR } from "date-fns/locale";
 import type { VitalSign } from "@/hooks/useVitalSigns";
 import type { EvolutionNote } from "@/hooks/useEvolutionNotes";
+import {
+  classifyHeartRate, classifyBloodPressure, classifyTemperature,
+  classifyOxygenSaturation, classifyRespiratoryRate, classifyGlucose,
+  classifyGlasgow, classifyBraden, classifyMorse,
+  classifyPediatricWeight, classifyPediatricHeight, classifyBMI,
+  getClassificationBadge, type ClinicalClassification,
+} from "@/lib/clinicalRules";
 
 interface ClinicalAnalyticsProps {
   view: "geral" | "pediatria" | "cardiologia" | "uti" | "tendencias";
