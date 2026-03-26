@@ -154,6 +154,18 @@ const sections: SidebarSection[] = [
     ],
   },
   {
+    id: "analise-clinica",
+    label: "Análise Clínica",
+    icon: BarChart2,
+    children: [
+      { id: "analise-geral", label: "Painel Geral", icon: BarChart2 },
+      { id: "analise-pediatria", label: "Pediatria", icon: Baby },
+      { id: "analise-cardiologia", label: "Cardiologia", icon: HeartPulse },
+      { id: "analise-uti", label: "UTI / Críticos", icon: HeartPulse },
+      { id: "analise-tendencias", label: "Tendências", icon: TrendingUp },
+    ],
+  },
+  {
     id: "auditoria-geral",
     label: "Auditoria e Histórico",
     icon: History,
