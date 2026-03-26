@@ -1,5 +1,7 @@
 import { ClipboardList, User, Clock, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { extractSpecialtyFromContent } from "@/lib/clinicalRules";
 
 interface EvolutionNote {
   id: string;
@@ -49,39 +51,54 @@ export function EvolutionNotes({ notes, onAddNote }: EvolutionNotesProps) {
       </div>
 
       <div className="space-y-4 max-h-96 overflow-y-auto scrollbar-thin pr-1">
-        {notes.map((note) => (
-          <div
-            key={note.id}
-            className={`timeline-item border-l-4 ${typeStyles[note.type]} pl-4 pb-4`}
-          >
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <div>
-                <p className="text-xs font-medium text-primary uppercase tracking-wide">
-                  {typeLabels[note.type]}
-                </p>
-                <div className="flex items-center gap-3 mt-1 text-sm">
-                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    {note.date} às {note.time}
-                  </span>
+        {notes.map((note) => {
+          const extractedSpecialty = extractSpecialtyFromContent(note.content);
+          
+          return (
+            <div
+              key={note.id}
+              className={`timeline-item border-l-4 ${typeStyles[note.type]} pl-4 pb-4`}
+            >
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-medium text-primary uppercase tracking-wide">
+                      {typeLabels[note.type]}
+                    </p>
+                    {extractedSpecialty && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-primary/5 text-primary border-primary/20">
+                        {extractedSpecialty}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-sm">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5" />
+                      {note.date} às {note.time}
+                    </span>
+                  </div>
                 </div>
               </div>
+              
+              <div className="bg-muted/30 rounded-lg p-4 mt-2">
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                  {note.content}
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
+                <User className="h-3.5 w-3.5" />
+                <span className="font-medium">{note.professional}</span>
+                {note.specialty && (
+                  <>
+                    <span>•</span>
+                    <span>{note.specialty}</span>
+                  </>
+                )}
+              </div>
             </div>
-            
-            <div className="bg-muted/30 rounded-lg p-4 mt-2">
-              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                {note.content}
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-              <User className="h-3.5 w-3.5" />
-              <span className="font-medium">{note.professional}</span>
-              <span>•</span>
-              <span>{note.specialty}</span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
