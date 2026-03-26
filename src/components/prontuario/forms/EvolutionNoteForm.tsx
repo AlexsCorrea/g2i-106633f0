@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreateEvolutionNote } from "@/hooks/useEvolutionNotes";
+import { useCreateVitalSign } from "@/hooks/useVitalSigns";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Stethoscope } from "lucide-react";
 import { SpecialtyFields, MEDICAL_SPECIALTIES, specialtyDataToContent } from "./specialties/SpecialtyFields";
 import type { SpecialtyData } from "./specialties/SpecialtyFields";
+import { toast } from "sonner";
 
 interface EvolutionNoteFormProps {
   patientId: string;
@@ -26,6 +28,7 @@ const noteTypes = [
 export function EvolutionNoteForm({ patientId, open, onOpenChange, initialSpecialty }: EvolutionNoteFormProps) {
   const { profile } = useAuth();
   const createNote = useCreateEvolutionNote();
+  const createVitalSign = useCreateVitalSign();
 
   const [noteType, setNoteType] = useState("medica");
   const [specialty, setSpecialty] = useState(initialSpecialty || "");
@@ -56,6 +59,40 @@ export function EvolutionNoteForm({ patientId, open, onOpenChange, initialSpecia
       assessment: (specialtyData.avaliacao as string) || (specialtyData.diagnostico as string) || null,
       plan: (specialtyData.conduta as string) || null,
     });
+
+    // Auto-save anthropometric data to vital_signs when pediatric form has weight/height/PC
+    const peso = parseFloat(specialtyData.peso as string);
+    const estatura = parseFloat(specialtyData.estatura as string);
+    const pc = specialtyData.pc as string;
+    const hasAnthropometry = !isNaN(peso) || !isNaN(estatura);
+
+    if (hasAnthropometry) {
+      try {
+        const pcNote = pc ? `PC: ${pc}cm` : "";
+        const specNote = specialty ? `Especialidade: ${MEDICAL_SPECIALTIES.find(s => s.value === specialty)?.label || specialty}` : "";
+        const noteParts = [specNote, pcNote].filter(Boolean).join(" | ");
+
+        await createVitalSign.mutateAsync({
+          patient_id: patientId,
+          recorded_by: profile.id,
+          weight: !isNaN(peso) ? peso : null,
+          height: !isNaN(estatura) ? estatura : null,
+          temperature: null,
+          heart_rate: null,
+          respiratory_rate: null,
+          blood_pressure_systolic: null,
+          blood_pressure_diastolic: null,
+          oxygen_saturation: null,
+          pain_level: null,
+          glucose: null,
+          notes: noteParts || null,
+          recorded_at: new Date().toISOString(),
+        });
+        toast.success("Dados antropométricos salvos nos sinais vitais!");
+      } catch {
+        // Silent fail - evolution note was already saved
+      }
+    }
 
     setSpecialtyData({});
     setSpecialty("");
