@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ArrowLeft, Search, CheckCircle2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGenerateTicket } from "@/hooks/useQueueTickets";
+import { DateMaskInput } from "@/components/ui/date-mask-input";
 import type { KioskResultData } from "@/pages/Kiosk";
 
 interface Props {
@@ -226,15 +227,14 @@ export function KioskCheckin({ onBack, onResult }: Props) {
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Data de Nascimento</label>
-          <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)}
-            className="w-full h-14 text-lg text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" />
+          <DateMaskInput value={birthDate} onChange={setBirthDate} />
         </div>
         {error && (
           <div className="flex items-center gap-2 text-destructive bg-red-50 rounded-xl p-3">
             <AlertCircle className="w-5 h-5 flex-shrink-0" /><span className="text-sm">{error}</span>
           </div>
         )}
-        <button onClick={handleSearch} disabled={loading}
+        <button onClick={handleSearch} disabled={loading || !birthDate || cpf.replace(/\D/g, "").length < 11}
           className="w-full h-14 bg-primary text-white text-lg font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 active:scale-[0.98]">
           <Search className="w-5 h-5" />{loading ? "Buscando..." : "Buscar Agendamento"}
         </button>

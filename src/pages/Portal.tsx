@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Ticket, CalendarCheck, ArrowLeft, Bell, BellOff, Clock, Users, Search, AlertCircle, CheckCircle2, ChevronRight, Crown, UserCheck, Smartphone, Home, RotateCcw, History, MapPin, Volume2 } from "lucide-react";
+import { DateMaskInput } from "@/components/ui/date-mask-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGenerateTicket, useQueueTicketById, useQueueTickets } from "@/hooks/useQueueTickets";
 
@@ -431,15 +432,14 @@ export default function Portal() {
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">Data de Nascimento</label>
-            <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)}
-              className="w-full h-12 text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary" />
+            <DateMaskInput value={birthDate} onChange={setBirthDate} className="h-12 text-lg" />
           </div>
           {error && (
             <div className="flex items-center gap-2 text-destructive bg-red-50 rounded-xl p-3">
               <AlertCircle className="w-4 h-4 flex-shrink-0" /><span className="text-sm">{error}</span>
             </div>
           )}
-          <button onClick={handleSearchAppointment} disabled={loading}
+          <button onClick={handleSearchAppointment} disabled={loading || !birthDate || cpf.replace(/\D/g, "").length < 11}
             className="w-full h-12 bg-primary text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50">
             <Search className="w-5 h-5" />{loading ? "Buscando..." : "Buscar Agendamento"}
           </button>

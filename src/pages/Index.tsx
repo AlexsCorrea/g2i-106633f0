@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Users, Calendar, FileText, LogIn, LogOut, 
-  Heart, Activity, Pill, ClipboardList, Shield, BarChart3
+  Heart, Activity, Pill, ClipboardList, Shield, BarChart3,
+  Monitor, Megaphone
 } from "lucide-react";
 import WhatsNewModal from "@/components/WhatsNewModal";
 import { StatsCards } from "@/components/dashboard/StatsCards";
@@ -137,7 +138,7 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
           <h2 className="text-2xl font-bold text-foreground">Bem-vindo de volta!</h2>
           <p className="text-muted-foreground">Visão geral do sistema</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => navigate("/patients")} className="gap-2">
             <Users className="h-4 w-4" />
             Pacientes
@@ -149,6 +150,14 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
           <Button variant="outline" onClick={() => navigate("/dashboards")} className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Dashboards
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/kiosk")} className="gap-2">
+            <Monitor className="h-4 w-4" />
+            Autoatendimento
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/painel")} className="gap-2">
+            <Megaphone className="h-4 w-4" />
+            Painel de Chamadas
           </Button>
         </div>
       </div>
@@ -163,7 +172,7 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
       </div>
 
       {/* Quick Access */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card 
           className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
           onClick={() => navigate("/patients")}
@@ -172,8 +181,8 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
               <Users className="h-5 w-5 text-primary" />
             </div>
-            <CardTitle className="text-base">Gerenciar Pacientes</CardTitle>
-            <CardDescription className="text-xs">Cadastrar, editar e buscar pacientes</CardDescription>
+            <CardTitle className="text-base">Pacientes</CardTitle>
+            <CardDescription className="text-xs">Cadastrar, editar e buscar</CardDescription>
           </CardHeader>
         </Card>
         <Card 
@@ -184,8 +193,8 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
             <div className="h-10 w-10 rounded-lg bg-emerald-50 flex items-center justify-center mb-2">
               <Calendar className="h-5 w-5 text-emerald-600" />
             </div>
-            <CardTitle className="text-base">Agenda Completa</CardTitle>
-            <CardDescription className="text-xs">Consultas, exames e procedimentos</CardDescription>
+            <CardTitle className="text-base">Agenda</CardTitle>
+            <CardDescription className="text-xs">Consultas e procedimentos</CardDescription>
           </CardHeader>
         </Card>
         <Card className="border-dashed opacity-60">
@@ -194,7 +203,31 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
               <FileText className="h-5 w-5 text-muted-foreground" />
             </div>
             <CardTitle className="text-base">Prontuários</CardTitle>
-            <CardDescription className="text-xs">Selecione um paciente para abrir</CardDescription>
+            <CardDescription className="text-xs">Selecione um paciente</CardDescription>
+          </CardHeader>
+        </Card>
+        <Card 
+          className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+          onClick={() => navigate("/kiosk")}
+        >
+          <CardHeader className="pb-3">
+            <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center mb-2">
+              <Monitor className="h-5 w-5 text-blue-600" />
+            </div>
+            <CardTitle className="text-base">Autoatendimento</CardTitle>
+            <CardDescription className="text-xs">Totem de senhas e check-in</CardDescription>
+          </CardHeader>
+        </Card>
+        <Card 
+          className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+          onClick={() => navigate("/painel")}
+        >
+          <CardHeader className="pb-3">
+            <div className="h-10 w-10 rounded-lg bg-orange-50 flex items-center justify-center mb-2">
+              <Megaphone className="h-5 w-5 text-orange-600" />
+            </div>
+            <CardTitle className="text-base">Painel de Chamadas</CardTitle>
+            <CardDescription className="text-xs">Gestão e chamada de senhas</CardDescription>
           </CardHeader>
         </Card>
       </div>
