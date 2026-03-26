@@ -35,7 +35,7 @@ export default function Kiosk() {
   // Inactivity timeout - return to home if no interaction
   useEffect(() => {
     if (flow === "home") return;
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
       clearTimeout(timer);
       timer = setTimeout(goHome, INACTIVITY_TIMEOUT);
