@@ -222,7 +222,7 @@ export default function Prontuario() {
             <h3 className="section-header mb-0"><Activity className="h-4 w-4 text-primary" />Sinais Vitais</h3>
             <Button size="sm" variant="outline" onClick={() => setShowVitalsForm(true)} className="gap-1 text-xs h-7"><Plus className="h-3 w-3" />Registrar</Button>
           </div>
-          {formatVitals().length > 0 ? <VitalsCard vitals={formatVitals()} lastUpdate={latestVitals ? format(parseISO(latestVitals.recorded_at), "dd/MM 'às' HH:mm", { locale: ptBR }) : "-"} /> : <p className="text-muted-foreground text-sm">Nenhum registro</p>}
+          {formatVitals().length > 0 ? <VitalsCard vitals={formatVitals()} lastUpdate={latestVitals ? format(parseISO(latestVitals.recorded_at), "dd/MM 'às' HH:mm", { locale: ptBR }) : "-"} patientAge={patientAge} /> : <p className="text-muted-foreground text-sm">Nenhum registro</p>}
         </div>
         <div className="medical-card p-4">
           <div className="flex items-center justify-between mb-3">
