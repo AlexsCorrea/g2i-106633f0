@@ -234,7 +234,7 @@ export function KioskCheckin({ onBack, onResult }: Props) {
             <AlertCircle className="w-5 h-5 flex-shrink-0" /><span className="text-sm">{error}</span>
           </div>
         )}
-        <button onClick={handleSearch} disabled={loading}
+        <button onClick={handleSearch} disabled={loading || !birthDate || cpf.replace(/\D/g, "").length < 11}
           className="w-full h-14 bg-primary text-white text-lg font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 active:scale-[0.98]">
           <Search className="w-5 h-5" />{loading ? "Buscando..." : "Buscar Agendamento"}
         </button>
