@@ -1215,6 +1215,121 @@ export type Database = {
           },
         ]
       }
+      exam_gallery_items: {
+        Row: {
+          annotations: Json | null
+          category: string
+          created_at: string
+          equipment: string | null
+          exam_date: string
+          exam_request_id: string | null
+          exam_time: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string
+          file_url: string
+          id: string
+          laterality: string | null
+          metadata: Json | null
+          mime_type: string | null
+          observations: string | null
+          origin: string | null
+          patient_id: string
+          professional_name: string | null
+          report_text: string | null
+          report_url: string | null
+          status: string
+          subcategory: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          annotations?: Json | null
+          category?: string
+          created_at?: string
+          equipment?: string | null
+          exam_date?: string
+          exam_request_id?: string | null
+          exam_time?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string
+          file_url: string
+          id?: string
+          laterality?: string | null
+          metadata?: Json | null
+          mime_type?: string | null
+          observations?: string | null
+          origin?: string | null
+          patient_id: string
+          professional_name?: string | null
+          report_text?: string | null
+          report_url?: string | null
+          status?: string
+          subcategory?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          annotations?: Json | null
+          category?: string
+          created_at?: string
+          equipment?: string | null
+          exam_date?: string
+          exam_request_id?: string | null
+          exam_time?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          laterality?: string | null
+          metadata?: Json | null
+          mime_type?: string | null
+          observations?: string | null
+          origin?: string | null
+          patient_id?: string
+          professional_name?: string | null
+          report_text?: string | null
+          report_url?: string | null
+          status?: string
+          subcategory?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_gallery_items_exam_request_id_fkey"
+            columns: ["exam_request_id"]
+            isOneToOne: false
+            referencedRelation: "exam_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_gallery_items_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_gallery_items_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_requests: {
         Row: {
           collected_at: string | null

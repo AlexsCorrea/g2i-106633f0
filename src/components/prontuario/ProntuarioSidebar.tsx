@@ -81,6 +81,7 @@ const sections: SidebarSection[] = [
       { id: "pedidos-exames", label: "Solicitação de Exames", icon: FileText },
       { id: "resultados-exames", label: "Resultados", icon: FileText },
       { id: "imagens", label: "Exames de Imagem", icon: Eye },
+      { id: "galeria-exames", label: "Galeria de Exames", icon: Eye },
     ],
   },
   {

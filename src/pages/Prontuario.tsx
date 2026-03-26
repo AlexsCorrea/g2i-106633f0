@@ -50,6 +50,7 @@ import { AIChatButton } from "@/components/prontuario/AIChatButton";
 import { AIAssistantPanel } from "@/components/prontuario/AIAssistantPanel";
 import { ModuleSection, EmptyModule } from "@/components/prontuario/sections/ModuleSection";
 import { ClinicalAnalytics } from "@/components/prontuario/ClinicalAnalytics";
+import { ExamGallery } from "@/components/prontuario/ExamGallery";
 import {
   classifyHeartRate, classifyBloodPressure, classifyTemperature,
   classifyOxygenSaturation, classifyGlucose, getClassificationBadge,
@@ -1138,6 +1139,7 @@ export default function Prontuario() {
       case "pedidos-exames": return renderExams();
       case "resultados-exames": return renderResultadosExames();
       case "imagens": return renderImagens();
+      case "galeria-exames": return <ExamGallery patientId={id!} />;
       case "bloco-cirurgico": return renderSurgery();
       case "anestesia": return renderAnestesia();
       case "checklist-cirurgico": return renderChecklistCirurgico();
