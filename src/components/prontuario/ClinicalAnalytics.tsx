@@ -268,12 +268,175 @@ export function ClinicalAnalytics({
 
   // === PEDIATRIA VIEW ===
   if (view === "pediatria") {
-    const age = patientBirthDate ? differenceInYears(new Date(), parseISO(patientBirthDate)) : 0;
+    const gender = (patientGender === "M" || patientGender === "F") ? patientGender : "M";
+    const genderKey = gender === "M" ? "male" : "female";
+
+    // Build reference curves covering patient data range
+    const ageRange = growthData.length > 0
+      ? { min: Math.max(0, Math.min(...growthData.map(d => d.ageMonths)) - 3), max: Math.max(...growthData.map(d => d.ageMonths)) + 6 }
+      : { min: 0, max: 60 };
+
+    const weightRefCurve = useMemo(() => buildReferenceCurve(weightReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
+    const heightRefCurve = useMemo(() => buildReferenceCurve(heightReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
+    const bmiRefCurve = useMemo(() => buildReferenceCurve(bmiReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
+
+    // Merge patient data with reference curve for unified chart
+    const mergeWithRef = (patientData: typeof growthData, refCurve: GrowthReferencePoint[], valueKey: "weight" | "height" | "bmi") => {
+      const refMap = new Map(refCurve.map(r => [r.ageMonths, r]));
+      const patMap = new Map(patientData.filter(d => d[valueKey] != null).map(d => [d.ageMonths, d[valueKey] as number]));
+      const allAges = [...new Set([...refMap.keys(), ...patMap.keys()])].sort((a, b) => a - b);
+      return allAges.map(age => {
+        const ref = refMap.get(age) || interpolateReference(age, refCurve);
+        const patValue = patMap.get(age) ?? null;
+        return {
+          ageMonths: age,
+          ageLabel: `${age}m`,
+          value: patValue,
+          p3: ref?.p3 ?? null,
+          p15: ref?.p15 ?? null,
+          p50: ref?.p50 ?? null,
+          p85: ref?.p85 ?? null,
+          p97: ref?.p97 ?? null,
+        };
+      });
+    };
+
+    const weightChartData = mergeWithRef(growthData, weightRefCurve, "weight");
+    const heightChartData = mergeWithRef(growthData, heightRefCurve, "height");
+    const bmiChartData = mergeWithRef(growthData, bmiRefCurve, "bmi");
+
+    // Latest percentile estimation
+    const lastGrowth = growthData.length > 0 ? growthData[growthData.length - 1] : null;
+    const weightPercentile = lastGrowth?.weight ? (() => {
+      const ref = interpolateReference(lastGrowth.ageMonths, weightReference[genderKey]);
+      return ref ? estimatePercentile(lastGrowth.weight, ref) : null;
+    })() : null;
+    const heightPercentile = lastGrowth?.height ? (() => {
+      const ref = interpolateReference(lastGrowth.ageMonths, heightReference[genderKey]);
+      return ref ? estimatePercentile(lastGrowth.height, ref) : null;
+    })() : null;
+    const bmiPercentile = lastGrowth?.bmi ? (() => {
+      const ref = interpolateReference(lastGrowth.ageMonths, bmiReference[genderKey]);
+      return ref ? estimatePercentile(lastGrowth.bmi, ref) : null;
+    })() : null;
+
+    const zoneColors: Record<string, string> = {
+      "critical-low": "text-destructive",
+      "low": "text-warning",
+      "normal": "text-success",
+      "high": "text-warning",
+      "critical-high": "text-destructive",
+    };
+    const zoneBg: Record<string, string> = {
+      "critical-low": "bg-destructive/10",
+      "low": "bg-warning/10",
+      "normal": "bg-success/10",
+      "high": "bg-warning/10",
+      "critical-high": "bg-destructive/10",
+    };
+    const zoneLabels: Record<string, string> = {
+      "critical-low": "Muito abaixo (< P3)",
+      "low": "Abaixo (P3-P15)",
+      "normal": "Adequado (P15-P85)",
+      "high": "Acima (P85-P97)",
+      "critical-high": "Muito acima (> P97)",
+    };
+
+    const GrowthChart = ({ data, yLabel, title }: { data: typeof weightChartData; yLabel: string; title: string }) => (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">{title}</CardTitle>
+          <p className="text-[10px] text-muted-foreground">Referência OMS/CDC — Sexo {gender === "M" ? "Masculino" : "Feminino"}</p>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="ageLabel" tick={{ fontSize: 10 }} label={{ value: "Idade (meses)", position: "insideBottom", offset: -5, fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 10 }} />
+                <Tooltip content={({ active, payload, label }: any) => {
+                  if (!active || !payload?.length) return null;
+                  return (
+                    <div className="rounded-lg border bg-card p-2 shadow-md text-xs">
+                      <p className="font-medium mb-1">{label}</p>
+                      {payload.map((p: any, i: number) => (
+                        <p key={i} style={{ color: p.color }}>{p.name}: <strong>{p.value != null ? p.value : "—"}</strong></p>
+                      ))}
+                    </div>
+                  );
+                }} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                {/* P3-P97 band (outer) */}
+                <Area type="monotone" dataKey="p97" name="P97" stroke="none" fill="hsl(var(--primary))" fillOpacity={0.05} connectNulls dot={false} activeDot={false} />
+                <Area type="monotone" dataKey="p3" name="P3" stroke="none" fill="hsl(var(--background))" fillOpacity={1} connectNulls dot={false} activeDot={false} />
+                {/* P15-P85 band (normal zone) */}
+                <Area type="monotone" dataKey="p85" name="P85" stroke="hsl(var(--primary))" strokeWidth={0.5} strokeDasharray="4 4" fill="hsl(var(--primary))" fillOpacity={0.08} connectNulls dot={false} activeDot={false} />
+                <Area type="monotone" dataKey="p15" name="P15" stroke="hsl(var(--primary))" strokeWidth={0.5} strokeDasharray="4 4" fill="hsl(var(--background))" fillOpacity={1} connectNulls dot={false} activeDot={false} />
+                {/* Median line */}
+                <Line type="monotone" dataKey="p50" name="Mediana (P50)" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />
+                {/* Patient data */}
+                <Line type="monotone" dataKey="value" name="Paciente" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }} connectNulls />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          {/* Legend explanation */}
+          <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-primary inline-block" /> Paciente</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-muted-foreground inline-block" style={{ borderTop: "1px dashed" }} /> Mediana (P50)</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-2 bg-primary/10 inline-block rounded-sm" /> Faixa P15-P85</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-2 bg-primary/5 inline-block rounded-sm" /> Faixa P3-P97</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
 
     return (
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold flex items-center gap-2"><Baby className="h-4 w-4 text-primary" />Análise Pediátrica</h3>
-        
+        <h3 className="text-sm font-semibold flex items-center gap-2"><Baby className="h-4 w-4 text-primary" />Análise Pediátrica — Curvas de Crescimento</h3>
+
+        {/* Percentile indicators */}
+        {lastGrowth && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {lastGrowth.weight && weightPercentile && (
+              <div className="medical-card p-3">
+                <p className="text-[10px] text-muted-foreground">Peso — {lastGrowth.ageLabel}</p>
+                <p className="text-xl font-bold">{lastGrowth.weight}<span className="text-sm font-normal text-muted-foreground ml-1">kg</span></p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${zoneBg[weightPercentile.zone]} ${zoneColors[weightPercentile.zone]}`}>
+                    {weightPercentile.percentile}
+                  </span>
+                  <span className={`text-[10px] ${zoneColors[weightPercentile.zone]}`}>{zoneLabels[weightPercentile.zone]}</span>
+                </div>
+              </div>
+            )}
+            {lastGrowth.height && heightPercentile && (
+              <div className="medical-card p-3">
+                <p className="text-[10px] text-muted-foreground">Estatura — {lastGrowth.ageLabel}</p>
+                <p className="text-xl font-bold">{lastGrowth.height}<span className="text-sm font-normal text-muted-foreground ml-1">cm</span></p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${zoneBg[heightPercentile.zone]} ${zoneColors[heightPercentile.zone]}`}>
+                    {heightPercentile.percentile}
+                  </span>
+                  <span className={`text-[10px] ${zoneColors[heightPercentile.zone]}`}>{zoneLabels[heightPercentile.zone]}</span>
+                </div>
+              </div>
+            )}
+            {lastGrowth.bmi && bmiPercentile && (
+              <div className="medical-card p-3">
+                <p className="text-[10px] text-muted-foreground">IMC — {lastGrowth.ageLabel}</p>
+                <p className="text-xl font-bold">{lastGrowth.bmi}<span className="text-sm font-normal text-muted-foreground ml-1">kg/m²</span></p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${zoneBg[bmiPercentile.zone]} ${zoneColors[bmiPercentile.zone]}`}>
+                    {bmiPercentile.percentile}
+                  </span>
+                  <span className={`text-[10px] ${zoneColors[bmiPercentile.zone]}`}>{zoneLabels[bmiPercentile.zone]}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {growthData.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center">
@@ -289,111 +452,32 @@ export function ClinicalAnalytics({
               <TabsTrigger value="altura" className="text-xs h-6">Altura × Idade</TabsTrigger>
               <TabsTrigger value="imc" className="text-xs h-6">IMC × Idade</TabsTrigger>
             </TabsList>
-
             <TabsContent value="peso">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Curva de Peso × Idade</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={growthData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                        <XAxis dataKey="ageLabel" tick={{ fontSize: 10 }} label={{ value: "Idade (meses)", position: "insideBottom", offset: -5, fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} label={{ value: "Peso (kg)", angle: -90, position: "insideLeft", fontSize: 10 }} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Area type="monotone" dataKey="weight" name="Peso (kg)" stroke={chartColors.weight} fill={chartColors.weight} fillOpacity={0.1} strokeWidth={2} dot={{ r: 4 }} connectNulls />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {growthData.filter(d => d.weight).map((d, i) => (
-                      <Badge key={i} variant="outline" className="text-[10px]">{d.date}: {d.weight}kg ({d.ageLabel})</Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <GrowthChart data={weightChartData} yLabel="Peso (kg)" title="Curva de Peso × Idade" />
             </TabsContent>
-
             <TabsContent value="altura">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Curva de Estatura × Idade</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={growthData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                        <XAxis dataKey="ageLabel" tick={{ fontSize: 10 }} label={{ value: "Idade (meses)", position: "insideBottom", offset: -5, fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} label={{ value: "Estatura (cm)", angle: -90, position: "insideLeft", fontSize: 10 }} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Area type="monotone" dataKey="height" name="Estatura (cm)" stroke={chartColors.height} fill={chartColors.height} fillOpacity={0.1} strokeWidth={2} dot={{ r: 4 }} connectNulls />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+              <GrowthChart data={heightChartData} yLabel="Estatura (cm)" title="Curva de Estatura × Idade" />
             </TabsContent>
-
             <TabsContent value="imc">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">IMC × Idade</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={growthData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                        <XAxis dataKey="ageLabel" tick={{ fontSize: 10 }} label={{ value: "Idade (meses)", position: "insideBottom", offset: -5, fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} label={{ value: "IMC (kg/m²)", angle: -90, position: "insideLeft", fontSize: 10 }} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Area type="monotone" dataKey="bmi" name="IMC" stroke={chartColors.bmi} fill={chartColors.bmi} fillOpacity={0.1} strokeWidth={2} dot={{ r: 4 }} connectNulls />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+              <GrowthChart data={bmiChartData} yLabel="IMC (kg/m²)" title="IMC × Idade" />
             </TabsContent>
           </Tabs>
         )}
 
-        {/* Latest measurements with classification */}
-        {growthData.length > 0 && (() => {
-          const last = growthData[growthData.length - 1];
-          const gender = (patientGender === "M" || patientGender === "F") ? patientGender : "M";
-          const weightCls = last.weight ? classifyPediatricWeight(last.weight, last.ageMonths, gender as "M" | "F") : null;
-          const heightCls = last.height ? classifyPediatricHeight(last.height, last.ageMonths, gender as "M" | "F") : null;
-          const bmiCls = last.bmi ? classifyBMI(last.bmi, patientAgeYears) : null;
-          return (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {last.weight && (
-                <div className="medical-card p-3">
-                  <p className="text-[10px] text-muted-foreground">Último Peso</p>
-                  <p className="text-xl font-bold">{last.weight}<span className="text-sm font-normal text-muted-foreground ml-1">kg</span></p>
-                  <p className="text-[10px] text-muted-foreground">{last.date} • {last.ageLabel}</p>
-                  {weightCls && <span className={`inline-block mt-1 ${getClassificationBadge(weightCls).className}`}>{weightCls.label}</span>}
-                </div>
-              )}
-              {last.height && (
-                <div className="medical-card p-3">
-                  <p className="text-[10px] text-muted-foreground">Última Estatura</p>
-                  <p className="text-xl font-bold">{last.height}<span className="text-sm font-normal text-muted-foreground ml-1">cm</span></p>
-                  {heightCls && <span className={`inline-block mt-1 ${getClassificationBadge(heightCls).className}`}>{heightCls.label}</span>}
-                </div>
-              )}
-              {last.bmi && (
-                <div className="medical-card p-3">
-                  <p className="text-[10px] text-muted-foreground">Último IMC</p>
-                  <p className="text-xl font-bold">{last.bmi}<span className="text-sm font-normal text-muted-foreground ml-1">kg/m²</span></p>
-                  {bmiCls && <span className={`inline-block mt-1 ${getClassificationBadge(bmiCls).className}`}>{bmiCls.label}</span>}
-                </div>
-              )}
+        {/* Alerts */}
+        {lastGrowth && (weightPercentile?.zone === "critical-low" || weightPercentile?.zone === "critical-high" || heightPercentile?.zone === "critical-low") && (
+          <div className="medical-card p-3 border-destructive/30">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <span className="text-xs font-semibold text-destructive">Alertas de Crescimento</span>
             </div>
-          );
-        })()}
+            <div className="space-y-1 text-xs text-muted-foreground">
+              {weightPercentile?.zone === "critical-low" && <p>⚠️ Peso abaixo do percentil 3 — investigar desnutrição ou patologia subjacente.</p>}
+              {weightPercentile?.zone === "critical-high" && <p>⚠️ Peso acima do percentil 97 — avaliar obesidade infantil.</p>}
+              {heightPercentile?.zone === "critical-low" && <p>⚠️ Estatura abaixo do percentil 3 — investigar baixa estatura patológica.</p>}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
