@@ -21,6 +21,11 @@ import {
   classifyPediatricWeight, classifyPediatricHeight, classifyBMI,
   getClassificationBadge, type ClinicalClassification,
 } from "@/lib/clinicalRules";
+import {
+  weightReference, heightReference, bmiReference,
+  buildReferenceCurve, interpolateReference, estimatePercentile,
+  type GrowthReferencePoint,
+} from "@/lib/pediatricGrowthReference";
 
 interface ClinicalAnalyticsProps {
   view: "geral" | "pediatria" | "cardiologia" | "uti" | "tendencias";
