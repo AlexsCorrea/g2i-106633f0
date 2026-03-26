@@ -221,32 +221,41 @@ export function ClinicalAnalytics({
           </Card>
         )}
 
-        {/* Scales summary */}
+        {/* Scales summary with clinical interpretation */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {latestGlasgow?.total_score != null && (
-            <div className="medical-card p-3">
-              <p className="text-[10px] text-muted-foreground">Glasgow</p>
-              <p className={`text-xl font-bold ${latestGlasgow.total_score <= 8 ? "text-destructive" : latestGlasgow.total_score <= 12 ? "text-warning" : ""}`}>
-                {latestGlasgow.total_score}<span className="text-sm font-normal text-muted-foreground">/15</span>
-              </p>
-            </div>
-          )}
-          {latestBraden?.total_score != null && (
-            <div className="medical-card p-3">
-              <p className="text-[10px] text-muted-foreground">Braden</p>
-              <p className={`text-xl font-bold ${latestBraden.total_score <= 12 ? "text-destructive" : latestBraden.total_score <= 14 ? "text-warning" : ""}`}>
-                {latestBraden.total_score}<span className="text-sm font-normal text-muted-foreground">/23</span>
-              </p>
-            </div>
-          )}
-          {latestMorse?.total_score != null && (
-            <div className="medical-card p-3">
-              <p className="text-[10px] text-muted-foreground">Morse</p>
-              <p className={`text-xl font-bold ${latestMorse.total_score >= 45 ? "text-destructive" : latestMorse.total_score >= 25 ? "text-warning" : ""}`}>
-                {latestMorse.total_score}
-              </p>
-            </div>
-          )}
+          {latestGlasgow?.total_score != null && (() => {
+            const cls = classifyGlasgow(latestGlasgow.total_score);
+            const badge = getClassificationBadge(cls);
+            return (
+              <div className="medical-card p-3">
+                <p className="text-[10px] text-muted-foreground">Glasgow</p>
+                <p className={`text-xl font-bold ${cls.color}`}>{latestGlasgow.total_score}<span className="text-sm font-normal text-muted-foreground">/15</span></p>
+                <span className={`inline-block mt-1 ${badge.className}`}>{badge.text}</span>
+              </div>
+            );
+          })()}
+          {latestBraden?.total_score != null && (() => {
+            const cls = classifyBraden(latestBraden.total_score);
+            const badge = getClassificationBadge(cls);
+            return (
+              <div className="medical-card p-3">
+                <p className="text-[10px] text-muted-foreground">Braden</p>
+                <p className={`text-xl font-bold ${cls.color}`}>{latestBraden.total_score}<span className="text-sm font-normal text-muted-foreground">/23</span></p>
+                <span className={`inline-block mt-1 ${badge.className}`}>{badge.text}</span>
+              </div>
+            );
+          })()}
+          {latestMorse?.total_score != null && (() => {
+            const cls = classifyMorse(latestMorse.total_score);
+            const badge = getClassificationBadge(cls);
+            return (
+              <div className="medical-card p-3">
+                <p className="text-[10px] text-muted-foreground">Morse</p>
+                <p className={`text-xl font-bold ${cls.color}`}>{latestMorse.total_score}</p>
+                <span className={`inline-block mt-1 ${badge.className}`}>{badge.text}</span>
+              </div>
+            );
+          })()}
         </div>
       </div>
     );
