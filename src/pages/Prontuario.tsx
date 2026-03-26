@@ -50,6 +50,10 @@ import { AIChatButton } from "@/components/prontuario/AIChatButton";
 import { AIAssistantPanel } from "@/components/prontuario/AIAssistantPanel";
 import { ModuleSection, EmptyModule } from "@/components/prontuario/sections/ModuleSection";
 import { ClinicalAnalytics } from "@/components/prontuario/ClinicalAnalytics";
+import {
+  classifyHeartRate, classifyBloodPressure, classifyTemperature,
+  classifyOxygenSaturation, classifyGlucose, getClassificationBadge,
+} from "@/lib/clinicalRules";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
