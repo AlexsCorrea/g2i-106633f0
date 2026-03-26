@@ -117,7 +117,16 @@ const sections: SidebarSection[] = [
       { id: "evolucao-fono", label: "Fonoaudiologia", icon: Ear },
       { id: "evolucao-social", label: "Serviço Social", icon: Users },
       { id: "terapia-ocupacional", label: "Terapia Ocupacional", icon: Hand },
-      { id: "odontologia", label: "Odontologia", icon: Smile },
+    ],
+  },
+  {
+    id: "odontologia-area",
+    label: "Odontologia Hospitalar",
+    icon: Smile,
+    children: [
+      { id: "odontologia", label: "Evolução / Atendimento", icon: ClipboardList },
+      { id: "odontograma", label: "Odontograma", icon: Smile },
+      { id: "periograma", label: "Periograma", icon: Smile },
     ],
   },
   {
