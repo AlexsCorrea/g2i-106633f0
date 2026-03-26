@@ -12,6 +12,9 @@ import Patients from "./pages/Patients";
 import Prontuario from "./pages/Prontuario";
 import Agenda from "./pages/Agenda";
 import Dashboards from "./pages/Dashboards";
+import Kiosk from "./pages/Kiosk";
+import QueueMobile from "./pages/QueueMobile";
+import QueuePanel from "./pages/QueuePanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +35,9 @@ function App() {
               <Route path="/prontuario/:id" element={<Prontuario />} />
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/dashboards" element={<Dashboards />} />
+              <Route path="/kiosk" element={<Kiosk />} />
+              <Route path="/fila" element={<QueueMobile />} />
+              <Route path="/painel" element={<QueuePanel />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>

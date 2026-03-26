@@ -909,6 +909,149 @@ export type Database = {
         }
         Relationships: []
       }
+      queue_counters: {
+        Row: {
+          counter_date: string
+          id: string
+          last_number: number
+          queue_name: string
+        }
+        Insert: {
+          counter_date?: string
+          id?: string
+          last_number?: number
+          queue_name: string
+        }
+        Update: {
+          counter_date?: string
+          id?: string
+          last_number?: number
+          queue_name?: string
+        }
+        Relationships: []
+      }
+      queue_history: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          new_status: string | null
+          old_status: string | null
+          performed_by: string | null
+          ticket_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          performed_by?: string | null
+          ticket_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          performed_by?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queue_history_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "queue_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      queue_tickets: {
+        Row: {
+          appointment_id: string | null
+          attended_at: string | null
+          called_at: string | null
+          called_to: string | null
+          checkin_data: Json | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          notification_enabled: boolean | null
+          notification_token: string | null
+          patient_id: string | null
+          priority: number
+          queue_name: string
+          sector: string
+          source: string
+          status: string
+          ticket_number: string
+          ticket_type: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          attended_at?: string | null
+          called_at?: string | null
+          called_to?: string | null
+          checkin_data?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notification_enabled?: boolean | null
+          notification_token?: string | null
+          patient_id?: string | null
+          priority?: number
+          queue_name?: string
+          sector?: string
+          source?: string
+          status?: string
+          ticket_number: string
+          ticket_type?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          attended_at?: string | null
+          called_at?: string | null
+          called_to?: string | null
+          checkin_data?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notification_enabled?: boolean | null
+          notification_token?: string | null
+          patient_id?: string | null
+          priority?: number
+          queue_name?: string
+          sector?: string
+          source?: string
+          status?: string
+          ticket_number?: string
+          ticket_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queue_tickets_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queue_tickets_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       surgical_procedures: {
         Row: {
           anesthesia_type: string | null
