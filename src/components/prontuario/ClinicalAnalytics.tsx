@@ -93,6 +93,20 @@ export function ClinicalAnalytics({
       });
   }, [vitalSigns, patientBirthDate]);
 
+  // Pediatric reference curves (always computed, used conditionally in render)
+  const gender = (patientGender === "M" || patientGender === "F") ? patientGender : "M";
+  const genderKey = gender === "M" ? "male" : "female";
+  const ageRange = useMemo(() => {
+    if (growthData.length === 0) return { min: 0, max: 60 };
+    return {
+      min: Math.max(0, Math.min(...growthData.map(d => d.ageMonths)) - 3),
+      max: Math.max(...growthData.map(d => d.ageMonths)) + 6,
+    };
+  }, [growthData]);
+  const weightRefCurve = useMemo(() => buildReferenceCurve(weightReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
+  const heightRefCurve = useMemo(() => buildReferenceCurve(heightReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
+  const bmiRefCurve = useMemo(() => buildReferenceCurve(bmiReference[genderKey], ageRange.min, ageRange.max), [genderKey, ageRange.min, ageRange.max]);
+
   // Summary indicators
   const latest = vitalSigns[0];
   const previous = vitalSigns[1];
