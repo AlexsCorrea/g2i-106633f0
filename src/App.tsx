@@ -38,6 +38,7 @@ function App() {
               <Route path="/dashboards" element={<Dashboards />} />
               <Route path="/kiosk" element={<Kiosk />} />
               <Route path="/fila" element={<QueueMobile />} />
+              <Route path="/portal" element={<Portal />} />
               <Route path="/painel" element={<QueuePanel />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
