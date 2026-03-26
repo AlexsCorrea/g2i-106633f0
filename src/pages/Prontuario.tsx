@@ -1138,6 +1138,7 @@ export default function Prontuario() {
       case "pedidos-exames": return renderExams();
       case "resultados-exames": return renderResultadosExames();
       case "imagens": return renderImagens();
+      case "galeria-exames": return <ExamGallery patientId={id!} />;
       case "bloco-cirurgico": return renderSurgery();
       case "anestesia": return renderAnestesia();
       case "checklist-cirurgico": return renderChecklistCirurgico();
