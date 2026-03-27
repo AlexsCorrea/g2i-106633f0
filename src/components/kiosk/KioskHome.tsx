@@ -16,7 +16,7 @@ export function KioskHome({ onSelect }: Props) {
         <div className="w-16 h-16 mx-auto bg-white/20 rounded-2xl flex items-center justify-center">
           <span className="text-3xl">🏥</span>
         </div>
-        <h1 className="text-3xl font-bold text-white">Bem-vindo ao Solaris</h1>
+        <h1 className="text-3xl font-bold text-white">Bem-vindo à OftalmoCenter</h1>
         <p className="text-white/70 text-base">Escolha uma opção para continuar</p>
       </div>
 
@@ -36,7 +36,11 @@ export function KioskHome({ onSelect }: Props) {
               <QrCode className="w-4 h-4" />
               Acesse pelo celular
             </p>
-            <p className="text-white/50 text-xs">Escaneie o QR Code para retirar<br />senha ou fazer check-in</p>
+            <p className="text-white/50 text-xs">
+              Escaneie o QR Code para retirar
+              <br />
+              senha ou fazer check-in
+            </p>
           </div>
         </div>
 
