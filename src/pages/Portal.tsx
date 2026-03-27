@@ -1,10 +1,39 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Ticket, CalendarCheck, ArrowLeft, Bell, BellOff, Clock, Users, Search, AlertCircle, CheckCircle2, ChevronRight, Crown, UserCheck, Smartphone, Home, RotateCcw, History, MapPin, Volume2 } from "lucide-react";
+import {
+  Ticket,
+  CalendarCheck,
+  ArrowLeft,
+  Bell,
+  BellOff,
+  Clock,
+  Users,
+  Search,
+  AlertCircle,
+  CheckCircle2,
+  ChevronRight,
+  Crown,
+  UserCheck,
+  Smartphone,
+  Home,
+  RotateCcw,
+  History,
+  MapPin,
+  Volume2,
+} from "lucide-react";
 import { DateMaskInput } from "@/components/ui/date-mask-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGenerateTicket, useQueueTicketById, useQueueTickets } from "@/hooks/useQueueTickets";
 
-type PortalStep = "home" | "ticket-category" | "ticket-subtype" | "tracking" | "checkin-identify" | "checkin-confirm" | "checkin-update" | "checkin-done" | "history";
+type PortalStep =
+  | "home"
+  | "ticket-category"
+  | "ticket-subtype"
+  | "tracking"
+  | "checkin-identify"
+  | "checkin-confirm"
+  | "checkin-update"
+  | "checkin-done"
+  | "history";
 
 interface TicketCategory {
   id: string;
@@ -17,7 +46,10 @@ interface TicketCategory {
 
 const categories: TicketCategory[] = [
   {
-    id: "normal", label: "Normal", description: "Atendimento geral", color: "hsl(var(--primary))",
+    id: "normal",
+    label: "Normal",
+    description: "Atendimento geral",
+    color: "hsl(var(--primary))",
     subtypes: [
       { id: "consulta", label: "Consulta", description: "Sem agendamento prévio" },
       { id: "retorno_pos_operatorio", label: "Retorno Pós-op", description: "Retorno cirúrgico" },
@@ -30,18 +62,32 @@ const categories: TicketCategory[] = [
 ];
 
 const typeLabels: Record<string, string> = {
-  normal: "Normal", preferencial: "Preferencial", preferencial_60: "60+",
-  preferencial_80: "80+", retorno_pos_operatorio: "Ret. Pós-op", consulta: "Consulta",
+  normal: "Normal",
+  preferencial: "Preferencial",
+  preferencial_60: "60+",
+  preferencial_80: "80+",
+  retorno_pos_operatorio: "Ret. Pós-op",
+  consulta: "Consulta",
 };
 
 interface FoundAppointment {
-  id: string; title: string; scheduled_at: string; appointment_type: string;
-  patient_id: string; patient_name: string; professional_name: string | null; location: string | null;
+  id: string;
+  title: string;
+  scheduled_at: string;
+  appointment_type: string;
+  patient_id: string;
+  patient_name: string;
+  professional_name: string | null;
+  location: string | null;
 }
 
 interface PatientData {
-  id: string; full_name: string; phone: string | null; health_insurance: string | null;
-  health_insurance_number: string | null; updated_at: string;
+  id: string;
+  full_name: string;
+  phone: string | null;
+  health_insurance: string | null;
+  health_insurance_number: string | null;
+  updated_at: string;
 }
 
 export default function Portal() {
@@ -104,13 +150,18 @@ export default function Portal() {
         const playBeep = (freq: number, delay: number) => {
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
-          osc.connect(gain); gain.connect(audioCtx.destination);
-          osc.frequency.value = freq; osc.type = "sine";
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.frequency.value = freq;
+          osc.type = "sine";
           gain.gain.value = 0.5;
           osc.start(audioCtx.currentTime + delay);
           osc.stop(audioCtx.currentTime + delay + 0.3);
         };
-        playBeep(880, 0); playBeep(1100, 0.5); playBeep(880, 1.0); playBeep(1100, 1.5);
+        playBeep(880, 0);
+        playBeep(1100, 0.5);
+        playBeep(880, 1.0);
+        playBeep(1100, 1.5);
       } catch {}
     } else {
       setShowCallAlert(false);
@@ -127,9 +178,12 @@ export default function Portal() {
   // Load patient's today tickets
   const loadTodayTickets = async (patientId: string) => {
     const today = new Date().toISOString().split("T")[0];
-    const { data } = await supabase.from("queue_tickets").select("*")
+    const { data } = await supabase
+      .from("queue_tickets")
+      .select("*")
       .eq("patient_id", patientId)
-      .gte("created_at", `${today}T00:00:00`).lte("created_at", `${today}T23:59:59`)
+      .gte("created_at", `${today}T00:00:00`)
+      .lte("created_at", `${today}T23:59:59`)
       .order("created_at", { ascending: false });
     setTodayTickets(data || []);
   };
@@ -138,30 +192,42 @@ export default function Portal() {
     await requestNotifications();
     try {
       const ticket = await generateTicket.mutateAsync({
-        ticket_type: type, queue_name: "recepcao", source: "celular", notification_enabled: notificationsEnabled,
+        ticket_type: type,
+        queue_name: "recepcao",
+        source: "celular",
+        notification_enabled: notificationsEnabled,
         patient_id: patientData?.id,
       });
       setTicketId(ticket.id);
       localStorage.setItem("portal_ticket_id", ticket.id);
       localStorage.setItem("portal_ticket_date", new Date().toISOString().split("T")[0]);
       setStep("tracking");
-    } catch { /* handled */ }
+    } catch {
+      /* handled */
+    }
   };
 
   const handleCategoryClick = (cat: TicketCategory) => {
     // Check for active tickets
-    const activeTicket = todayTickets.find(t => ["aguardando", "chamada", "em_atendimento"].includes(t.status));
+    const activeTicket = todayTickets.find((t) => ["aguardando", "chamada", "em_atendimento"].includes(t.status));
     if (activeTicket) {
-      const confirm = window.confirm(`Você já possui a senha ${activeTicket.ticket_number} (${activeTicket.status === "aguardando" ? "Aguardando" : activeTicket.status === "chamada" ? "Chamada" : "Em atendimento"}). Deseja gerar uma nova senha?`);
+      const confirm = window.confirm(
+        `Você já possui a senha ${activeTicket.ticket_number} (${activeTicket.status === "aguardando" ? "Aguardando" : activeTicket.status === "chamada" ? "Chamada" : "Em atendimento"}). Deseja gerar uma nova senha?`,
+      );
       if (!confirm) return;
     }
-    if (cat.subtypes) { setSelectedCategory(cat); setStep("ticket-subtype"); }
-    else handleGenerateTicket(cat.id);
+    if (cat.subtypes) {
+      setSelectedCategory(cat);
+      setStep("ticket-subtype");
+    } else handleGenerateTicket(cat.id);
   };
 
   const formatCpf = (v: string) => {
     const d = v.replace(/\D/g, "").slice(0, 11);
-    return d.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    return d
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
   };
 
   const isOutdated = (updatedAt: string) => {
@@ -175,15 +241,26 @@ export default function Portal() {
   const handleSearchAppointment = async () => {
     setError("");
     const cleanCpf = cpf.replace(/\D/g, "");
-    if (cleanCpf.length < 11) { setError("CPF inválido."); return; }
-    if (!birthDate) { setError("Informe a data de nascimento."); return; }
+    if (cleanCpf.length < 11) {
+      setError("CPF inválido.");
+      return;
+    }
+    if (!birthDate) {
+      setError("Informe a data de nascimento.");
+      return;
+    }
     setLoading(true);
     try {
-      const { data: patients } = await supabase.from("patients")
+      const { data: patients } = await supabase
+        .from("patients")
         .select("id, full_name, birth_date, phone, health_insurance, health_insurance_number, updated_at")
         .eq("cpf", cleanCpf);
       const patient = patients?.find((p: any) => p.birth_date === birthDate);
-      if (!patient) { setError("Paciente não encontrado."); setLoading(false); return; }
+      if (!patient) {
+        setError("Paciente não encontrado.");
+        setLoading(false);
+        return;
+      }
 
       setPatientData(patient as PatientData);
       await loadTodayTickets(patient.id);
@@ -201,43 +278,87 @@ export default function Portal() {
       }
 
       const today = new Date().toISOString().split("T")[0];
-      const { data: appts } = await supabase.from("appointments").select("*, profiles(full_name)")
-        .eq("patient_id", patient.id).gte("scheduled_at", `${today}T00:00:00`).lte("scheduled_at", `${today}T23:59:59`)
+      const { data: appts } = await supabase
+        .from("appointments")
+        .select("*, profiles(full_name)")
+        .eq("patient_id", patient.id)
+        .gte("scheduled_at", `${today}T00:00:00`)
+        .lte("scheduled_at", `${today}T23:59:59`)
         .in("status", ["agendado", "confirmado"]);
-      if (!appts?.length) { setError("Nenhum agendamento encontrado para hoje."); setLoading(false); return; }
-      setAppointments(appts.map((a: any) => ({
-        id: a.id, title: a.title, scheduled_at: a.scheduled_at, appointment_type: a.appointment_type,
-        patient_id: patient.id, patient_name: patient.full_name,
-        professional_name: a.profiles?.full_name || null, location: a.location,
-      })));
+      if (!appts?.length) {
+        setError("Nenhum agendamento encontrado para hoje.");
+        setLoading(false);
+        return;
+      }
+      setAppointments(
+        appts.map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          scheduled_at: a.scheduled_at,
+          appointment_type: a.appointment_type,
+          patient_id: patient.id,
+          patient_name: patient.full_name,
+          professional_name: a.profiles?.full_name || null,
+          location: a.location,
+        })),
+      );
       setStep("checkin-confirm");
-    } catch (err: any) { setError(err.message); } finally { setLoading(false); }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpdateAndContinue = async () => {
     if (!patientData) return;
-    if (!updateFields.phone.trim()) { setError("Telefone é obrigatório."); return; }
+    if (!updateFields.phone.trim()) {
+      setError("Telefone é obrigatório.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
-      await supabase.from("patients").update({
-        phone: updateFields.phone,
-        health_insurance: updateFields.insurance || null,
-        health_insurance_number: updateFields.insurance_number || null,
-      }).eq("id", patientData.id);
+      await supabase
+        .from("patients")
+        .update({
+          phone: updateFields.phone,
+          health_insurance: updateFields.insurance || null,
+          health_insurance_number: updateFields.insurance_number || null,
+        })
+        .eq("id", patientData.id);
 
       const today = new Date().toISOString().split("T")[0];
-      const { data: appts } = await supabase.from("appointments").select("*, profiles(full_name)")
-        .eq("patient_id", patientData.id).gte("scheduled_at", `${today}T00:00:00`).lte("scheduled_at", `${today}T23:59:59`)
+      const { data: appts } = await supabase
+        .from("appointments")
+        .select("*, profiles(full_name)")
+        .eq("patient_id", patientData.id)
+        .gte("scheduled_at", `${today}T00:00:00`)
+        .lte("scheduled_at", `${today}T23:59:59`)
         .in("status", ["agendado", "confirmado"]);
-      if (!appts?.length) { setError("Nenhum agendamento encontrado para hoje."); setLoading(false); return; }
-      setAppointments(appts.map((a: any) => ({
-        id: a.id, title: a.title, scheduled_at: a.scheduled_at, appointment_type: a.appointment_type,
-        patient_id: patientData.id, patient_name: patientData.full_name,
-        professional_name: a.profiles?.full_name || null, location: a.location,
-      })));
+      if (!appts?.length) {
+        setError("Nenhum agendamento encontrado para hoje.");
+        setLoading(false);
+        return;
+      }
+      setAppointments(
+        appts.map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          scheduled_at: a.scheduled_at,
+          appointment_type: a.appointment_type,
+          patient_id: patientData.id,
+          patient_name: patientData.full_name,
+          professional_name: a.profiles?.full_name || null,
+          location: a.location,
+        })),
+      );
       setStep("checkin-confirm");
-    } catch (err: any) { setError(err.message); } finally { setLoading(false); }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleConfirmCheckin = async (appt: FoundAppointment) => {
@@ -245,19 +366,27 @@ export default function Portal() {
     try {
       await supabase.from("appointments").update({ status: "confirmado" }).eq("id", appt.id);
       const ticket = await generateTicket.mutateAsync({
-        patient_id: appt.patient_id, appointment_id: appt.id, ticket_type: "consulta",
-        queue_name: "recepcao", source: "celular",
+        patient_id: appt.patient_id,
+        appointment_id: appt.id,
+        ticket_type: "consulta",
+        queue_name: "recepcao",
+        source: "celular",
         checkin_data: { checkin_at: new Date().toISOString(), source: "mobile" },
       });
       setTicketId(ticket.id);
       localStorage.setItem("portal_ticket_id", ticket.id);
       localStorage.setItem("portal_ticket_date", new Date().toISOString().split("T")[0]);
       setCheckinResult({
-        name: appt.patient_name, ticket: ticket.ticket_number,
+        name: appt.patient_name,
+        ticket: ticket.ticket_number,
         time: new Date(appt.scheduled_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       });
       setStep("checkin-done");
-    } catch { setError("Erro ao confirmar."); } finally { setLoading(false); }
+    } catch {
+      setError("Erro ao confirmar.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetAll = () => {
@@ -265,9 +394,13 @@ export default function Portal() {
     localStorage.removeItem("portal_ticket_date");
     setTicketId(null);
     setSelectedCategory(null);
-    setCpf(""); setBirthDate(""); setError("");
-    setAppointments([]); setCheckinResult(null);
-    setPatientData(null); setTodayTickets([]);
+    setCpf("");
+    setBirthDate("");
+    setError("");
+    setAppointments([]);
+    setCheckinResult(null);
+    setPatientData(null);
+    setTodayTickets([]);
     setStep("home");
   };
 
@@ -284,7 +417,8 @@ export default function Portal() {
 
   const BackBtn = ({ onClick }: { onClick: () => void }) => (
     <button onClick={onClick} className="flex items-center gap-2 text-white/80 hover:text-white mb-4">
-      <ArrowLeft className="w-5 h-5" /><span>Voltar</span>
+      <ArrowLeft className="w-5 h-5" />
+      <span>Voltar</span>
     </button>
   );
 
@@ -297,12 +431,15 @@ export default function Portal() {
         <p className="text-white text-5xl md:text-7xl font-black tracking-widest mb-6">{myTicket.ticket_number}</p>
         {myTicket.called_to && (
           <div className="flex items-center gap-2 text-white/90 text-xl mb-2">
-            <MapPin className="w-6 h-6" /><span>{myTicket.called_to}</span>
+            <MapPin className="w-6 h-6" />
+            <span>{myTicket.called_to}</span>
           </div>
         )}
         <p className="text-white/80 text-lg mb-10">Dirija-se ao atendimento</p>
-        <button onClick={() => setShowCallAlert(false)}
-          className="px-10 py-4 bg-white text-green-700 font-black text-xl rounded-2xl shadow-2xl active:scale-95 transition-transform">
+        <button
+          onClick={() => setShowCallAlert(false)}
+          className="px-10 py-4 bg-white text-green-700 font-black text-xl rounded-2xl shadow-2xl active:scale-95 transition-transform"
+        >
           OK, ENTENDI
         </button>
       </div>
@@ -316,41 +453,67 @@ export default function Portal() {
     const isCalled = myTicket.status === "chamada";
     return (
       <Wrapper>
-        <h1 className="text-lg font-bold text-white text-center">Portal Solaris</h1>
-        <div className={`bg-white rounded-3xl p-8 shadow-2xl text-center space-y-4 ${isCalled ? "ring-4 ring-green-400 animate-pulse" : ""}`}>
+        <h1 className="text-lg font-bold text-white text-center">Portal OftalmoCenter</h1>
+        <div
+          className={`bg-white rounded-3xl p-8 shadow-2xl text-center space-y-4 ${isCalled ? "ring-4 ring-green-400 animate-pulse" : ""}`}
+        >
           <p className="text-5xl">{st.emoji}</p>
           <p className={`text-sm uppercase tracking-wider font-semibold ${st.color}`}>{st.label}</p>
           <p className={`text-5xl font-black tracking-wider ${st.color}`}>{myTicket.ticket_number}</p>
           {myTicket.status === "aguardando" && queuePosition && (
             <div className="flex items-center justify-center gap-6 text-muted-foreground text-sm">
-              <span className="flex items-center gap-1"><Users className="w-4 h-4" />{queuePosition}º na fila</span>
-              <span className="flex items-center gap-1"><Clock className="w-4 h-4" />~{queuePosition * 5} min</span>
+              <span className="flex items-center gap-1">
+                <Users className="w-4 h-4" />
+                {queuePosition}º na fila
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="w-4 h-4" />~{queuePosition * 5} min
+              </span>
             </div>
           )}
           {isCalled && (
             <div className="bg-green-50 border-2 border-green-400 rounded-xl p-4">
               <p className="font-black text-green-700 text-2xl">DIRIJA-SE AO ATENDIMENTO!</p>
-              {myTicket.called_to && <p className="text-green-600 font-medium mt-1 flex items-center justify-center gap-1"><MapPin className="w-4 h-4" />{myTicket.called_to}</p>}
+              {myTicket.called_to && (
+                <p className="text-green-600 font-medium mt-1 flex items-center justify-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  {myTicket.called_to}
+                </p>
+              )}
             </div>
           )}
           {myTicket.status === "em_atendimento" && (
             <p className="text-blue-600 font-medium text-sm">Você está sendo atendido</p>
           )}
         </div>
-        <button onClick={() => setNotificationsEnabled(v => !v)} className="flex items-center justify-center gap-2 text-white/70 text-sm mx-auto">
+        <button
+          onClick={() => setNotificationsEnabled((v) => !v)}
+          className="flex items-center justify-center gap-2 text-white/70 text-sm mx-auto"
+        >
           {notificationsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
           {notificationsEnabled ? "Notificações ativas" : "Ativar notificações"}
         </button>
         {isDone && (
           <div className="space-y-3">
-            <p className="text-white/60 text-sm text-center">Última senha: {myTicket.ticket_number} ({st.label})</p>
-            <button onClick={() => { resetAll(); setStep("ticket-category"); }}
-              className="w-full h-12 bg-white text-primary font-bold rounded-xl flex items-center justify-center gap-2">
-              <Ticket className="w-5 h-5" />Gerar Nova Senha
+            <p className="text-white/60 text-sm text-center">
+              Última senha: {myTicket.ticket_number} ({st.label})
+            </p>
+            <button
+              onClick={() => {
+                resetAll();
+                setStep("ticket-category");
+              }}
+              className="w-full h-12 bg-white text-primary font-bold rounded-xl flex items-center justify-center gap-2"
+            >
+              <Ticket className="w-5 h-5" />
+              Gerar Nova Senha
             </button>
-            <button onClick={resetAll}
-              className="w-full h-12 bg-white/10 border border-white/30 text-white font-medium rounded-xl flex items-center justify-center gap-2">
-              <Home className="w-5 h-5" />Voltar ao Início
+            <button
+              onClick={resetAll}
+              className="w-full h-12 bg-white/10 border border-white/30 text-white font-medium rounded-xl flex items-center justify-center gap-2"
+            >
+              <Home className="w-5 h-5" />
+              Voltar ao Início
             </button>
           </div>
         )}
@@ -371,32 +534,46 @@ export default function Portal() {
         <div className="bg-white rounded-2xl p-5 shadow-lg space-y-4">
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">Telefone *</label>
-            <input type="tel" inputMode="tel" value={updateFields.phone}
-              onChange={e => setUpdateFields(f => ({ ...f, phone: e.target.value }))}
+            <input
+              type="tel"
+              inputMode="tel"
+              value={updateFields.phone}
+              onChange={(e) => setUpdateFields((f) => ({ ...f, phone: e.target.value }))}
               placeholder="(11) 99999-9999"
-              className="w-full h-12 text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary" />
+              className="w-full h-12 text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">Convênio</label>
-            <input type="text" value={updateFields.insurance}
-              onChange={e => setUpdateFields(f => ({ ...f, insurance: e.target.value }))}
+            <input
+              type="text"
+              value={updateFields.insurance}
+              onChange={(e) => setUpdateFields((f) => ({ ...f, insurance: e.target.value }))}
               placeholder="Nome do convênio"
-              className="w-full h-12 text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary" />
+              className="w-full h-12 text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">Nº Carteirinha</label>
-            <input type="text" value={updateFields.insurance_number}
-              onChange={e => setUpdateFields(f => ({ ...f, insurance_number: e.target.value }))}
+            <input
+              type="text"
+              value={updateFields.insurance_number}
+              onChange={(e) => setUpdateFields((f) => ({ ...f, insurance_number: e.target.value }))}
               placeholder="Número do plano"
-              className="w-full h-12 text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary" />
+              className="w-full h-12 text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
           {error && (
             <div className="flex items-center gap-2 text-destructive bg-red-50 rounded-xl p-3">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" /><span className="text-sm">{error}</span>
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span className="text-sm">{error}</span>
             </div>
           )}
-          <button onClick={handleUpdateAndContinue} disabled={loading}
-            className="w-full h-12 bg-primary text-white font-bold rounded-xl active:scale-[0.98] disabled:opacity-50">
+          <button
+            onClick={handleUpdateAndContinue}
+            disabled={loading}
+            className="w-full h-12 bg-primary text-white font-bold rounded-xl active:scale-[0.98] disabled:opacity-50"
+          >
             {loading ? "Salvando..." : "Atualizar e Continuar"}
           </button>
         </div>
@@ -415,14 +592,25 @@ export default function Portal() {
         <div className="bg-white rounded-3xl p-6 shadow-2xl text-center space-y-3">
           <p className="font-bold text-lg text-foreground">{checkinResult.name}</p>
           <p className="text-4xl font-black text-primary">{checkinResult.ticket}</p>
-          <p className="text-muted-foreground text-sm flex items-center justify-center gap-1"><Clock className="w-4 h-4" />{checkinResult.time}</p>
+          <p className="text-muted-foreground text-sm flex items-center justify-center gap-1">
+            <Clock className="w-4 h-4" />
+            {checkinResult.time}
+          </p>
         </div>
         <div className="space-y-3">
-          <button onClick={() => setStep("tracking")} className="w-full h-12 bg-white text-primary font-bold rounded-xl flex items-center justify-center gap-2">
-            <Clock className="w-5 h-5" />Acompanhar Fila
+          <button
+            onClick={() => setStep("tracking")}
+            className="w-full h-12 bg-white text-primary font-bold rounded-xl flex items-center justify-center gap-2"
+          >
+            <Clock className="w-5 h-5" />
+            Acompanhar Fila
           </button>
-          <button onClick={resetAll} className="w-full h-12 bg-white/10 border border-white/30 text-white font-medium rounded-xl flex items-center justify-center gap-2">
-            <Home className="w-5 h-5" />Voltar ao início
+          <button
+            onClick={resetAll}
+            className="w-full h-12 bg-white/10 border border-white/30 text-white font-medium rounded-xl flex items-center justify-center gap-2"
+          >
+            <Home className="w-5 h-5" />
+            Voltar ao início
           </button>
         </div>
       </Wrapper>
@@ -439,14 +627,21 @@ export default function Portal() {
           <h1 className="text-xl font-bold text-white">Agendamentos encontrados</h1>
         </div>
         <div className="space-y-3">
-          {appointments.map(appt => (
-            <button key={appt.id} onClick={() => handleConfirmCheckin(appt)} disabled={loading}
-              className="w-full bg-white rounded-2xl p-4 text-left shadow-lg active:scale-[0.98] disabled:opacity-50">
+          {appointments.map((appt) => (
+            <button
+              key={appt.id}
+              onClick={() => handleConfirmCheckin(appt)}
+              disabled={loading}
+              className="w-full bg-white rounded-2xl p-4 text-left shadow-lg active:scale-[0.98] disabled:opacity-50"
+            >
               <p className="font-bold text-foreground">{appt.patient_name}</p>
               <p className="text-primary font-medium text-sm">
-                {new Date(appt.scheduled_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} — {appt.title}
+                {new Date(appt.scheduled_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} —{" "}
+                {appt.title}
               </p>
-              {appt.professional_name && <p className="text-xs text-muted-foreground">Dr(a). {appt.professional_name}</p>}
+              {appt.professional_name && (
+                <p className="text-xs text-muted-foreground">Dr(a). {appt.professional_name}</p>
+              )}
               {appt.location && <p className="text-xs text-muted-foreground">📍 {appt.location}</p>}
               <div className="mt-2 bg-primary/10 rounded-lg px-3 py-1.5 text-center">
                 <span className="text-xs font-medium text-primary">Toque para confirmar</span>
@@ -470,9 +665,14 @@ export default function Portal() {
         <div className="bg-white rounded-2xl p-5 shadow-lg space-y-4">
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">CPF</label>
-            <input type="text" inputMode="numeric" value={cpf} onChange={e => setCpf(formatCpf(e.target.value))}
+            <input
+              type="text"
+              inputMode="numeric"
+              value={cpf}
+              onChange={(e) => setCpf(formatCpf(e.target.value))}
               placeholder="000.000.000-00"
-              className="w-full h-12 text-lg text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary" />
+              className="w-full h-12 text-lg text-center border-2 border-border rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">Data de Nascimento</label>
@@ -480,12 +680,17 @@ export default function Portal() {
           </div>
           {error && (
             <div className="flex items-center gap-2 text-destructive bg-red-50 rounded-xl p-3">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" /><span className="text-sm">{error}</span>
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span className="text-sm">{error}</span>
             </div>
           )}
-          <button onClick={handleSearchAppointment} disabled={loading || !birthDate || cpf.replace(/\D/g, "").length < 11}
-            className="w-full h-12 bg-primary text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50">
-            <Search className="w-5 h-5" />{loading ? "Buscando..." : "Buscar Agendamento"}
+          <button
+            onClick={handleSearchAppointment}
+            disabled={loading || !birthDate || cpf.replace(/\D/g, "").length < 11}
+            className="w-full h-12 bg-primary text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+          >
+            <Search className="w-5 h-5" />
+            {loading ? "Buscando..." : "Buscar Agendamento"}
           </button>
         </div>
       </Wrapper>
@@ -502,9 +707,13 @@ export default function Portal() {
           <p className="text-white/70 text-sm">Selecione o subtipo</p>
         </div>
         <div className="space-y-3">
-          {selectedCategory.subtypes.map(sub => (
-            <button key={sub.id} onClick={() => handleGenerateTicket(sub.id)} disabled={generateTicket.isPending}
-              className="w-full bg-white rounded-2xl p-4 flex items-center justify-between shadow-lg active:scale-[0.98] disabled:opacity-50">
+          {selectedCategory.subtypes.map((sub) => (
+            <button
+              key={sub.id}
+              onClick={() => handleGenerateTicket(sub.id)}
+              disabled={generateTicket.isPending}
+              className="w-full bg-white rounded-2xl p-4 flex items-center justify-between shadow-lg active:scale-[0.98] disabled:opacity-50"
+            >
               <div className="text-left">
                 <h3 className="font-bold text-foreground">{sub.label}</h3>
                 <p className="text-sm text-muted-foreground">{sub.description}</p>
@@ -527,13 +736,24 @@ export default function Portal() {
           <p className="text-white/70 text-sm">Escolha a categoria</p>
         </div>
         <div className="space-y-3">
-          {categories.map(cat => (
-            <button key={cat.id} onClick={() => handleCategoryClick(cat)} disabled={generateTicket.isPending}
-              className="w-full bg-white rounded-2xl p-4 flex items-center gap-3 shadow-lg active:scale-[0.98] disabled:opacity-50">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${cat.color}15` }}>
-                {cat.id === "preferencial_80" ? <Crown className="w-5 h-5" style={{ color: cat.color }} /> :
-                 cat.id.startsWith("preferencial") ? <UserCheck className="w-5 h-5" style={{ color: cat.color }} /> :
-                 <Users className="w-5 h-5" style={{ color: cat.color }} />}
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => handleCategoryClick(cat)}
+              disabled={generateTicket.isPending}
+              className="w-full bg-white rounded-2xl p-4 flex items-center gap-3 shadow-lg active:scale-[0.98] disabled:opacity-50"
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: `${cat.color}15` }}
+              >
+                {cat.id === "preferencial_80" ? (
+                  <Crown className="w-5 h-5" style={{ color: cat.color }} />
+                ) : cat.id.startsWith("preferencial") ? (
+                  <UserCheck className="w-5 h-5" style={{ color: cat.color }} />
+                ) : (
+                  <Users className="w-5 h-5" style={{ color: cat.color }} />
+                )}
               </div>
               <div className="text-left flex-1">
                 <h3 className="font-bold text-foreground">{cat.label}</h3>
@@ -559,8 +779,10 @@ export default function Portal() {
       </div>
 
       <div className="space-y-4">
-        <button onClick={() => setStep("ticket-category")}
-          className="w-full bg-white rounded-2xl p-5 flex items-center gap-4 shadow-lg active:scale-[0.98]">
+        <button
+          onClick={() => setStep("ticket-category")}
+          className="w-full bg-white rounded-2xl p-5 flex items-center gap-4 shadow-lg active:scale-[0.98]"
+        >
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
             <Ticket className="w-6 h-6 text-primary" />
           </div>
@@ -570,8 +792,15 @@ export default function Portal() {
           </div>
         </button>
 
-        <button onClick={() => { setStep("checkin-identify"); setError(""); setCpf(""); setBirthDate(""); }}
-          className="w-full bg-white rounded-2xl p-5 flex items-center gap-4 shadow-lg active:scale-[0.98]">
+        <button
+          onClick={() => {
+            setStep("checkin-identify");
+            setError("");
+            setCpf("");
+            setBirthDate("");
+          }}
+          className="w-full bg-white rounded-2xl p-5 flex items-center gap-4 shadow-lg active:scale-[0.98]"
+        >
           <div className="w-12 h-12 rounded-xl bg-accent/15 flex items-center justify-center">
             <CalendarCheck className="w-6 h-6 text-accent-foreground" />
           </div>
