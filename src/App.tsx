@@ -45,6 +45,7 @@ function App() {
               <Route path="/cme" element={<CME />} />
               <Route path="/painel" element={<QueuePanel />} />
               <Route path="/painel-tv" element={<QueueTV />} />
+              <Route path="/admin-autoatendimento" element={<AdminAutoatendimento />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>
