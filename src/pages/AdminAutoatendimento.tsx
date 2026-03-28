@@ -507,7 +507,7 @@ export default function AdminAutoatendimento() {
                         <Select value={selectedVoiceName} onValueChange={setSelectedVoiceName}>
                           <SelectTrigger className="mt-1"><SelectValue placeholder="Voz padrão do sistema" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Padrão do sistema</SelectItem>
+                            <SelectItem value="__default__">Padrão do sistema</SelectItem>
                             {availableVoices.map(v => (
                               <SelectItem key={v.name} value={v.name}>{v.name} ({v.lang})</SelectItem>
                             ))}
