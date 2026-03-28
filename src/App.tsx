@@ -18,6 +18,7 @@ import QueuePanel from "./pages/QueuePanel";
 import QueueTV from "./pages/QueueTV";
 import Portal from "./pages/Portal";
 import CME from "./pages/CME";
+import AdminAutoatendimento from "./pages/AdminAutoatendimento";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
