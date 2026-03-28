@@ -22,7 +22,7 @@ export interface QueueTicket {
   checkin_data: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
-  patients?: { full_name: string; cpf: string | null } | null;
+  patients?: { full_name: string; cpf: string | null; nome_social: string | null } | null;
 }
 
 export function useQueueTickets(filters?: { queue_name?: string; status?: string; sector?: string }) {
