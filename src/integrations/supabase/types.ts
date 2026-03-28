@@ -1793,6 +1793,7 @@ export type Database = {
           health_insurance: string | null
           health_insurance_number: string | null
           id: string
+          nome_social: string | null
           phone: string | null
           photo_url: string | null
           rg: string | null
@@ -1815,6 +1816,7 @@ export type Database = {
           health_insurance?: string | null
           health_insurance_number?: string | null
           id?: string
+          nome_social?: string | null
           phone?: string | null
           photo_url?: string | null
           rg?: string | null
@@ -1837,6 +1839,7 @@ export type Database = {
           health_insurance?: string | null
           health_insurance_number?: string | null
           id?: string
+          nome_social?: string | null
           phone?: string | null
           photo_url?: string | null
           rg?: string | null
@@ -2148,6 +2151,98 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      unit_ads: {
+        Row: {
+          active: boolean
+          created_at: string
+          display_order: number
+          duration_seconds: number
+          id: string
+          media_type: string
+          media_url: string
+          title: string
+          unit_config_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          display_order?: number
+          duration_seconds?: number
+          id?: string
+          media_type?: string
+          media_url: string
+          title: string
+          unit_config_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          display_order?: number
+          duration_seconds?: number
+          id?: string
+          media_type?: string
+          media_url?: string
+          title?: string
+          unit_config_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_ads_unit_config_id_fkey"
+            columns: ["unit_config_id"]
+            isOneToOne: false
+            referencedRelation: "unit_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unit_config: {
+        Row: {
+          ads_enabled: boolean
+          ads_interval_seconds: number
+          background_image_url: string | null
+          call_display_seconds: number
+          created_at: string
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          privacy_mode: string
+          secondary_color: string | null
+          social_name_policy: string
+          unit_name: string
+          updated_at: string
+        }
+        Insert: {
+          ads_enabled?: boolean
+          ads_interval_seconds?: number
+          background_image_url?: string | null
+          call_display_seconds?: number
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          privacy_mode?: string
+          secondary_color?: string | null
+          social_name_policy?: string
+          unit_name?: string
+          updated_at?: string
+        }
+        Update: {
+          ads_enabled?: boolean
+          ads_interval_seconds?: number
+          background_image_url?: string | null
+          call_display_seconds?: number
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          privacy_mode?: string
+          secondary_color?: string | null
+          social_name_policy?: string
+          unit_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       vital_signs: {
         Row: {
