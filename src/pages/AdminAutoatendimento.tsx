@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useUnitConfig, useUpdateUnitConfig, useUnitAds, useManageAds, type UnitConfig,
   ticketToSpeech, priorityToSpeech,
 } from "@/hooks/useUnitConfig";
@@ -26,7 +26,6 @@ export default function AdminAutoatendimento() {
   const { data: ads } = useUnitAds();
   const { add: addAd, remove: removeAd } = useManageAds();
 
-  // Local form state
   const [unitName, setUnitName] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#1e5a8a");
   const [secondaryColor, setSecondaryColor] = useState("#0f3460");
@@ -45,9 +44,12 @@ export default function AdminAutoatendimento() {
   const [totemRetirarSenha, setTotemRetirarSenha] = useState(true);
   const [totemCheckin, setTotemCheckin] = useState(true);
   const [totemTimeout, setTotemTimeout] = useState(60);
+  const [voiceRate, setVoiceRate] = useState(0.85);
+  const [voicePitch, setVoicePitch] = useState(1.0);
+  const [voiceVolume, setVoiceVolume] = useState(1.0);
+  const [preCallSound, setPreCallSound] = useState("triple_tone");
   const [initialized, setInitialized] = useState(false);
 
-  // Ad upload
   const [adTitle, setAdTitle] = useState("");
   const [adDuration, setAdDuration] = useState(10);
   const adFileRef = useRef<HTMLInputElement>(null);
@@ -55,8 +57,22 @@ export default function AdminAutoatendimento() {
   const bgFileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Sync config
-  React.useEffect(() => {
+  // Available voices
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceName, setSelectedVoiceName] = useState("");
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis?.getVoices() || [];
+      const ptVoices = voices.filter(v => v.lang.startsWith("pt"));
+      setAvailableVoices(ptVoices.length > 0 ? ptVoices : voices.slice(0, 10));
+    };
+    loadVoices();
+    window.speechSynthesis?.addEventListener("voiceschanged", loadVoices);
+    return () => window.speechSynthesis?.removeEventListener("voiceschanged", loadVoices);
+  }, []);
+
+  useEffect(() => {
     if (config && !initialized) {
       setUnitName(config.unit_name || "");
       setPrimaryColor(config.primary_color || "#1e5a8a");
@@ -76,6 +92,10 @@ export default function AdminAutoatendimento() {
       setTotemRetirarSenha(config.totem_retirar_senha !== false);
       setTotemCheckin(config.totem_checkin !== false);
       setTotemTimeout(config.totem_timeout_seconds || 60);
+      setVoiceRate(config.voice_rate || 0.85);
+      setVoicePitch(config.voice_pitch || 1.0);
+      setVoiceVolume(config.voice_volume || 1.0);
+      setPreCallSound(config.pre_call_sound || "triple_tone");
       setInitialized(true);
     }
   }, [config, initialized]);
@@ -102,6 +122,10 @@ export default function AdminAutoatendimento() {
       totem_retirar_senha: totemRetirarSenha,
       totem_checkin: totemCheckin,
       totem_timeout_seconds: totemTimeout,
+      voice_rate: voiceRate,
+      voice_pitch: voicePitch,
+      voice_volume: voiceVolume,
+      pre_call_sound: preCallSound,
     });
   };
 
@@ -156,34 +180,58 @@ export default function AdminAutoatendimento() {
     setUploading(false);
   };
 
-  const testLocution = () => {
-    const text = `Senha ${ticketToSpeech("P8004")}, prioridade ${priorityToSpeech("preferencial_80")}`;
+  const speakTest = (text: string) => {
     const synth = window.speechSynthesis;
     synth.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "pt-BR";
-    utter.rate = 0.85;
-    const voices = synth.getVoices();
-    const ptVoice = voices.find(v => v.lang.startsWith("pt"));
-    if (ptVoice) utter.voice = ptVoice;
+    utter.rate = voiceRate;
+    utter.pitch = voicePitch;
+    utter.volume = voiceVolume;
+    if (selectedVoiceName) {
+      const voice = availableVoices.find(v => v.name === selectedVoiceName);
+      if (voice) utter.voice = voice;
+    } else {
+      const ptVoice = availableVoices.find(v => v.lang.startsWith("pt"));
+      if (ptVoice) utter.voice = ptVoice;
+    }
     synth.speak(utter);
+  };
+
+  const testLocution = () => {
+    const text = `Senha ${ticketToSpeech("P8004")}, prioridade ${priorityToSpeech("preferencial_80")}.`;
+    speakTest(text);
     toast.info("Testando locução...");
+  };
+
+  const testLocutionFull = () => {
+    let text = `Senha ${ticketToSpeech("P8004")}`;
+    text += `, Ana Clara`;
+    text += `, prioridade ${priorityToSpeech("preferencial_80")}`;
+    if (locutionSpeakLocation) text += `, Guichê um`;
+    text += ".";
+    speakTest(text);
+    toast.info("Testando locução completa...");
   };
 
   const testSound = () => {
     try {
       const ctx = new AudioContext();
-      const playTone = (freq: number, delay: number) => {
+      const playTone = (freq: number, delay: number, dur = 0.25) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
         osc.frequency.value = freq; osc.type = "sine";
         gain.gain.setValueAtTime(0.5, ctx.currentTime + delay);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + dur);
         osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.35);
+        osc.stop(ctx.currentTime + delay + dur + 0.05);
       };
-      playTone(880, 0); playTone(1100, 0.35); playTone(880, 0.7);
+      if (preCallSound === "double_tone") {
+        playTone(880, 0, 0.2); playTone(1100, 0.3, 0.2);
+      } else if (preCallSound === "triple_tone") {
+        playTone(880, 0, 0.25); playTone(1100, 0.35, 0.25); playTone(880, 0.7, 0.35);
+      }
       toast.info("Testando som...");
     } catch {}
   };
@@ -200,7 +248,6 @@ export default function AdminAutoatendimento() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto p-6 space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
@@ -225,10 +272,11 @@ export default function AdminAutoatendimento() {
         </div>
 
         <Tabs defaultValue="branding" className="space-y-6">
-          <TabsList className="grid grid-cols-5 w-full">
+          <TabsList className="grid grid-cols-6 w-full">
             <TabsTrigger value="branding" className="gap-1"><Palette className="w-4 h-4" /> Identidade</TabsTrigger>
             <TabsTrigger value="privacy" className="gap-1"><ShieldCheck className="w-4 h-4" /> Privacidade</TabsTrigger>
             <TabsTrigger value="tv" className="gap-1"><Tv className="w-4 h-4" /> Painel TV</TabsTrigger>
+            <TabsTrigger value="voice" className="gap-1"><Mic className="w-4 h-4" /> Voz</TabsTrigger>
             <TabsTrigger value="ads" className="gap-1"><Megaphone className="w-4 h-4" /> Anúncios</TabsTrigger>
             <TabsTrigger value="totem" className="gap-1"><Monitor className="w-4 h-4" /> Totem</TabsTrigger>
           </TabsList>
@@ -287,7 +335,6 @@ export default function AdminAutoatendimento() {
                     </div>
                   </div>
                 </div>
-                {/* Preview */}
                 <div>
                   <Label className="mb-2 block">Pré-visualização</Label>
                   <div className="rounded-xl overflow-hidden border" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
@@ -379,22 +426,10 @@ export default function AdminAutoatendimento() {
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">Após esse período sem chamadas, inicia os anúncios</p>
                     </div>
-
-                    {/* Toggles */}
-                    <ToggleRow label="Som de chamada" desc="Toca bipes ao chamar uma senha" icon={<Volume2 className="w-4 h-4" />} checked={soundEnabled} onChange={setSoundEnabled} />
-                    <ToggleRow label="Locução automática" desc="Fala a senha e prioridade ao chamar" icon={<Mic className="w-4 h-4" />} checked={locutionEnabled} onChange={setLocutionEnabled} />
-                    {locutionEnabled && (
-                      <div className="ml-4 space-y-3 border-l-2 border-primary/20 pl-4">
-                        <ToggleRow label="Falar prioridade" desc="Inclui prioridade na locução" checked={locutionSpeakPriority} onChange={setLocutionSpeakPriority} />
-                        <ToggleRow label="Falar local" desc="Inclui guichê/sala na locução" checked={locutionSpeakLocation} onChange={setLocutionSpeakLocation} />
-                      </div>
-                    )}
                     <ToggleRow label="Relógio" desc="Exibe relógio no canto superior" icon={<Clock className="w-4 h-4" />} checked={showClock} onChange={setShowClock} />
                     <ToggleRow label="Últimas chamadas" desc="Exibe histórico lateral" checked={showHistory} onChange={setShowHistory} />
                   </div>
-
                   <div className="space-y-4">
-                    {/* Preview */}
                     <div className="p-4 rounded-xl border bg-muted/30">
                       <p className="font-medium mb-2">Exemplo de chamada</p>
                       <div className="rounded-lg p-4 text-center" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
@@ -406,11 +441,10 @@ export default function AdminAutoatendimento() {
                           {privacyMode === "senha_nome_social" && "Ana C."}
                           {privacyMode === "nome_completo" && "Ana Clara Silva"}
                         </p>
+                        <p className="text-white/60 text-xs mt-1">Preferencial 80+</p>
                         <p className="text-white text-sm mt-1">📍 Guichê 1</p>
                       </div>
                     </div>
-
-                    {/* Test buttons */}
                     <div className="space-y-2">
                       <Label>Testar</Label>
                       <div className="flex gap-2 flex-wrap">
@@ -418,12 +452,92 @@ export default function AdminAutoatendimento() {
                           <Play className="w-4 h-4 mr-1" /> Testar Som
                         </Button>
                         <Button variant="outline" size="sm" onClick={testLocution}>
-                          <Mic className="w-4 h-4 mr-1" /> Testar Locução
+                          <Mic className="w-4 h-4 mr-1" /> Locução Simples
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={testLocutionFull}>
+                          <Mic className="w-4 h-4 mr-1" /> Locução Completa
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => navigate("/painel-tv")}>
                           <Tv className="w-4 h-4 mr-1" /> Abrir Painel TV
                         </Button>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* VOICE TAB */}
+          <TabsContent value="voice" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações de Voz e Locução</CardTitle>
+                <CardDescription>Personalize a voz, velocidade e comportamento da locução automática</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-5">
+                    <ToggleRow label="Locução automática" desc="Fala a senha e prioridade ao chamar" icon={<Mic className="w-4 h-4" />} checked={locutionEnabled} onChange={setLocutionEnabled} />
+                    {locutionEnabled && (
+                      <div className="ml-4 space-y-3 border-l-2 border-primary/20 pl-4">
+                        <ToggleRow label="Falar prioridade" desc="Inclui prioridade na locução" checked={locutionSpeakPriority} onChange={setLocutionSpeakPriority} />
+                        <ToggleRow label="Falar local" desc="Inclui guichê/sala na locução" checked={locutionSpeakLocation} onChange={setLocutionSpeakLocation} />
+                      </div>
+                    )}
+                    <ToggleRow label="Som de chamada" desc="Toca bipes antes da locução" icon={<Volume2 className="w-4 h-4" />} checked={soundEnabled} onChange={setSoundEnabled} />
+                    {soundEnabled && (
+                      <div className="ml-4 border-l-2 border-primary/20 pl-4">
+                        <Label>Tipo de som</Label>
+                        <Select value={preCallSound} onValueChange={setPreCallSound}>
+                          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="triple_tone">3 toques (padrão)</SelectItem>
+                            <SelectItem value="double_tone">2 toques</SelectItem>
+                            <SelectItem value="none">Sem som</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-5">
+                    {availableVoices.length > 0 && (
+                      <div>
+                        <Label>Voz / Locutor</Label>
+                        <Select value={selectedVoiceName} onValueChange={setSelectedVoiceName}>
+                          <SelectTrigger className="mt-1"><SelectValue placeholder="Voz padrão do sistema" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Padrão do sistema</SelectItem>
+                            {availableVoices.map(v => (
+                              <SelectItem key={v.name} value={v.name}>{v.name} ({v.lang})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div>
+                      <Label>Velocidade da fala: {voiceRate.toFixed(2)}</Label>
+                      <Slider value={[voiceRate]} onValueChange={v => setVoiceRate(v[0])} min={0.5} max={1.5} step={0.05} className="mt-2" />
+                      <p className="text-xs text-muted-foreground mt-1">0.5 = lento, 1.0 = normal, 1.5 = rápido</p>
+                    </div>
+                    <div>
+                      <Label>Tom: {voicePitch.toFixed(2)}</Label>
+                      <Slider value={[voicePitch]} onValueChange={v => setVoicePitch(v[0])} min={0.5} max={2.0} step={0.1} className="mt-2" />
+                    </div>
+                    <div>
+                      <Label>Volume: {Math.round(voiceVolume * 100)}%</Label>
+                      <Slider value={[voiceVolume]} onValueChange={v => setVoiceVolume(v[0])} min={0.1} max={1.0} step={0.1} className="mt-2" />
+                    </div>
+                    <div className="flex gap-2 flex-wrap pt-2">
+                      <Button variant="outline" size="sm" onClick={testLocution}>
+                        <Play className="w-4 h-4 mr-1" /> Testar simples
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={testLocutionFull}>
+                        <Play className="w-4 h-4 mr-1" /> Testar completa
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={testSound}>
+                        <Volume2 className="w-4 h-4 mr-1" /> Testar som
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -440,7 +554,6 @@ export default function AdminAutoatendimento() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <ToggleRow label="Ativar anúncios" desc="Quando ativado, exibe mídia entre as chamadas" checked={adsEnabled} onChange={setAdsEnabled} />
-
                 {adsEnabled && (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -497,7 +610,7 @@ export default function AdminAutoatendimento() {
             </Card>
           </TabsContent>
 
-          {/* TOTEM TAB - EDITABLE */}
+          {/* TOTEM TAB */}
           <TabsContent value="totem" className="space-y-6">
             <Card>
               <CardHeader>
@@ -510,17 +623,15 @@ export default function AdminAutoatendimento() {
                     <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Tela Inicial</h3>
                     <ToggleRow label="Retirar Senha" desc="Botão para emissão de nova senha no totem" checked={totemRetirarSenha} onChange={setTotemRetirarSenha} />
                     <ToggleRow label="Fazer Check-in" desc="Botão para check-in de consulta agendada" checked={totemCheckin} onChange={setTotemCheckin} />
-
                     <div>
                       <Label>Timeout de inatividade (segundos)</Label>
                       <div className="flex items-center gap-4 mt-2">
-                        <Slider value={[totemTimeout]} onValueChange={v => setTotemTimeout(v[0])} min={15} max={180} step={15} className="flex-1" />
+                        <Slider value={[totemTimeout]} onValueChange={v => setTotemTimeout(v[0])} min={5} max={180} step={5} className="flex-1" />
                         <span className="text-sm font-mono w-12 text-right">{totemTimeout}s</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">O totem retorna à tela inicial após esse tempo de inatividade</p>
                     </div>
                   </div>
-
                   <div className="space-y-4">
                     <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Tipos de Senha</h3>
                     <div className="p-4 rounded-xl border">
@@ -536,7 +647,6 @@ export default function AdminAutoatendimento() {
                         <Badge>Financeiro</Badge>
                       </div>
                     </div>
-
                     <div className="p-4 rounded-xl border">
                       <p className="font-medium mb-2">Check-in</p>
                       <p className="text-sm text-muted-foreground mb-2">Identificação por CPF + Data de Nascimento</p>
@@ -546,7 +656,6 @@ export default function AdminAutoatendimento() {
                         <li>• Gera senha vinculada à consulta</li>
                       </ul>
                     </div>
-
                     <div className="p-4 rounded-xl border">
                       <p className="font-medium mb-2">QR Code</p>
                       <p className="text-sm text-muted-foreground">Na tela de resultado, QR Code direciona ao portal mobile para acompanhar a fila</p>
@@ -562,7 +671,6 @@ export default function AdminAutoatendimento() {
   );
 }
 
-/** Reusable toggle row component */
 function ToggleRow({ label, desc, icon, checked, onChange }: {
   label: string; desc: string; icon?: React.ReactNode;
   checked: boolean; onChange: (v: boolean) => void;

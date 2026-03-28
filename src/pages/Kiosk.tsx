@@ -17,12 +17,13 @@ export interface KioskResultData {
   ticketId?: string;
 }
 
-const INACTIVITY_TIMEOUT = 60000;
-
 export default function Kiosk() {
   const [flow, setFlow] = useState<KioskFlow>("home");
   const [resultData, setResultData] = useState<KioskResultData | null>(null);
   const { data: config } = useUnitConfig();
+
+  // Use config timeout (in seconds), convert to ms
+  const timeoutMs = (config?.totem_timeout_seconds || 60) * 1000;
 
   const goHome = useCallback(() => {
     setFlow("home");
@@ -39,7 +40,7 @@ export default function Kiosk() {
     let timer: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
       clearTimeout(timer);
-      timer = setTimeout(goHome, INACTIVITY_TIMEOUT);
+      timer = setTimeout(goHome, timeoutMs);
     };
     resetTimer();
     const events = ["touchstart", "mousedown", "keydown", "scroll"];
@@ -48,7 +49,7 @@ export default function Kiosk() {
       clearTimeout(timer);
       events.forEach(e => document.removeEventListener(e, resetTimer));
     };
-  }, [flow, goHome]);
+  }, [flow, goHome, timeoutMs]);
 
   const primaryColor = config?.primary_color || "hsl(210,85%,45%)";
   const secondaryColor = config?.secondary_color || "hsl(210,85%,30%)";

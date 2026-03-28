@@ -10,6 +10,7 @@ import { Volume2, MapPin, Clock } from "lucide-react";
 export default function QueueTV() {
   const { data: config } = useUnitConfig();
   const { data: ads } = useUnitAds();
+  // Fetch ALL called tickets (multiple stations can have active calls)
   const { data: calledTickets } = useQueueTickets({ queue_name: "recepcao", status: "chamada" });
   const { data: recentDone } = useQueueTickets({ queue_name: "recepcao", status: "concluida" });
   const { data: recentAbsent } = useQueueTickets({ queue_name: "recepcao", status: "ausente" });
@@ -20,6 +21,7 @@ export default function QueueTV() {
   const [flashCall, setFlashCall] = useState(false);
   const [pulseScale, setPulseScale] = useState(false);
   const prevCalledRef = useRef<string | null>(null);
+  const prevCalledCountRef = useRef<number>(0);
 
   const primaryColor = config?.primary_color || "#1e5a8a";
   const secondaryColor = config?.secondary_color || "#0f3460";
@@ -34,8 +36,12 @@ export default function QueueTV() {
   const locutionEnabled = config?.locution_enabled !== false;
   const speakPriority = config?.locution_speak_priority !== false;
   const speakLocation = config?.locution_speak_location === true;
+  const voiceRate = config?.voice_rate || 0.85;
+  const voicePitch = config?.voice_pitch || 1.0;
+  const voiceVolume = config?.voice_volume || 1.0;
+  const preCallSound = config?.pre_call_sound || "triple_tone";
 
-  // Build recent history
+  // Build recent history from done + absent
   const recentHistory = [
     ...(recentDone || []),
     ...(recentAbsent || []),
@@ -44,7 +50,14 @@ export default function QueueTV() {
     .sort((a, b) => new Date(b.called_at!).getTime() - new Date(a.called_at!).getTime())
     .slice(0, 6);
 
-  const currentCall = calledTickets?.[0] || null;
+  // The most recent call (sorted by called_at desc) - this is the "highlighted" one
+  const sortedCalled = [...(calledTickets || [])]
+    .filter(t => t.called_at)
+    .sort((a, b) => new Date(b.called_at!).getTime() - new Date(a.called_at!).getTime());
+  
+  const currentCall = sortedCalled[0] || null;
+  // Other active calls (from different stations)
+  const otherCalls = sortedCalled.slice(1);
 
   // Speech synthesis
   const speak = useCallback((text: string) => {
@@ -55,22 +68,21 @@ export default function QueueTV() {
       synth.cancel();
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = "pt-BR";
-      utter.rate = 0.85;
-      utter.pitch = 1;
-      utter.volume = 1;
-      // Try to find a PT-BR voice
+      utter.rate = voiceRate;
+      utter.pitch = voicePitch;
+      utter.volume = voiceVolume;
       const voices = synth.getVoices();
       const ptVoice = voices.find(v => v.lang.startsWith("pt"));
       if (ptVoice) utter.voice = ptVoice;
       synth.speak(utter);
     } catch {}
-  }, [locutionEnabled]);
+  }, [locutionEnabled, voiceRate, voicePitch, voiceVolume]);
 
   const playTones = useCallback(() => {
-    if (!soundEnabled) return;
+    if (!soundEnabled || preCallSound === "none") return;
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const playTone = (freq: number, delay: number, dur = 0.3) => {
+      const playTone = (freq: number, delay: number, dur = 0.25) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
@@ -82,11 +94,17 @@ export default function QueueTV() {
         osc.start(ctx.currentTime + delay);
         osc.stop(ctx.currentTime + delay + dur + 0.05);
       };
-      playTone(880, 0, 0.25);
-      playTone(1100, 0.35, 0.25);
-      playTone(880, 0.7, 0.35);
+      if (preCallSound === "double_tone") {
+        playTone(880, 0, 0.2);
+        playTone(1100, 0.3, 0.2);
+      } else {
+        // triple_tone (default)
+        playTone(880, 0, 0.25);
+        playTone(1100, 0.35, 0.25);
+        playTone(880, 0.7, 0.35);
+      }
     } catch {}
-  }, [soundEnabled]);
+  }, [soundEnabled, preCallSound]);
 
   const buildSpeechText = useCallback((ticket: any) => {
     const parts: string[] = [];
@@ -110,13 +128,20 @@ export default function QueueTV() {
       parts.push(ticket.called_to);
     }
 
-    return parts.join(", ");
+    return parts.join(", ") + ".";
   }, [privacyMode, speakPriority, speakLocation]);
 
-  // Detect new call
+  // Detect new call or recall (check both id change AND called_at change for recalls)
   useEffect(() => {
-    if (currentCall && currentCall.id !== prevCalledRef.current) {
+    if (!currentCall) return;
+    
+    const calledAtTime = currentCall.called_at ? new Date(currentCall.called_at).getTime() : 0;
+    const isNewCall = currentCall.id !== prevCalledRef.current;
+    const isRecall = currentCall.id === prevCalledRef.current && calledAtTime > prevCalledCountRef.current;
+    
+    if (isNewCall || isRecall) {
       prevCalledRef.current = currentCall.id;
+      prevCalledCountRef.current = calledAtTime;
       setShowingAd(false);
       setLastCallTime(Date.now());
       setFlashCall(true);
@@ -124,14 +149,15 @@ export default function QueueTV() {
 
       // Play sound then speak
       playTones();
+      const speechDelay = preCallSound === "none" ? 200 : 1200;
       setTimeout(() => {
         speak(buildSpeechText(currentCall));
-      }, 1200);
+      }, speechDelay);
 
       setTimeout(() => setFlashCall(false), 3000);
       setTimeout(() => setPulseScale(false), 1500);
     }
-  }, [currentCall?.id, playTones, speak, buildSpeechText]);
+  }, [currentCall?.id, currentCall?.called_at, playTones, speak, buildSpeechText, preCallSound]);
 
   // Timer: after call display + idle time, show ads
   useEffect(() => {
@@ -152,7 +178,7 @@ export default function QueueTV() {
       setShowingAd(false);
       setLastCallTime(Date.now());
     }
-  }, [currentCall?.id]);
+  }, [currentCall?.id, currentCall?.called_at]);
 
   // Rotate ads
   useEffect(() => {
@@ -178,18 +204,6 @@ export default function QueueTV() {
     window.speechSynthesis?.getVoices();
   }, []);
 
-  const displayName = (ticket: any) => {
-    if (!ticket.patient_id || !ticket.patients?.full_name) {
-      return ticket.ticket_number;
-    }
-    return formatPatientDisplay(
-      ticket.patients?.full_name,
-      ticket.patients?.nome_social || null,
-      privacyMode,
-      ticket.ticket_number,
-    );
-  };
-
   const displayNameOnly = (ticket: any) => {
     if (!ticket.patient_id || !ticket.patients?.full_name) return null;
     if (privacyMode === "somente_senha") return null;
@@ -207,6 +221,24 @@ export default function QueueTV() {
     return () => clearInterval(t);
   }, []);
   const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+  const priorityLabel = (type: string) => {
+    const map: Record<string, string> = {
+      preferencial_80: "80+", preferencial_60: "60+", preferencial: "Pref.",
+      retorno_pos_operatorio: "Retorno", consulta: "Consulta", normal: "Normal",
+      exames: "Exames", financeiro: "Financeiro", triagem: "Triagem",
+    };
+    return map[type] || type;
+  };
+
+  const priorityBgColor = (type: string) => {
+    switch (type) {
+      case "preferencial_80": return "rgba(239,68,68,0.3)";
+      case "preferencial_60": return "rgba(249,115,22,0.3)";
+      case "preferencial": return "rgba(234,179,8,0.3)";
+      default: return "rgba(255,255,255,0.15)";
+    }
+  };
 
   // AD MODE
   if (showingAd && ads && ads.length > 0 && !currentCall) {
@@ -264,18 +296,18 @@ export default function QueueTV() {
         <div className="flex-1 flex items-center justify-center">
           {currentCall ? (
             <div
-              className="text-center space-y-6"
+              className="text-center space-y-5"
               style={{
                 animation: flashCall
-                  ? "tvCallFlash 0.6s ease-in-out 3"
+                  ? "tvCallFlash 0.5s ease-in-out 4"
                   : pulseScale
                   ? "tvCallZoom 0.8s ease-out"
                   : "none",
               }}
             >
               <div className="flex items-center justify-center gap-3 text-white/70 text-xl">
-                <Volume2 className="w-7 h-7" />
-                <span>SENHA CHAMADA</span>
+                <Volume2 className="w-7 h-7 animate-pulse" />
+                <span className="uppercase tracking-widest">Senha Chamada</span>
               </div>
               <p
                 className="text-white leading-none font-black tracking-widest drop-shadow-2xl"
@@ -288,11 +320,26 @@ export default function QueueTV() {
                   {displayNameOnly(currentCall)}
                 </p>
               )}
+              {/* Priority badge */}
+              <div className="flex items-center justify-center gap-4">
+                <span
+                  className="px-5 py-2 rounded-full text-white text-lg font-bold"
+                  style={{ background: priorityBgColor(currentCall.ticket_type) }}
+                >
+                  {priorityLabel(currentCall.ticket_type)}
+                </span>
+              </div>
               {currentCall.called_to && (
                 <div className="flex items-center justify-center gap-3 text-white text-2xl">
                   <MapPin className="w-7 h-7" />
                   <span className="font-bold">{currentCall.called_to}</span>
                 </div>
+              )}
+              {/* Recall count indicator */}
+              {(currentCall as any).recall_count > 0 && (
+                <p className="text-white/50 text-sm">
+                  Rechamada #{(currentCall as any).recall_count}
+                </p>
               )}
             </div>
           ) : (
@@ -303,9 +350,30 @@ export default function QueueTV() {
           )}
         </div>
 
-        {/* Right sidebar - history */}
+        {/* Right sidebar */}
         {showHistory && (
           <div className="w-80 bg-black/30 flex flex-col">
+            {/* Other active calls from different stations */}
+            {otherCalls.length > 0 && (
+              <>
+                <div className="px-6 py-3 border-b border-white/10">
+                  <h3 className="text-white/80 text-sm font-semibold uppercase tracking-wider">Outras Chamadas</h3>
+                </div>
+                <div className="border-b border-white/10">
+                  {otherCalls.slice(0, 3).map((t) => (
+                    <div key={t.id} className="px-6 py-3 flex items-center justify-between bg-white/5">
+                      <div>
+                        <p className="text-white font-bold text-lg">{t.ticket_number}</p>
+                        <p className="text-white/50 text-xs">{displayNameOnly(t) || ""}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white/70 text-sm font-medium">{t.called_to || "—"}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             <div className="px-6 py-4 border-b border-white/10">
               <h3 className="text-white/80 text-lg font-semibold">Últimas Chamadas</h3>
             </div>
@@ -344,11 +412,11 @@ export default function QueueTV() {
       <style>{`
         @keyframes tvCallFlash {
           0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
+          50% { opacity: 0.4; }
         }
         @keyframes tvCallZoom {
-          0% { transform: scale(0.7); opacity: 0; }
-          60% { transform: scale(1.05); opacity: 1; }
+          0% { transform: scale(0.6); opacity: 0; }
+          50% { transform: scale(1.08); opacity: 1; }
           100% { transform: scale(1); }
         }
       `}</style>
