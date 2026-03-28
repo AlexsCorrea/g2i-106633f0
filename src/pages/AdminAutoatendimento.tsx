@@ -59,7 +59,7 @@ export default function AdminAutoatendimento() {
 
   // Available voices
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoiceName, setSelectedVoiceName] = useState("");
+  const [selectedVoiceName, setSelectedVoiceName] = useState("__default__");
 
   useEffect(() => {
     const loadVoices = () => {
