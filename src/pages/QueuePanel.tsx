@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueueTickets, useCallNextTicket, useUpdateTicketStatus } from "@/hooks/useQueueTickets";
 import { useUnitConfig, formatPatientDisplay } from "@/hooks/useUnitConfig";
@@ -7,9 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PhoneCall, SkipForward, CheckCircle, XCircle, Users, Monitor, RotateCcw, Clock, History, Search, Filter, Tv, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+
+const STORAGE_KEY = "solaris_panel_prefs";
 
 const stations = [
   "Guichê 1", "Guichê 2", "Recepção", "Triagem",
@@ -17,18 +20,19 @@ const stations = [
   "Exames", "Financeiro",
 ];
 
-const contextLabels: Record<string, string> = {
-  consulta: "Consulta",
-  retorno_pos_operatorio: "Retorno Pós-op",
-  normal: "Normal",
-  preferencial: "Preferencial",
-  preferencial_60: "60+",
-  preferencial_80: "80+",
-  recepcao: "Recepção",
-  exames: "Exames",
-  financeiro: "Financeiro",
-  triagem: "Triagem",
-};
+const ticketTypes = [
+  { value: "normal", label: "Normal" },
+  { value: "preferencial", label: "Preferencial" },
+  { value: "preferencial_60", label: "60+" },
+  { value: "preferencial_80", label: "80+" },
+  { value: "consulta", label: "Consulta" },
+  { value: "retorno_pos_operatorio", label: "Retorno" },
+  { value: "exames", label: "Exames" },
+  { value: "financeiro", label: "Financeiro" },
+  { value: "triagem", label: "Triagem" },
+];
+
+const contextLabels: Record<string, string> = Object.fromEntries(ticketTypes.map(t => [t.value, t.label]));
 
 const priorityColor = (type: string) => {
   switch (type) {
@@ -41,11 +45,25 @@ const priorityColor = (type: string) => {
 
 const typeLabel = (type: string) => contextLabels[type] || type;
 
+function loadPrefs() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
+
+function savePrefs(prefs: any) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); } catch {}
+}
+
 export default function QueuePanel() {
   const navigate = useNavigate();
-  const [station, setStation] = useState("Guichê 1");
-  const [filterType, setFilterType] = useState("all");
-  const [filterPriority, setFilterPriority] = useState("all");
+  const saved = loadPrefs();
+
+  const [station, setStation] = useState(saved?.station || "Guichê 1");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(saved?.selectedTypes || []);
+  const [filterPriority, setFilterPriority] = useState(saved?.filterPriority || "all");
   const [searchTicket, setSearchTicket] = useState("");
 
   const { data: config } = useUnitConfig();
@@ -63,6 +81,11 @@ export default function QueuePanel() {
     .sort((a, b) => new Date(b.called_at!).getTime() - new Date(a.called_at!).getTime())
     .slice(0, 12);
 
+  // Persist preferences
+  useEffect(() => {
+    savePrefs({ station, selectedTypes, filterPriority });
+  }, [station, selectedTypes, filterPriority]);
+
   useEffect(() => {
     const channel = supabase
       .channel("queue-panel")
@@ -71,7 +94,6 @@ export default function QueuePanel() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Call next - no global block, each station can call independently
   const handleCall = () => {
     callNext.mutate({ queue_name: "recepcao", called_to: station });
   };
@@ -95,10 +117,8 @@ export default function QueuePanel() {
   const handleRecall = async (ticket: any) => {
     const newCount = ((ticket as any).recall_count || 0) + 1;
     if (newCount >= 3) {
-      // Auto mark as absent after 3rd recall
       await supabase.from("queue_tickets").update({
-        status: "ausente",
-        recall_count: newCount,
+        status: "ausente", recall_count: newCount,
       }).eq("id", ticket.id);
       await supabase.from("queue_history").insert({
         ticket_id: ticket.id, action: "auto_absent",
@@ -120,8 +140,14 @@ export default function QueuePanel() {
     toast.info(`Rechamada #${newCount} — ${ticket.ticket_number}`);
   };
 
+  const toggleType = (type: string) => {
+    setSelectedTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
   const filteredWaiting = waiting?.filter(t => {
-    if (filterType !== "all" && t.ticket_type !== filterType) return false;
+    if (selectedTypes.length > 0 && !selectedTypes.includes(t.ticket_type)) return false;
     if (filterPriority === "high" && t.priority < 2) return false;
     if (filterPriority === "normal" && t.priority >= 2) return false;
     if (searchTicket && !t.ticket_number.toLowerCase().includes(searchTicket.toLowerCase())) return false;
@@ -131,7 +157,6 @@ export default function QueuePanel() {
   const unitName = config?.unit_name || "Solaris";
   const privacyMode = config?.privacy_mode || "senha_iniciais";
 
-  // Group called by station
   const myStationCalls = called?.filter(t => t.called_to === station) || [];
   const otherStationCalls = called?.filter(t => t.called_to !== station) || [];
 
@@ -148,20 +173,16 @@ export default function QueuePanel() {
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <Select value={station} onValueChange={setStation}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {stations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
             <Button size="lg" onClick={handleCall} disabled={callNext.isPending || !waiting?.length} className="h-12 px-6">
-              <PhoneCall className="w-5 h-5 mr-2" />
-              Chamar Próximo
+              <PhoneCall className="w-5 h-5 mr-2" /> Chamar Próximo
             </Button>
             <Button variant="outline" onClick={() => navigate("/painel-tv")} className="h-12">
-              <Tv className="w-5 h-5 mr-2" />
-              Painel TV
+              <Tv className="w-5 h-5 mr-2" /> Painel TV
             </Button>
           </div>
         </div>
@@ -196,7 +217,7 @@ export default function QueuePanel() {
             <CardHeader><CardTitle className="text-primary">🔔 Minhas Chamadas — {station}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {myStationCalls.map((ticket) => (
-                <div key={ticket.id} className="flex items-center justify-between bg-white rounded-xl p-4 shadow-sm">
+                <div key={ticket.id} className="flex items-center justify-between bg-card rounded-xl p-4 shadow-sm">
                   <div className="flex items-center gap-4">
                     <span className="text-3xl font-black text-primary">{ticket.ticket_number}</span>
                     <div>
@@ -234,14 +255,12 @@ export default function QueuePanel() {
             <CardHeader><CardTitle className="text-orange-600 text-base">📢 Chamadas em outros guichês</CardTitle></CardHeader>
             <CardContent className="space-y-2">
               {otherStationCalls.map((ticket) => (
-                <div key={ticket.id} className="flex items-center justify-between bg-white rounded-lg p-3 shadow-sm">
+                <div key={ticket.id} className="flex items-center justify-between bg-card rounded-lg p-3 shadow-sm">
                   <div className="flex items-center gap-3">
                     <span className="text-xl font-black text-orange-600">{ticket.ticket_number}</span>
                     <span className="text-sm text-muted-foreground">{ticket.called_to}</span>
                     <Badge variant={priorityColor(ticket.ticket_type) as any} className="text-xs">{typeLabel(ticket.ticket_type)}</Badge>
-                    {(ticket as any).recall_count > 0 && (
-                      <span className="text-xs text-muted-foreground">{(ticket as any).recall_count}x</span>
-                    )}
+                    {(ticket as any).recall_count > 0 && <span className="text-xs text-muted-foreground">{(ticket as any).recall_count}x</span>}
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {ticket.called_at ? new Date(ticket.called_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}
@@ -258,7 +277,7 @@ export default function QueuePanel() {
             <CardHeader><CardTitle className="text-blue-700">👨‍⚕️ Em Atendimento</CardTitle></CardHeader>
             <CardContent className="space-y-2">
               {inService.map((ticket) => (
-                <div key={ticket.id} className="flex items-center justify-between bg-white rounded-xl p-3 shadow-sm">
+                <div key={ticket.id} className="flex items-center justify-between bg-card rounded-xl p-3 shadow-sm">
                   <div className="flex items-center gap-3">
                     <span className="text-xl font-black text-blue-600">{ticket.ticket_number}</span>
                     <span className="text-sm">{ticket.patients?.full_name || "—"}</span>
@@ -280,23 +299,10 @@ export default function QueuePanel() {
               <CardHeader>
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <CardTitle className="flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    Fila de Espera
+                    <Users className="w-5 h-5" /> Fila de Espera
                     {waiting && <Badge variant="secondary">{waiting.length}</Badge>}
                   </CardTitle>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Select value={filterType} onValueChange={setFilterType}>
-                      <SelectTrigger className="w-28 h-8"><Filter className="w-3 h-3 mr-1" /><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="preferencial">Pref.</SelectItem>
-                        <SelectItem value="preferencial_60">60+</SelectItem>
-                        <SelectItem value="preferencial_80">80+</SelectItem>
-                        <SelectItem value="consulta">Consulta</SelectItem>
-                        <SelectItem value="retorno_pos_operatorio">Retorno</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <Select value={filterPriority} onValueChange={setFilterPriority}>
                       <SelectTrigger className="w-28 h-8"><SelectValue placeholder="Prioridade" /></SelectTrigger>
                       <SelectContent>
@@ -310,6 +316,26 @@ export default function QueuePanel() {
                       <Input placeholder="Senha..." value={searchTicket} onChange={e => setSearchTicket(e.target.value)} className="h-8 w-24 pl-7 text-xs" />
                     </div>
                   </div>
+                </div>
+                {/* Multi-select type filters */}
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {ticketTypes.map((tt) => (
+                    <label key={tt.value} className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
+                      <Checkbox
+                        checked={selectedTypes.includes(tt.value)}
+                        onCheckedChange={() => toggleType(tt.value)}
+                        className="h-3.5 w-3.5"
+                      />
+                      <span className={selectedTypes.includes(tt.value) ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                        {tt.label}
+                      </span>
+                    </label>
+                  ))}
+                  {selectedTypes.length > 0 && (
+                    <Button variant="ghost" size="sm" className="h-5 text-xs px-2" onClick={() => setSelectedTypes([])}>
+                      Limpar
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
