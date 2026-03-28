@@ -24,6 +24,10 @@ export interface UnitConfig {
   totem_retirar_senha: boolean;
   totem_checkin: boolean;
   totem_timeout_seconds: number;
+  voice_rate: number;
+  voice_pitch: number;
+  voice_volume: number;
+  pre_call_sound: string;
 }
 
 export interface UnitAd {

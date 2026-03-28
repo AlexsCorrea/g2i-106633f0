@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CheckCircle2, Printer, Home, Clock } from "lucide-react";
+import { CheckCircle2, Printer, Home, Clock, QrCode } from "lucide-react";
 import type { KioskResultData } from "@/pages/Kiosk";
 
 interface Props {
@@ -32,12 +32,14 @@ export function KioskResult({ data, onBack }: Props) {
     return () => clearInterval(timer);
   }, [onBack]);
 
+  const portalUrl = `${window.location.origin}/portal`;
+
   return (
     <div className="space-y-6 text-center">
       <div className="space-y-3">
         <CheckCircle2 className="w-16 h-16 text-green-300 mx-auto" />
         <h1 className="text-2xl font-bold text-white">
-          {data.patientName ? "Check-in Confirmado!" : "Senha Emitida!"}
+          {data.patientName ? "Check-in realizado com sucesso!" : "Senha emitida com sucesso!"}
         </h1>
       </div>
 
@@ -69,7 +71,17 @@ export function KioskResult({ data, onBack }: Props) {
         <p className="text-xs text-[hsl(var(--muted-foreground))]">
           {new Date().toLocaleDateString("pt-BR")} às {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
         </p>
+
+        {/* QR Code hint */}
+        <div className="border-t border-[hsl(var(--border))] pt-4">
+          <div className="flex items-center justify-center gap-2 text-[hsl(var(--muted-foreground))]">
+            <QrCode className="w-4 h-4" />
+            <p className="text-xs">Acompanhe sua fila pelo celular em <strong>{portalUrl.replace(/https?:\/\//, '')}</strong></p>
+          </div>
+        </div>
       </div>
+
+      <p className="text-white/80 text-base">Aguarde sua chamada no painel da sala de espera</p>
 
       <div className="flex gap-3">
         <button
@@ -88,7 +100,7 @@ export function KioskResult({ data, onBack }: Props) {
         </button>
       </div>
 
-      <p className="text-white/50 text-sm">Retornando ao início em {countdown}s</p>
+      <p className="text-white/50 text-sm">Retornando para a tela inicial em {countdown} segundos</p>
     </div>
   );
 }

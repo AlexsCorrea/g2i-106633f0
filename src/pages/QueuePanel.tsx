@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { PhoneCall, SkipForward, CheckCircle, XCircle, Users, Monitor, RotateCcw, Clock, History, Search, Filter, Tv } from "lucide-react";
+import { PhoneCall, SkipForward, CheckCircle, XCircle, Users, Monitor, RotateCcw, Clock, History, Search, Filter, Tv, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const stations = [
   "Guichê 1", "Guichê 2", "Recepção", "Triagem",
@@ -44,7 +45,6 @@ export default function QueuePanel() {
   const navigate = useNavigate();
   const [station, setStation] = useState("Guichê 1");
   const [filterType, setFilterType] = useState("all");
-  const [filterContext, setFilterContext] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
   const [searchTicket, setSearchTicket] = useState("");
 
@@ -71,17 +71,53 @@ export default function QueuePanel() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Call next - no global block, each station can call independently
   const handleCall = () => {
     callNext.mutate({ queue_name: "recepcao", called_to: station });
   };
 
-  const handleCallSpecific = (ticketId: string) => {
-    updateStatus.mutate({ id: ticketId, status: "chamada" });
-    supabase.from("queue_tickets").update({ called_to: station, called_at: new Date().toISOString() }).eq("id", ticketId);
+  const handleCallSpecific = async (ticketId: string) => {
+    const { error } = await supabase.from("queue_tickets").update({
+      status: "chamada",
+      called_to: station,
+      called_at: new Date().toISOString(),
+      recall_count: 0,
+    }).eq("id", ticketId);
+    if (error) { toast.error("Erro ao chamar senha"); return; }
+    await supabase.from("queue_history").insert({
+      ticket_id: ticketId, action: "ticket_called",
+      old_status: "aguardando", new_status: "chamada",
+      details: { called_to: station },
+    });
+    toast.success("Senha chamada!");
   };
 
-  const handleRecall = (ticketId: string) => {
-    supabase.from("queue_tickets").update({ called_at: new Date().toISOString(), called_to: station }).eq("id", ticketId);
+  const handleRecall = async (ticket: any) => {
+    const newCount = ((ticket as any).recall_count || 0) + 1;
+    if (newCount >= 3) {
+      // Auto mark as absent after 3rd recall
+      await supabase.from("queue_tickets").update({
+        status: "ausente",
+        recall_count: newCount,
+      }).eq("id", ticket.id);
+      await supabase.from("queue_history").insert({
+        ticket_id: ticket.id, action: "auto_absent",
+        old_status: "chamada", new_status: "ausente",
+        details: { reason: "3 rechamadas sem resposta", recall_count: newCount },
+      });
+      toast.warning(`Senha ${ticket.ticket_number} marcada como ausente após ${newCount} chamadas`);
+      return;
+    }
+    await supabase.from("queue_tickets").update({
+      called_at: new Date().toISOString(),
+      called_to: station,
+      recall_count: newCount,
+    }).eq("id", ticket.id);
+    await supabase.from("queue_history").insert({
+      ticket_id: ticket.id, action: "ticket_recalled",
+      details: { called_to: station, recall_count: newCount },
+    });
+    toast.info(`Rechamada #${newCount} — ${ticket.ticket_number}`);
   };
 
   const filteredWaiting = waiting?.filter(t => {
@@ -93,6 +129,11 @@ export default function QueuePanel() {
   });
 
   const unitName = config?.unit_name || "Solaris";
+  const privacyMode = config?.privacy_mode || "senha_iniciais";
+
+  // Group called by station
+  const myStationCalls = called?.filter(t => t.called_to === station) || [];
+  const otherStationCalls = called?.filter(t => t.called_to !== station) || [];
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -149,27 +190,62 @@ export default function QueuePanel() {
           </CardContent></Card>
         </div>
 
-        {/* Active calls */}
-        {called && called.length > 0 && (
+        {/* My station calls */}
+        {myStationCalls.length > 0 && (
           <Card className="border-2 border-primary bg-primary/5">
-            <CardHeader><CardTitle className="text-primary">🔔 Chamadas Ativas</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-primary">🔔 Minhas Chamadas — {station}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {called.map((ticket) => (
+              {myStationCalls.map((ticket) => (
                 <div key={ticket.id} className="flex items-center justify-between bg-white rounded-xl p-4 shadow-sm">
                   <div className="flex items-center gap-4">
                     <span className="text-3xl font-black text-primary">{ticket.ticket_number}</span>
                     <div>
-                      <p className="font-medium">{ticket.patients?.full_name || "Paciente"}</p>
+                      <p className="font-medium">{ticket.patients?.full_name || "Não identificado"}</p>
                       <p className="text-sm text-muted-foreground">{ticket.called_to} • {typeLabel(ticket.ticket_type)}</p>
                     </div>
                     <Badge variant={priorityColor(ticket.ticket_type) as any}>{typeLabel(ticket.ticket_type)}</Badge>
+                    {(ticket as any).recall_count > 0 && (
+                      <Badge variant="outline" className="gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {(ticket as any).recall_count}x chamada
+                      </Badge>
+                    )}
+                    {!ticket.patient_id && (
+                      <Badge variant="outline" className="text-xs text-muted-foreground">Sem identificação</Badge>
+                    )}
                   </div>
                   <div className="flex gap-2 flex-wrap">
-                    <Button size="sm" onClick={() => handleRecall(ticket.id)} variant="outline"><RotateCcw className="w-4 h-4 mr-1" /> Rechamar</Button>
+                    <Button size="sm" onClick={() => handleRecall(ticket)} variant="outline">
+                      <RotateCcw className="w-4 h-4 mr-1" /> Rechamar {(ticket as any).recall_count > 0 && `(${(ticket as any).recall_count}/3)`}
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: ticket.id, status: "em_atendimento" })}><CheckCircle className="w-4 h-4 mr-1" /> Atender</Button>
                     <Button size="sm" variant="ghost" onClick={() => updateStatus.mutate({ id: ticket.id, status: "ausente" })}><XCircle className="w-4 h-4 mr-1" /> Ausente</Button>
                     <Button size="sm" variant="ghost" onClick={() => updateStatus.mutate({ id: ticket.id, status: "aguardando" })}><SkipForward className="w-4 h-4 mr-1" /> Devolver</Button>
                   </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Other station calls */}
+        {otherStationCalls.length > 0 && (
+          <Card className="border border-orange-200 bg-orange-50/30">
+            <CardHeader><CardTitle className="text-orange-600 text-base">📢 Chamadas em outros guichês</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {otherStationCalls.map((ticket) => (
+                <div key={ticket.id} className="flex items-center justify-between bg-white rounded-lg p-3 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl font-black text-orange-600">{ticket.ticket_number}</span>
+                    <span className="text-sm text-muted-foreground">{ticket.called_to}</span>
+                    <Badge variant={priorityColor(ticket.ticket_type) as any} className="text-xs">{typeLabel(ticket.ticket_type)}</Badge>
+                    {(ticket as any).recall_count > 0 && (
+                      <span className="text-xs text-muted-foreground">{(ticket as any).recall_count}x</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {ticket.called_at ? new Date(ticket.called_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}
+                  </span>
                 </div>
               ))}
             </CardContent>
@@ -284,6 +360,7 @@ export default function QueuePanel() {
                         <Badge variant="outline" className="text-xs">
                           {ticket.status === "concluida" ? "✅" : ticket.status === "ausente" ? "❌" : "🔔"}
                         </Badge>
+                        <span className="text-xs text-muted-foreground">{typeLabel(ticket.ticket_type)}</span>
                       </div>
                       <div className="text-right text-xs text-muted-foreground">
                         <p>{ticket.called_to}</p>
