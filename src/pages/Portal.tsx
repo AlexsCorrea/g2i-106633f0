@@ -455,7 +455,7 @@ export default function Portal() {
     const isCalled = myTicket.status === "chamada";
     return (
       <Wrapper>
-        <h1 className="text-lg font-bold text-white text-center">Portal OftalmoCenter</h1>
+        <h1 className="text-lg font-bold text-white text-center">Portal {unitConfig?.unit_name || "Solaris"}</h1>
         <div
           className={`bg-white rounded-3xl p-8 shadow-2xl text-center space-y-4 ${isCalled ? "ring-4 ring-green-400 animate-pulse" : ""}`}
         >
