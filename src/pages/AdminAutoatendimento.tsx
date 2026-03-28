@@ -188,7 +188,7 @@ export default function AdminAutoatendimento() {
     utter.rate = voiceRate;
     utter.pitch = voicePitch;
     utter.volume = voiceVolume;
-    if (selectedVoiceName) {
+    if (selectedVoiceName && selectedVoiceName !== "__default__") {
       const voice = availableVoices.find(v => v.name === selectedVoiceName);
       if (voice) utter.voice = voice;
     } else {
