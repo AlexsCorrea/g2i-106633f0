@@ -2020,6 +2020,7 @@ export type Database = {
           patient_id: string | null
           priority: number
           queue_name: string
+          recall_count: number
           sector: string
           source: string
           status: string
@@ -2041,6 +2042,7 @@ export type Database = {
           patient_id?: string | null
           priority?: number
           queue_name?: string
+          recall_count?: number
           sector?: string
           source?: string
           status?: string
@@ -2062,6 +2064,7 @@ export type Database = {
           patient_id?: string | null
           priority?: number
           queue_name?: string
+          recall_count?: number
           sector?: string
           source?: string
           status?: string
@@ -2209,6 +2212,7 @@ export type Database = {
           locution_speak_location: boolean
           locution_speak_priority: boolean
           logo_url: string | null
+          pre_call_sound: string
           primary_color: string | null
           privacy_mode: string
           secondary_color: string | null
@@ -2221,6 +2225,9 @@ export type Database = {
           totem_timeout_seconds: number
           unit_name: string
           updated_at: string
+          voice_pitch: number
+          voice_rate: number
+          voice_volume: number
         }
         Insert: {
           ads_enabled?: boolean
@@ -2234,6 +2241,7 @@ export type Database = {
           locution_speak_location?: boolean
           locution_speak_priority?: boolean
           logo_url?: string | null
+          pre_call_sound?: string
           primary_color?: string | null
           privacy_mode?: string
           secondary_color?: string | null
@@ -2246,6 +2254,9 @@ export type Database = {
           totem_timeout_seconds?: number
           unit_name?: string
           updated_at?: string
+          voice_pitch?: number
+          voice_rate?: number
+          voice_volume?: number
         }
         Update: {
           ads_enabled?: boolean
@@ -2259,6 +2270,7 @@ export type Database = {
           locution_speak_location?: boolean
           locution_speak_priority?: boolean
           logo_url?: string | null
+          pre_call_sound?: string
           primary_color?: string | null
           privacy_mode?: string
           secondary_color?: string | null
@@ -2271,6 +2283,9 @@ export type Database = {
           totem_timeout_seconds?: number
           unit_name?: string
           updated_at?: string
+          voice_pitch?: number
+          voice_rate?: number
+          voice_volume?: number
         }
         Relationships: []
       }
