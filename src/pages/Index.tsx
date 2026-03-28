@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { 
   Users, Calendar, FileText, LogIn, LogOut, 
   Heart, Activity, Pill, ClipboardList, Shield, BarChart3,
-  Monitor, Megaphone, FlaskConical
+  Monitor, Megaphone, FlaskConical, Tv
 } from "lucide-react";
 import WhatsNewModal from "@/components/WhatsNewModal";
 import { StatsCards } from "@/components/dashboard/StatsCards";
@@ -163,6 +163,10 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
             <FlaskConical className="h-4 w-4" />
             CME
           </Button>
+          <Button variant="outline" onClick={() => navigate("/painel-tv")} className="gap-2">
+            <Tv className="h-4 w-4" />
+            Painel TV
+          </Button>
         </div>
       </div>
 
@@ -176,7 +180,7 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
       </div>
 
       {/* Quick Access */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
         <Card className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all" onClick={() => navigate("/patients")}>
           <CardHeader className="pb-3">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
@@ -229,6 +233,15 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
             </div>
             <CardTitle className="text-base">CME</CardTitle>
             <CardDescription className="text-xs">Central de Material Esterilizado</CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all" onClick={() => navigate("/painel-tv")}>
+          <CardHeader className="pb-3">
+            <div className="h-10 w-10 rounded-lg bg-red-50 flex items-center justify-center mb-2">
+              <Tv className="h-5 w-5 text-red-600" />
+            </div>
+            <CardTitle className="text-base">Painel TV</CardTitle>
+            <CardDescription className="text-xs">Painel público de chamadas</CardDescription>
           </CardHeader>
         </Card>
       </div>

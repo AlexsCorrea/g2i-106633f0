@@ -3,6 +3,7 @@ import { KioskHome } from "@/components/kiosk/KioskHome";
 import { KioskTicket } from "@/components/kiosk/KioskTicket";
 import { KioskCheckin } from "@/components/kiosk/KioskCheckin";
 import { KioskResult } from "@/components/kiosk/KioskResult";
+import { useUnitConfig } from "@/hooks/useUnitConfig";
 
 export type KioskFlow = "home" | "ticket" | "checkin" | "result";
 
@@ -16,11 +17,12 @@ export interface KioskResultData {
   ticketId?: string;
 }
 
-const INACTIVITY_TIMEOUT = 60000; // 60 seconds
+const INACTIVITY_TIMEOUT = 60000;
 
 export default function Kiosk() {
   const [flow, setFlow] = useState<KioskFlow>("home");
   const [resultData, setResultData] = useState<KioskResultData | null>(null);
+  const { data: config } = useUnitConfig();
 
   const goHome = useCallback(() => {
     setFlow("home");
@@ -32,7 +34,6 @@ export default function Kiosk() {
     setFlow("result");
   };
 
-  // Inactivity timeout - return to home if no interaction
   useEffect(() => {
     if (flow === "home") return;
     let timer: ReturnType<typeof setTimeout>;
@@ -49,8 +50,14 @@ export default function Kiosk() {
     };
   }, [flow, goHome]);
 
+  const primaryColor = config?.primary_color || "hsl(210,85%,45%)";
+  const secondaryColor = config?.secondary_color || "hsl(210,85%,30%)";
+  const bgStyle = config?.background_image_url
+    ? { backgroundImage: `url(${config.background_image_url})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : { background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[hsl(210,85%,45%)] to-[hsl(210,85%,30%)] flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={bgStyle}>
       <div className="w-full max-w-lg">
         {flow === "home" && <KioskHome onSelect={setFlow} />}
         {flow === "ticket" && <KioskTicket onBack={goHome} onResult={showResult} />}

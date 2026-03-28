@@ -23,6 +23,7 @@ import {
 import { DateMaskInput } from "@/components/ui/date-mask-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGenerateTicket, useQueueTicketById, useQueueTickets } from "@/hooks/useQueueTickets";
+import { useUnitConfig } from "@/hooks/useUnitConfig";
 
 type PortalStep =
   | "home"
@@ -118,6 +119,7 @@ export default function Portal() {
   const generateTicket = useGenerateTicket();
   const { data: myTicket } = useQueueTicketById(ticketId);
   const { data: allTickets } = useQueueTickets({ queue_name: "recepcao", status: "aguardando" });
+  const { data: unitConfig } = useUnitConfig();
 
   // Auto-redirect to tracking if active ticket exists
   useEffect(() => {
@@ -453,7 +455,7 @@ export default function Portal() {
     const isCalled = myTicket.status === "chamada";
     return (
       <Wrapper>
-        <h1 className="text-lg font-bold text-white text-center">Portal OftalmoCenter</h1>
+        <h1 className="text-lg font-bold text-white text-center">Portal {unitConfig?.unit_name || "Solaris"}</h1>
         <div
           className={`bg-white rounded-3xl p-8 shadow-2xl text-center space-y-4 ${isCalled ? "ring-4 ring-green-400 animate-pulse" : ""}`}
         >
@@ -771,10 +773,14 @@ export default function Portal() {
   return (
     <Wrapper>
       <div className="text-center space-y-2">
-        <div className="w-14 h-14 mx-auto bg-white/20 rounded-2xl flex items-center justify-center">
-          <Smartphone className="w-7 h-7 text-white" />
+        <div className="w-14 h-14 mx-auto bg-white/20 rounded-2xl flex items-center justify-center overflow-hidden">
+          {unitConfig?.logo_url ? (
+            <img src={unitConfig.logo_url} alt="Logo" className="w-full h-full object-cover" />
+          ) : (
+            <Smartphone className="w-7 h-7 text-white" />
+          )}
         </div>
-        <h1 className="text-2xl font-bold text-white">Portal Solaris</h1>
+        <h1 className="text-2xl font-bold text-white">Portal {unitConfig?.unit_name || "Solaris"}</h1>
         <p className="text-white/60 text-sm">O que deseja fazer?</p>
       </div>
 
@@ -811,7 +817,7 @@ export default function Portal() {
         </button>
       </div>
 
-      <p className="text-white/30 text-xs text-center">Solaris Health System</p>
+      <p className="text-white/30 text-xs text-center">{unitConfig?.unit_name || "Solaris"} Health System</p>
     </Wrapper>
   );
 }
