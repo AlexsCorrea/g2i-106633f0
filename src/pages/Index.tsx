@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { 
   Users, Calendar, FileText, LogIn, LogOut, 
   Heart, Activity, Pill, ClipboardList, Shield, BarChart3,
-  Monitor, Megaphone, FlaskConical, Tv
+  Monitor, Megaphone, FlaskConical, Tv, Settings2
 } from "lucide-react";
 import WhatsNewModal from "@/components/WhatsNewModal";
 import { StatsCards } from "@/components/dashboard/StatsCards";
