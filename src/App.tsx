@@ -18,6 +18,7 @@ import QueuePanel from "./pages/QueuePanel";
 import QueueTV from "./pages/QueueTV";
 import Portal from "./pages/Portal";
 import CME from "./pages/CME";
+import AdminAutoatendimento from "./pages/AdminAutoatendimento";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ function App() {
               <Route path="/cme" element={<CME />} />
               <Route path="/painel" element={<QueuePanel />} />
               <Route path="/painel-tv" element={<QueueTV />} />
+              <Route path="/admin-autoatendimento" element={<AdminAutoatendimento />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>

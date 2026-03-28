@@ -188,6 +188,11 @@ export default function QueueTV() {
                   <span className="font-bold">{currentCall.called_to}</span>
                 </div>
               )}
+              {currentCall.called_to && (
+                <p className="text-white/50 text-lg italic mt-2">
+                  Dirija-se ao {currentCall.called_to}
+                </p>
+              )}
             </div>
           ) : (
             <div className="text-center space-y-4">
