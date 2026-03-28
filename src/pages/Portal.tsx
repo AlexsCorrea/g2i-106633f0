@@ -119,6 +119,7 @@ export default function Portal() {
   const generateTicket = useGenerateTicket();
   const { data: myTicket } = useQueueTicketById(ticketId);
   const { data: allTickets } = useQueueTickets({ queue_name: "recepcao", status: "aguardando" });
+  const { data: unitConfig } = useUnitConfig();
 
   // Auto-redirect to tracking if active ticket exists
   useEffect(() => {
