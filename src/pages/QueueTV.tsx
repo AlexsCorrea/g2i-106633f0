@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueueTickets } from "@/hooks/useQueueTickets";
 import {
   useUnitConfig, useUnitAds, formatPatientDisplay,
   getPatientNameForSpeech, ticketToSpeech, priorityToSpeech,
@@ -16,18 +15,18 @@ interface QueuedCall {
 export default function QueueTV() {
   const { data: config } = useUnitConfig();
   const { data: ads } = useUnitAds();
-  const { data: calledTickets } = useQueueTickets({ queue_name: "recepcao", status: "chamada" });
-  const { data: recentDone } = useQueueTickets({ queue_name: "recepcao", status: "concluida" });
-  const { data: recentAbsent } = useQueueTickets({ queue_name: "recepcao", status: "ausente" });
 
-  // Call queue: display one at a time
+  // Call queue: display one at a time — ONLY fed by realtime events
   const [callQueue, setCallQueue] = useState<QueuedCall[]>([]);
   const [activeCall, setActiveCall] = useState<QueuedCall | null>(null);
   const activeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // History of recent calls (visual sidebar)
+  const [recentHistory, setRecentHistory] = useState<any[]>([]);
+
   // Ads playlist
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
-  const [idleMode, setIdleMode] = useState(false);
+  const [idleMode, setIdleMode] = useState(true);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const adTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -38,9 +37,6 @@ export default function QueueTV() {
   // Animation state
   const [flashCall, setFlashCall] = useState(false);
   const [pulseScale, setPulseScale] = useState(false);
-
-  // Track processed calls to avoid duplicates
-  const processedCallsRef = useRef<Set<string>>(new Set());
 
   // Config values
   const primaryColor = config?.primary_color || "#1e5a8a";
@@ -61,15 +57,6 @@ export default function QueueTV() {
   const voiceVolume = config?.voice_volume || 1.0;
   const preCallSound = config?.pre_call_sound || "triple_tone";
 
-  // History
-  const recentHistory = [
-    ...(recentDone || []),
-    ...(recentAbsent || []),
-  ]
-    .filter((t) => t.called_at)
-    .sort((a, b) => new Date(b.called_at!).getTime() - new Date(a.called_at!).getTime())
-    .slice(0, 8);
-
   // Clock
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -78,25 +65,74 @@ export default function QueueTV() {
   }, []);
   const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
-  // Load voices
+  // Load voices early
   useEffect(() => { window.speechSynthesis?.getVoices(); }, []);
 
-  // Realtime subscription
+  // ---- REALTIME: only react to real operator events ----
   useEffect(() => {
     const channel = supabase
-      .channel("tv-panel")
-      .on("postgres_changes", { event: "*", schema: "public", table: "queue_tickets" }, () => {})
+      .channel("tv-panel-realtime")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "queue_tickets" },
+        (payload) => {
+          const row = payload.new as any;
+          // Only enqueue when status just became "chamada"
+          if (row.status === "chamada" && row.called_at) {
+            // Fetch full ticket with patient data
+            supabase
+              .from("queue_tickets")
+              .select("*, patients(full_name, cpf, nome_social)")
+              .eq("id", row.id)
+              .single()
+              .then(({ data }) => {
+                if (!data) return;
+                const key = `${data.id}_${data.called_at}`;
+                setCallQueue((prev) => {
+                  // Avoid duplicate
+                  if (prev.some((c) => c.id === key)) return prev;
+                  return [...prev, { id: key, ticket: data, timestamp: new Date(data.called_at || Date.now()).getTime() }];
+                });
+              });
+          }
+          // Track completed/absent for history
+          if (row.status === "concluida" || row.status === "ausente") {
+            supabase
+              .from("queue_tickets")
+              .select("*, patients(full_name, cpf, nome_social)")
+              .eq("id", row.id)
+              .single()
+              .then(({ data }) => {
+                if (!data || !data.called_at) return;
+                setRecentHistory((prev) => [data, ...prev].slice(0, 10));
+              });
+          }
+        }
+      )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  // Load initial history on mount
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    supabase
+      .from("queue_tickets")
+      .select("*, patients(full_name, cpf, nome_social)")
+      .in("status", ["concluida", "ausente"])
+      .gte("created_at", `${today}T00:00:00`)
+      .not("called_at", "is", null)
+      .order("called_at", { ascending: false })
+      .limit(10)
+      .then(({ data }) => {
+        if (data) setRecentHistory(data);
+      });
   }, []);
 
   // ---- LOCUTION ENGINE (queued) ----
   const processLocutionQueue = useCallback(() => {
     if (isSpeakingRef.current || locutionQueueRef.current.length === 0) return;
-    if (!locutionEnabled) {
-      locutionQueueRef.current = [];
-      return;
-    }
+    if (!locutionEnabled) { locutionQueueRef.current = []; return; }
     isSpeakingRef.current = true;
     const text = locutionQueueRef.current.shift()!;
     try {
@@ -111,18 +147,10 @@ export default function QueueTV() {
       const voices = synth.getVoices();
       const ptVoice = voices.find(v => v.lang.startsWith("pt-BR")) || voices.find(v => v.lang.startsWith("pt"));
       if (ptVoice) utter.voice = ptVoice;
-      utter.onend = () => {
-        isSpeakingRef.current = false;
-        setTimeout(() => processLocutionQueue(), 300);
-      };
-      utter.onerror = () => {
-        isSpeakingRef.current = false;
-        setTimeout(() => processLocutionQueue(), 300);
-      };
+      utter.onend = () => { isSpeakingRef.current = false; setTimeout(() => processLocutionQueue(), 300); };
+      utter.onerror = () => { isSpeakingRef.current = false; setTimeout(() => processLocutionQueue(), 300); };
       synth.speak(utter);
-    } catch {
-      isSpeakingRef.current = false;
-    }
+    } catch { isSpeakingRef.current = false; }
   }, [locutionEnabled, voiceRate, voicePitch, voiceVolume]);
 
   const enqueueLocution = useCallback((text: string) => {
@@ -176,26 +204,9 @@ export default function QueueTV() {
     return parts.join(", ") + ".";
   }, [privacyMode, speakPriority, speakLocation]);
 
-  // ---- DETECT NEW CALLS → enqueue ----
-  useEffect(() => {
-    if (!calledTickets) return;
-    const newCalls: QueuedCall[] = [];
-    for (const t of calledTickets) {
-      const key = `${t.id}_${t.called_at}`;
-      if (!processedCallsRef.current.has(key)) {
-        processedCallsRef.current.add(key);
-        newCalls.push({ id: key, ticket: t, timestamp: new Date(t.called_at || Date.now()).getTime() });
-      }
-    }
-    if (newCalls.length > 0) {
-      newCalls.sort((a, b) => a.timestamp - b.timestamp);
-      setCallQueue(prev => [...prev, ...newCalls]);
-    }
-  }, [calledTickets]);
-
   // ---- PROCESS CALL QUEUE: show one at a time ----
   useEffect(() => {
-    if (activeCall) return; // already showing one
+    if (activeCall) return;
     if (callQueue.length === 0) return;
 
     const next = callQueue[0];
@@ -205,23 +216,16 @@ export default function QueueTV() {
     setFlashCall(true);
     setPulseScale(true);
 
-    // Clear idle timer
     if (idleTimerRef.current) { clearTimeout(idleTimerRef.current); idleTimerRef.current = null; }
     if (adTimerRef.current) { clearTimeout(adTimerRef.current); adTimerRef.current = null; }
 
-    // Play sound then enqueue locution
-    playTones().then(() => {
-      enqueueLocution(buildSpeechText(next.ticket));
-    });
+    playTones().then(() => { enqueueLocution(buildSpeechText(next.ticket)); });
 
     setTimeout(() => setFlashCall(false), 3000);
     setTimeout(() => setPulseScale(false), 1500);
 
-    // Auto-advance after display time
     if (activeTimerRef.current) clearTimeout(activeTimerRef.current);
-    activeTimerRef.current = setTimeout(() => {
-      setActiveCall(null);
-    }, callDisplaySec * 1000);
+    activeTimerRef.current = setTimeout(() => { setActiveCall(null); }, callDisplaySec * 1000);
   }, [callQueue, activeCall, callDisplaySec, playTones, enqueueLocution, buildSpeechText]);
 
   // ---- IDLE MODE: start ads after no active call ----
@@ -231,12 +235,8 @@ export default function QueueTV() {
       if (idleTimerRef.current) { clearTimeout(idleTimerRef.current); idleTimerRef.current = null; }
       return;
     }
-    // No active call and queue empty → start idle timer
     idleTimerRef.current = setTimeout(() => {
-      if (adsEnabled) {
-        setIdleMode(true);
-        setCurrentAdIdx(0);
-      }
+      if (adsEnabled) { setIdleMode(true); setCurrentAdIdx(0); }
     }, adsIdleSec * 1000);
     return () => { if (idleTimerRef.current) clearTimeout(idleTimerRef.current); };
   }, [activeCall, callQueue.length, adsEnabled, adsIdleSec]);
@@ -244,7 +244,11 @@ export default function QueueTV() {
   // ---- AD PLAYLIST ROTATION ----
   useEffect(() => {
     if (!idleMode || !ads?.length) return;
-    const dur = (ads[currentAdIdx]?.duration_seconds || 10) * 1000;
+    const ad = ads[currentAdIdx];
+    if (!ad) return;
+    // For videos, let onEnded handle advancement; for images/gifs use timer
+    if (ad.media_type === "video") return;
+    const dur = (ad.duration_seconds || 10) * 1000;
     adTimerRef.current = setTimeout(() => {
       setCurrentAdIdx(prev => (prev + 1) % ads.length);
     }, dur);
@@ -253,9 +257,7 @@ export default function QueueTV() {
 
   // Interrupt ads when new call arrives
   useEffect(() => {
-    if (idleMode && callQueue.length > 0) {
-      setIdleMode(false);
-    }
+    if (idleMode && callQueue.length > 0) { setIdleMode(false); }
   }, [callQueue.length, idleMode]);
 
   // Cleanup on unmount
@@ -271,11 +273,7 @@ export default function QueueTV() {
   const displayNameOnly = (ticket: any) => {
     if (!ticket.patient_id || !ticket.patients?.full_name) return null;
     if (privacyMode === "somente_senha") return null;
-    return formatPatientDisplay(
-      ticket.patients?.full_name,
-      ticket.patients?.nome_social || null,
-      privacyMode, ""
-    ).replace(/^\s*—\s*/, "").trim();
+    return formatPatientDisplay(ticket.patients?.full_name, ticket.patients?.nome_social || null, privacyMode, "").replace(/^\s*—\s*/, "").trim();
   };
 
   const priorityLabel = (type: string) => {
@@ -295,12 +293,6 @@ export default function QueueTV() {
       default: return "rgba(255,255,255,0.15)";
     }
   };
-
-  // Other active calls (from calledTickets minus current activeCall)
-  const otherActiveCalls = (calledTickets || [])
-    .filter(t => activeCall ? t.id !== activeCall.ticket.id : true)
-    .sort((a, b) => new Date(b.called_at!).getTime() - new Date(a.called_at!).getTime())
-    .slice(0, 4);
 
   // ---- RENDER: AD/IDLE MODE ----
   if (idleMode && ads && ads.length > 0) {
@@ -364,17 +356,12 @@ export default function QueueTV() {
 
       {/* Main content */}
       <div className="flex-1 flex">
-        {/* Current call - large center area */}
         <div className="flex-1 flex items-center justify-center">
           {ticket ? (
             <div
               className="text-center space-y-6"
               style={{
-                animation: pulseScale
-                  ? "tvCallZoom 0.8s ease-out forwards"
-                  : flashCall
-                  ? "tvCallPulse 1s ease-in-out 3"
-                  : "none",
+                animation: pulseScale ? "tvCallZoom 0.8s ease-out forwards" : flashCall ? "tvCallPulse 1s ease-in-out 3" : "none",
               }}
             >
               <div className="flex items-center justify-center gap-3 text-white/70 text-xl">
@@ -382,24 +369,16 @@ export default function QueueTV() {
                 <span className="uppercase tracking-[0.3em] font-light">Chamada</span>
               </div>
 
-              <p
-                className="text-white leading-none font-black tracking-widest drop-shadow-[0_4px_30px_rgba(255,255,255,0.3)]"
-                style={{ fontSize: "clamp(6rem, 14vw, 12rem)" }}
-              >
+              <p className="text-white leading-none font-black tracking-widest drop-shadow-[0_4px_30px_rgba(255,255,255,0.3)]" style={{ fontSize: "clamp(6rem, 14vw, 12rem)" }}>
                 {ticket.ticket_number}
               </p>
 
               {displayNameOnly(ticket) && (
-                <p className="text-white/90 text-4xl font-semibold tracking-wide">
-                  {displayNameOnly(ticket)}
-                </p>
+                <p className="text-white/90 text-4xl font-semibold tracking-wide">{displayNameOnly(ticket)}</p>
               )}
 
               <div className="flex items-center justify-center gap-4 flex-wrap">
-                <span
-                  className="px-6 py-2.5 rounded-full text-white text-xl font-bold border border-white/20"
-                  style={{ background: priorityBgColor(ticket.ticket_type) }}
-                >
+                <span className="px-6 py-2.5 rounded-full text-white text-xl font-bold border border-white/20" style={{ background: priorityBgColor(ticket.ticket_type) }}>
                   {priorityLabel(ticket.ticket_type)}
                 </span>
               </div>
@@ -411,17 +390,13 @@ export default function QueueTV() {
                 </div>
               )}
 
-              {(ticket as any).recall_count > 0 && (
-                <p className="text-white/40 text-sm mt-2">
-                  Rechamada #{(ticket as any).recall_count}
-                </p>
+              {ticket.recall_count > 0 && (
+                <p className="text-white/40 text-sm mt-2">Rechamada #{ticket.recall_count}</p>
               )}
             </div>
           ) : (
             <div className="text-center space-y-6">
-              {config?.logo_url && (
-                <img src={config.logo_url} alt="Logo" className="h-24 w-24 rounded-2xl object-cover mx-auto opacity-40" />
-              )}
+              {config?.logo_url && <img src={config.logo_url} alt="Logo" className="h-24 w-24 rounded-2xl object-cover mx-auto opacity-40" />}
               <p className="text-white/30 text-5xl font-light">Aguardando chamada</p>
               <p className="text-white/15 text-xl">{unitName}</p>
             </div>
@@ -431,26 +406,6 @@ export default function QueueTV() {
         {/* Right sidebar */}
         {showHistory && (
           <div className="w-80 bg-black/30 flex flex-col border-l border-white/5">
-            {/* Other active calls */}
-            {otherActiveCalls.length > 0 && (
-              <>
-                <div className="px-5 py-3 border-b border-white/10 bg-white/5">
-                  <h3 className="text-white/70 text-xs font-semibold uppercase tracking-wider">Outras chamadas</h3>
-                </div>
-                <div className="border-b border-white/10">
-                  {otherActiveCalls.slice(0, 3).map((t) => (
-                    <div key={t.id} className="px-5 py-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-white font-bold text-lg">{t.ticket_number}</p>
-                        <p className="text-white/40 text-xs">{displayNameOnly(t) || ""}</p>
-                      </div>
-                      <p className="text-white/60 text-sm">{t.called_to || "—"}</p>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
             <div className="px-5 py-4 border-b border-white/10">
               <h3 className="text-white/70 text-sm font-semibold uppercase tracking-wider">Últimas chamadas</h3>
             </div>
@@ -480,7 +435,6 @@ export default function QueueTV() {
         )}
       </div>
 
-      {/* Bottom bar */}
       <div className="h-10 bg-black/30 flex items-center justify-center">
         <p className="text-white/20 text-xs">{unitName} • Painel de Chamadas</p>
       </div>
