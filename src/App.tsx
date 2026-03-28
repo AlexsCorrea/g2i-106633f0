@@ -15,6 +15,7 @@ import Dashboards from "./pages/Dashboards";
 import Kiosk from "./pages/Kiosk";
 import QueueMobile from "./pages/QueueMobile";
 import QueuePanel from "./pages/QueuePanel";
+import QueueTV from "./pages/QueueTV";
 import Portal from "./pages/Portal";
 import CME from "./pages/CME";
 import NotFound from "./pages/NotFound";
@@ -42,6 +43,7 @@ function App() {
               <Route path="/portal" element={<Portal />} />
               <Route path="/cme" element={<CME />} />
               <Route path="/painel" element={<QueuePanel />} />
+              <Route path="/painel-tv" element={<QueueTV />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>
