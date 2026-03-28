@@ -2199,46 +2199,76 @@ export type Database = {
       unit_config: {
         Row: {
           ads_enabled: boolean
+          ads_idle_seconds: number
           ads_interval_seconds: number
           background_image_url: string | null
           call_display_seconds: number
           created_at: string
           id: string
+          locution_enabled: boolean
+          locution_speak_location: boolean
+          locution_speak_priority: boolean
           logo_url: string | null
           primary_color: string | null
           privacy_mode: string
           secondary_color: string | null
+          show_clock: boolean
+          show_history: boolean
           social_name_policy: string
+          sound_enabled: boolean
+          totem_checkin: boolean
+          totem_retirar_senha: boolean
+          totem_timeout_seconds: number
           unit_name: string
           updated_at: string
         }
         Insert: {
           ads_enabled?: boolean
+          ads_idle_seconds?: number
           ads_interval_seconds?: number
           background_image_url?: string | null
           call_display_seconds?: number
           created_at?: string
           id?: string
+          locution_enabled?: boolean
+          locution_speak_location?: boolean
+          locution_speak_priority?: boolean
           logo_url?: string | null
           primary_color?: string | null
           privacy_mode?: string
           secondary_color?: string | null
+          show_clock?: boolean
+          show_history?: boolean
           social_name_policy?: string
+          sound_enabled?: boolean
+          totem_checkin?: boolean
+          totem_retirar_senha?: boolean
+          totem_timeout_seconds?: number
           unit_name?: string
           updated_at?: string
         }
         Update: {
           ads_enabled?: boolean
+          ads_idle_seconds?: number
           ads_interval_seconds?: number
           background_image_url?: string | null
           call_display_seconds?: number
           created_at?: string
           id?: string
+          locution_enabled?: boolean
+          locution_speak_location?: boolean
+          locution_speak_priority?: boolean
           logo_url?: string | null
           primary_color?: string | null
           privacy_mode?: string
           secondary_color?: string | null
+          show_clock?: boolean
+          show_history?: boolean
           social_name_policy?: string
+          sound_enabled?: boolean
+          totem_checkin?: boolean
+          totem_retirar_senha?: boolean
+          totem_timeout_seconds?: number
           unit_name?: string
           updated_at?: string
         }

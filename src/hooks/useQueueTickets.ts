@@ -22,7 +22,7 @@ export interface QueueTicket {
   checkin_data: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
-  patients?: { full_name: string; cpf: string | null } | null;
+  patients?: { full_name: string; cpf: string | null; nome_social: string | null } | null;
 }
 
 export function useQueueTickets(filters?: { queue_name?: string; status?: string; sector?: string }) {
@@ -31,7 +31,7 @@ export function useQueueTickets(filters?: { queue_name?: string; status?: string
     queryFn: async () => {
       let query = supabase
         .from("queue_tickets")
-        .select("*, patients(full_name, cpf)")
+        .select("*, patients(full_name, cpf, nome_social)")
         .order("priority", { ascending: false })
         .order("created_at", { ascending: true });
 
@@ -58,7 +58,7 @@ export function useQueueTicketById(ticketId: string | null) {
       if (!ticketId) return null;
       const { data, error } = await supabase
         .from("queue_tickets")
-        .select("*, patients(full_name, cpf)")
+        .select("*, patients(full_name, cpf, nome_social)")
         .eq("id", ticketId)
         .single();
       if (error) throw error;
