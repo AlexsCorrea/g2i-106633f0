@@ -773,10 +773,14 @@ export default function Portal() {
   return (
     <Wrapper>
       <div className="text-center space-y-2">
-        <div className="w-14 h-14 mx-auto bg-white/20 rounded-2xl flex items-center justify-center">
-          <Smartphone className="w-7 h-7 text-white" />
+        <div className="w-14 h-14 mx-auto bg-white/20 rounded-2xl flex items-center justify-center overflow-hidden">
+          {unitConfig?.logo_url ? (
+            <img src={unitConfig.logo_url} alt="Logo" className="w-full h-full object-cover" />
+          ) : (
+            <Smartphone className="w-7 h-7 text-white" />
+          )}
         </div>
-        <h1 className="text-2xl font-bold text-white">Portal Solaris</h1>
+        <h1 className="text-2xl font-bold text-white">Portal {unitConfig?.unit_name || "Solaris"}</h1>
         <p className="text-white/60 text-sm">O que deseja fazer?</p>
       </div>
 
