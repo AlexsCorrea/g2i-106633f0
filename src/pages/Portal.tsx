@@ -817,7 +817,7 @@ export default function Portal() {
         </button>
       </div>
 
-      <p className="text-white/30 text-xs text-center">Solaris Health System</p>
+      <p className="text-white/30 text-xs text-center">{unitConfig?.unit_name || "Solaris"} Health System</p>
     </Wrapper>
   );
 }
