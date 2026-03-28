@@ -180,7 +180,7 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
       </div>
 
       {/* Quick Access */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
         <Card className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all" onClick={() => navigate("/patients")}>
           <CardHeader className="pb-3">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
