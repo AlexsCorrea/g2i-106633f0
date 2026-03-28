@@ -58,7 +58,7 @@ export function useQueueTicketById(ticketId: string | null) {
       if (!ticketId) return null;
       const { data, error } = await supabase
         .from("queue_tickets")
-        .select("*, patients(full_name, cpf)")
+        .select("*, patients(full_name, cpf, nome_social)")
         .eq("id", ticketId)
         .single();
       if (error) throw error;
