@@ -9,11 +9,21 @@ export interface UnitConfig {
   primary_color: string;
   secondary_color: string;
   background_image_url: string | null;
-  privacy_mode: string; // 'somente_senha' | 'senha_iniciais' | 'senha_nome_social' | 'nome_completo'
-  social_name_policy: string; // 'iniciais_social' | 'somente_senha' | 'nome_social_abreviado'
+  privacy_mode: string;
+  social_name_policy: string;
   call_display_seconds: number;
   ads_enabled: boolean;
   ads_interval_seconds: number;
+  locution_enabled: boolean;
+  locution_speak_priority: boolean;
+  locution_speak_location: boolean;
+  sound_enabled: boolean;
+  show_clock: boolean;
+  show_history: boolean;
+  ads_idle_seconds: number;
+  totem_retirar_senha: boolean;
+  totem_checkin: boolean;
+  totem_timeout_seconds: number;
 }
 
 export interface UnitAd {
@@ -136,4 +146,61 @@ export function formatPatientDisplay(
     default:
       return ticketNumber;
   }
+}
+
+/** Get display name part only (no ticket number) for speech */
+export function getPatientNameForSpeech(
+  fullName: string | null | undefined,
+  nomeSocial: string | null | undefined,
+  privacyMode: string,
+): string | null {
+  if (!fullName || privacyMode === "somente_senha") return null;
+
+  switch (privacyMode) {
+    case "senha_iniciais": {
+      const name = nomeSocial || fullName;
+      return name
+        .split(" ")
+        .map((w) => w[0]?.toUpperCase())
+        .filter(Boolean)
+        .join(" ");
+    }
+    case "senha_nome_social": {
+      if (nomeSocial) {
+        const parts = nomeSocial.split(" ");
+        return parts[0];
+      }
+      const parts = fullName.split(" ");
+      return parts[0];
+    }
+    case "nome_completo":
+      return nomeSocial || fullName;
+    default:
+      return null;
+  }
+}
+
+/** Convert ticket number to spoken form: P8004 → "P oito zero zero quatro" */
+export function ticketToSpeech(ticket: string): string {
+  const digitMap: Record<string, string> = {
+    "0": "zero", "1": "um", "2": "dois", "3": "três", "4": "quatro",
+    "5": "cinco", "6": "seis", "7": "sete", "8": "oito", "9": "nove",
+  };
+  return ticket.split("").map(c => digitMap[c] || c).join(" ");
+}
+
+/** Get spoken priority label */
+export function priorityToSpeech(ticketType: string): string {
+  const map: Record<string, string> = {
+    preferencial_80: "oitenta mais",
+    preferencial_60: "sessenta mais",
+    preferencial: "preferencial",
+    retorno_pos_operatorio: "retorno pós-operatório",
+    consulta: "consulta",
+    exames: "exames",
+    financeiro: "financeiro",
+    triagem: "triagem",
+    normal: "normal",
+  };
+  return map[ticketType] || "normal";
 }

@@ -1,5 +1,7 @@
 import React, { useState, useRef } from "react";
-import { useUnitConfig, useUpdateUnitConfig, useUnitAds, useManageAds, type UnitConfig } from "@/hooks/useUnitConfig";
+import { useUnitConfig, useUpdateUnitConfig, useUnitAds, useManageAds, type UnitConfig,
+  ticketToSpeech, priorityToSpeech,
+} from "@/hooks/useUnitConfig";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +15,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import {
   Palette, Image, Tv, Monitor, Settings2, Upload, Trash2, GripVertical,
-  ArrowLeft, Eye, Volume2, Clock, ShieldCheck, Megaphone
+  ArrowLeft, Eye, Volume2, Clock, ShieldCheck, Megaphone, Play, Mic,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -33,6 +35,16 @@ export default function AdminAutoatendimento() {
   const [callDisplaySeconds, setCallDisplaySeconds] = useState(15);
   const [adsEnabled, setAdsEnabled] = useState(false);
   const [adsInterval, setAdsInterval] = useState(10);
+  const [locutionEnabled, setLocutionEnabled] = useState(true);
+  const [locutionSpeakPriority, setLocutionSpeakPriority] = useState(true);
+  const [locutionSpeakLocation, setLocutionSpeakLocation] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showClock, setShowClock] = useState(true);
+  const [showHistory, setShowHistory] = useState(true);
+  const [adsIdleSeconds, setAdsIdleSeconds] = useState(20);
+  const [totemRetirarSenha, setTotemRetirarSenha] = useState(true);
+  const [totemCheckin, setTotemCheckin] = useState(true);
+  const [totemTimeout, setTotemTimeout] = useState(60);
   const [initialized, setInitialized] = useState(false);
 
   // Ad upload
@@ -43,7 +55,7 @@ export default function AdminAutoatendimento() {
   const bgFileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Sync config to local state once loaded
+  // Sync config
   React.useEffect(() => {
     if (config && !initialized) {
       setUnitName(config.unit_name || "");
@@ -54,6 +66,16 @@ export default function AdminAutoatendimento() {
       setCallDisplaySeconds(config.call_display_seconds || 15);
       setAdsEnabled(config.ads_enabled || false);
       setAdsInterval(config.ads_interval_seconds || 10);
+      setLocutionEnabled(config.locution_enabled !== false);
+      setLocutionSpeakPriority(config.locution_speak_priority !== false);
+      setLocutionSpeakLocation(config.locution_speak_location === true);
+      setSoundEnabled(config.sound_enabled !== false);
+      setShowClock(config.show_clock !== false);
+      setShowHistory(config.show_history !== false);
+      setAdsIdleSeconds(config.ads_idle_seconds || 20);
+      setTotemRetirarSenha(config.totem_retirar_senha !== false);
+      setTotemCheckin(config.totem_checkin !== false);
+      setTotemTimeout(config.totem_timeout_seconds || 60);
       setInitialized(true);
     }
   }, [config, initialized]);
@@ -70,6 +92,16 @@ export default function AdminAutoatendimento() {
       call_display_seconds: callDisplaySeconds,
       ads_enabled: adsEnabled,
       ads_interval_seconds: adsInterval,
+      locution_enabled: locutionEnabled,
+      locution_speak_priority: locutionSpeakPriority,
+      locution_speak_location: locutionSpeakLocation,
+      sound_enabled: soundEnabled,
+      show_clock: showClock,
+      show_history: showHistory,
+      ads_idle_seconds: adsIdleSeconds,
+      totem_retirar_senha: totemRetirarSenha,
+      totem_checkin: totemCheckin,
+      totem_timeout_seconds: totemTimeout,
     });
   };
 
@@ -88,9 +120,7 @@ export default function AdminAutoatendimento() {
       const url = await uploadFile(file, "exam-gallery", `unit-branding/logo-${Date.now()}.${file.name.split(".").pop()}`);
       updateConfig.mutate({ id: config.id, logo_url: url } as any);
       toast.success("Logo atualizada!");
-    } catch (err: any) {
-      toast.error("Erro ao enviar logo: " + err.message);
-    }
+    } catch (err: any) { toast.error("Erro ao enviar logo: " + err.message); }
     setUploading(false);
   };
 
@@ -102,9 +132,7 @@ export default function AdminAutoatendimento() {
       const url = await uploadFile(file, "exam-gallery", `unit-branding/bg-${Date.now()}.${file.name.split(".").pop()}`);
       updateConfig.mutate({ id: config.id, background_image_url: url } as any);
       toast.success("Imagem de fundo atualizada!");
-    } catch (err: any) {
-      toast.error("Erro ao enviar imagem: " + err.message);
-    }
+    } catch (err: any) { toast.error("Erro ao enviar imagem: " + err.message); }
     setUploading(false);
   };
 
@@ -118,20 +146,46 @@ export default function AdminAutoatendimento() {
       const mediaType = ["mp4", "webm", "mov"].includes(ext) ? "video" : "image";
       const url = await uploadFile(file, "exam-gallery", `unit-ads/ad-${Date.now()}.${ext}`);
       addAd.mutate({
-        title: adTitle,
-        media_type: mediaType,
-        media_url: url,
-        display_order: (ads?.length || 0) + 1,
-        duration_seconds: adDuration,
-        active: true,
-        unit_config_id: config?.id || null,
+        title: adTitle, media_type: mediaType, media_url: url,
+        display_order: (ads?.length || 0) + 1, duration_seconds: adDuration,
+        active: true, unit_config_id: config?.id || null,
       });
       setAdTitle("");
       toast.success("Anúncio adicionado!");
-    } catch (err: any) {
-      toast.error("Erro ao enviar mídia: " + err.message);
-    }
+    } catch (err: any) { toast.error("Erro ao enviar mídia: " + err.message); }
     setUploading(false);
+  };
+
+  const testLocution = () => {
+    const text = `Senha ${ticketToSpeech("P8004")}, prioridade ${priorityToSpeech("preferencial_80")}`;
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "pt-BR";
+    utter.rate = 0.85;
+    const voices = synth.getVoices();
+    const ptVoice = voices.find(v => v.lang.startsWith("pt"));
+    if (ptVoice) utter.voice = ptVoice;
+    synth.speak(utter);
+    toast.info("Testando locução...");
+  };
+
+  const testSound = () => {
+    try {
+      const ctx = new AudioContext();
+      const playTone = (freq: number, delay: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = freq; osc.type = "sine";
+        gain.gain.setValueAtTime(0.5, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.3);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.35);
+      };
+      playTone(880, 0); playTone(1100, 0.35); playTone(880, 0.7);
+      toast.info("Testando som...");
+    } catch {}
   };
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando...</div>;
@@ -210,14 +264,11 @@ export default function AdminAutoatendimento() {
                       </div>
                     </div>
                   </div>
-
                   <div className="space-y-4">
                     <div>
                       <Label>Logo da Unidade</Label>
                       <div className="flex items-center gap-4 mt-1">
-                        {config?.logo_url && (
-                          <img src={config.logo_url} alt="Logo" className="w-16 h-16 rounded-xl object-cover border" />
-                        )}
+                        {config?.logo_url && <img src={config.logo_url} alt="Logo" className="w-16 h-16 rounded-xl object-cover border" />}
                         <Button variant="outline" onClick={() => logoFileRef.current?.click()} disabled={uploading}>
                           <Upload className="w-4 h-4 mr-2" /> {config?.logo_url ? "Trocar Logo" : "Enviar Logo"}
                         </Button>
@@ -227,9 +278,7 @@ export default function AdminAutoatendimento() {
                     <div>
                       <Label>Imagem de Fundo (opcional)</Label>
                       <div className="flex items-center gap-4 mt-1">
-                        {config?.background_image_url && (
-                          <img src={config.background_image_url} alt="BG" className="w-24 h-16 rounded-lg object-cover border" />
-                        )}
+                        {config?.background_image_url && <img src={config.background_image_url} alt="BG" className="w-24 h-16 rounded-lg object-cover border" />}
                         <Button variant="outline" onClick={() => bgFileRef.current?.click()} disabled={uploading}>
                           <Image className="w-4 h-4 mr-2" /> {config?.background_image_url ? "Trocar" : "Enviar Imagem"}
                         </Button>
@@ -238,7 +287,6 @@ export default function AdminAutoatendimento() {
                     </div>
                   </div>
                 </div>
-
                 {/* Preview */}
                 <div>
                   <Label className="mb-2 block">Pré-visualização</Label>
@@ -250,7 +298,6 @@ export default function AdminAutoatendimento() {
                     <div className="p-8 text-center">
                       <p className="text-white/60 text-sm">SENHA CHAMADA</p>
                       <p className="text-white text-5xl font-black tracking-widest my-2">P8004</p>
-                      <p className="text-white/80">Guichê 1</p>
                     </div>
                   </div>
                 </div>
@@ -291,7 +338,6 @@ export default function AdminAutoatendimento() {
                     ))}
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <Label>Política de Nome Social</Label>
                   <Select value={socialNamePolicy} onValueChange={setSocialNamePolicy}>
@@ -321,48 +367,34 @@ export default function AdminAutoatendimento() {
                     <div>
                       <Label>Tempo de exibição da chamada (segundos)</Label>
                       <div className="flex items-center gap-4 mt-2">
-                        <Slider
-                          value={[callDisplaySeconds]}
-                          onValueChange={v => setCallDisplaySeconds(v[0])}
-                          min={5}
-                          max={60}
-                          step={5}
-                          className="flex-1"
-                        />
+                        <Slider value={[callDisplaySeconds]} onValueChange={v => setCallDisplaySeconds(v[0])} min={5} max={60} step={5} className="flex-1" />
                         <span className="text-sm font-mono w-12 text-right">{callDisplaySeconds}s</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">Após esse tempo, o painel volta ao modo ocioso ou exibe anúncios</p>
+                    </div>
+                    <div>
+                      <Label>Tempo de inatividade para anúncios (segundos)</Label>
+                      <div className="flex items-center gap-4 mt-2">
+                        <Slider value={[adsIdleSeconds]} onValueChange={v => setAdsIdleSeconds(v[0])} min={5} max={120} step={5} className="flex-1" />
+                        <span className="text-sm font-mono w-12 text-right">{adsIdleSeconds}s</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Após esse período sem chamadas, inicia os anúncios</p>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 rounded-xl border">
-                      <div>
-                        <p className="font-medium flex items-center gap-2"><Volume2 className="w-4 h-4" /> Som de chamada</p>
-                        <p className="text-xs text-muted-foreground">Toca bipes ao chamar uma senha</p>
+                    {/* Toggles */}
+                    <ToggleRow label="Som de chamada" desc="Toca bipes ao chamar uma senha" icon={<Volume2 className="w-4 h-4" />} checked={soundEnabled} onChange={setSoundEnabled} />
+                    <ToggleRow label="Locução automática" desc="Fala a senha e prioridade ao chamar" icon={<Mic className="w-4 h-4" />} checked={locutionEnabled} onChange={setLocutionEnabled} />
+                    {locutionEnabled && (
+                      <div className="ml-4 space-y-3 border-l-2 border-primary/20 pl-4">
+                        <ToggleRow label="Falar prioridade" desc="Inclui prioridade na locução" checked={locutionSpeakPriority} onChange={setLocutionSpeakPriority} />
+                        <ToggleRow label="Falar local" desc="Inclui guichê/sala na locução" checked={locutionSpeakLocation} onChange={setLocutionSpeakLocation} />
                       </div>
-                      <Badge variant="outline">Ativo</Badge>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 rounded-xl border">
-                      <div>
-                        <p className="font-medium flex items-center gap-2"><Clock className="w-4 h-4" /> Relógio</p>
-                        <p className="text-xs text-muted-foreground">Exibe relógio no canto superior</p>
-                      </div>
-                      <Badge variant="outline">Ativo</Badge>
-                    </div>
+                    )}
+                    <ToggleRow label="Relógio" desc="Exibe relógio no canto superior" icon={<Clock className="w-4 h-4" />} checked={showClock} onChange={setShowClock} />
+                    <ToggleRow label="Últimas chamadas" desc="Exibe histórico lateral" checked={showHistory} onChange={setShowHistory} />
                   </div>
 
                   <div className="space-y-4">
-                    <div className="p-4 rounded-xl border bg-muted/30">
-                      <p className="font-medium mb-2">Composição da chamada</p>
-                      <p className="text-sm text-muted-foreground mb-3">Ao chamar um paciente, o painel TV exibirá:</p>
-                      <ul className="space-y-2 text-sm">
-                        <li className="flex items-center gap-2"><Badge className="w-2 h-2 p-0 rounded-full" /> Número da senha em destaque</li>
-                        <li className="flex items-center gap-2"><Badge className="w-2 h-2 p-0 rounded-full" /> Identificação conforme política de privacidade</li>
-                        <li className="flex items-center gap-2"><Badge className="w-2 h-2 p-0 rounded-full" /> Local de atendimento (guichê, sala, setor)</li>
-                        <li className="flex items-center gap-2"><Badge className="w-2 h-2 p-0 rounded-full" /> Texto de orientação para o paciente</li>
-                      </ul>
-                    </div>
-
+                    {/* Preview */}
                     <div className="p-4 rounded-xl border bg-muted/30">
                       <p className="font-medium mb-2">Exemplo de chamada</p>
                       <div className="rounded-lg p-4 text-center" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
@@ -375,7 +407,22 @@ export default function AdminAutoatendimento() {
                           {privacyMode === "nome_completo" && "Ana Clara Silva"}
                         </p>
                         <p className="text-white text-sm mt-1">📍 Guichê 1</p>
-                        <p className="text-white/60 text-xs mt-2 italic">Dirija-se ao Guichê 1</p>
+                      </div>
+                    </div>
+
+                    {/* Test buttons */}
+                    <div className="space-y-2">
+                      <Label>Testar</Label>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" onClick={testSound}>
+                          <Play className="w-4 h-4 mr-1" /> Testar Som
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={testLocution}>
+                          <Mic className="w-4 h-4 mr-1" /> Testar Locução
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => navigate("/painel-tv")}>
+                          <Tv className="w-4 h-4 mr-1" /> Abrir Painel TV
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -392,13 +439,7 @@ export default function AdminAutoatendimento() {
                 <CardDescription>Mídia exibida quando o painel está ocioso (sem chamadas ativas)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between p-4 rounded-xl border">
-                  <div>
-                    <p className="font-medium">Ativar anúncios</p>
-                    <p className="text-xs text-muted-foreground">Quando ativado, exibe mídia entre as chamadas</p>
-                  </div>
-                  <Switch checked={adsEnabled} onCheckedChange={setAdsEnabled} />
-                </div>
+                <ToggleRow label="Ativar anúncios" desc="Quando ativado, exibe mídia entre as chamadas" checked={adsEnabled} onChange={setAdsEnabled} />
 
                 {adsEnabled && (
                   <>
@@ -410,6 +451,7 @@ export default function AdminAutoatendimento() {
                       <div>
                         <Label>Duração (segundos)</Label>
                         <Input type="number" value={adDuration} onChange={e => setAdDuration(Number(e.target.value))} min={3} max={120} />
+                        <p className="text-xs text-muted-foreground mt-1">Para vídeos, pode usar a duração real do vídeo</p>
                       </div>
                       <div className="flex items-end">
                         <Button onClick={() => adFileRef.current?.click()} disabled={uploading} className="w-full">
@@ -418,8 +460,6 @@ export default function AdminAutoatendimento() {
                         <input ref={adFileRef} type="file" accept="image/*,video/mp4,video/webm,image/gif" className="hidden" onChange={handleAdUpload} />
                       </div>
                     </div>
-
-                    {/* Ad list */}
                     <div className="space-y-3">
                       <Label>Anúncios cadastrados</Label>
                       {(!ads || ads.length === 0) ? (
@@ -457,7 +497,7 @@ export default function AdminAutoatendimento() {
             </Card>
           </TabsContent>
 
-          {/* TOTEM TAB */}
+          {/* TOTEM TAB - EDITABLE */}
           <TabsContent value="totem" className="space-y-6">
             <Card>
               <CardHeader>
@@ -467,17 +507,24 @@ export default function AdminAutoatendimento() {
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <div className="p-4 rounded-xl border">
-                      <p className="font-medium mb-2">Tela Inicial do Totem</p>
-                      <p className="text-sm text-muted-foreground mb-3">Botões exibidos ao paciente na tela inicial</p>
-                      <ul className="space-y-2 text-sm">
-                        <li className="flex items-center gap-2"><Badge variant="outline">1</Badge> Retirar Senha</li>
-                        <li className="flex items-center gap-2"><Badge variant="outline">2</Badge> Check-in de Consulta</li>
-                      </ul>
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Tela Inicial</h3>
+                    <ToggleRow label="Retirar Senha" desc="Botão para emissão de nova senha no totem" checked={totemRetirarSenha} onChange={setTotemRetirarSenha} />
+                    <ToggleRow label="Fazer Check-in" desc="Botão para check-in de consulta agendada" checked={totemCheckin} onChange={setTotemCheckin} />
+
+                    <div>
+                      <Label>Timeout de inatividade (segundos)</Label>
+                      <div className="flex items-center gap-4 mt-2">
+                        <Slider value={[totemTimeout]} onValueChange={v => setTotemTimeout(v[0])} min={15} max={180} step={15} className="flex-1" />
+                        <span className="text-sm font-mono w-12 text-right">{totemTimeout}s</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">O totem retorna à tela inicial após esse tempo de inatividade</p>
                     </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Tipos de Senha</h3>
                     <div className="p-4 rounded-xl border">
-                      <p className="font-medium mb-2">Tipos de Senha</p>
-                      <p className="text-sm text-muted-foreground mb-3">Senhas disponíveis para emissão</p>
+                      <p className="text-sm text-muted-foreground mb-3">Senhas disponíveis para emissão no totem</p>
                       <div className="flex flex-wrap gap-2">
                         <Badge>Normal</Badge>
                         <Badge>Preferencial</Badge>
@@ -489,12 +536,7 @@ export default function AdminAutoatendimento() {
                         <Badge>Financeiro</Badge>
                       </div>
                     </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-xl border">
-                      <p className="font-medium mb-2">Timeout de Inatividade</p>
-                      <p className="text-sm text-muted-foreground">O totem retorna à tela inicial após 60 segundos de inatividade</p>
-                    </div>
+
                     <div className="p-4 rounded-xl border">
                       <p className="font-medium mb-2">Check-in</p>
                       <p className="text-sm text-muted-foreground mb-2">Identificação por CPF + Data de Nascimento</p>
@@ -504,9 +546,10 @@ export default function AdminAutoatendimento() {
                         <li>• Gera senha vinculada à consulta</li>
                       </ul>
                     </div>
+
                     <div className="p-4 rounded-xl border">
                       <p className="font-medium mb-2">QR Code</p>
-                      <p className="text-sm text-muted-foreground">Na tela de resultado, é exibido QR Code para o portal mobile onde o paciente acompanha a fila</p>
+                      <p className="text-sm text-muted-foreground">Na tela de resultado, QR Code direciona ao portal mobile para acompanhar a fila</p>
                     </div>
                   </div>
                 </div>
@@ -515,6 +558,22 @@ export default function AdminAutoatendimento() {
           </TabsContent>
         </Tabs>
       </div>
+    </div>
+  );
+}
+
+/** Reusable toggle row component */
+function ToggleRow({ label, desc, icon, checked, onChange }: {
+  label: string; desc: string; icon?: React.ReactNode;
+  checked: boolean; onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-xl border">
+      <div>
+        <p className="font-medium flex items-center gap-2">{icon}{label}</p>
+        <p className="text-xs text-muted-foreground">{desc}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }
