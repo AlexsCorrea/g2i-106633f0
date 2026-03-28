@@ -23,6 +23,7 @@ import {
 import { DateMaskInput } from "@/components/ui/date-mask-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGenerateTicket, useQueueTicketById, useQueueTickets } from "@/hooks/useQueueTickets";
+import { useUnitConfig } from "@/hooks/useUnitConfig";
 
 type PortalStep =
   | "home"
