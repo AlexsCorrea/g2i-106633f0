@@ -163,10 +163,14 @@ function DashboardSection({ navigate }: { navigate: (path: string) => void }) {
             <FlaskConical className="h-4 w-4" />
             CME
           </Button>
-          <Button variant="outline" onClick={() => navigate("/painel-tv")} className="gap-2">
-            <Tv className="h-4 w-4" />
-            Painel TV
-          </Button>
+            <Button variant="outline" onClick={() => navigate("/painel-tv")} className="gap-2">
+              <Tv className="h-4 w-4" />
+              Painel TV
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/admin-autoatendimento")} className="gap-2">
+              <Settings2 className="h-4 w-4" />
+              Config. Autoatendimento
+            </Button>
         </div>
       </div>
 
