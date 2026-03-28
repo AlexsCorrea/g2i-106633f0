@@ -59,7 +59,7 @@ export default function AdminAutoatendimento() {
 
   // Available voices
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoiceName, setSelectedVoiceName] = useState("");
+  const [selectedVoiceName, setSelectedVoiceName] = useState("__default__");
 
   useEffect(() => {
     const loadVoices = () => {
@@ -188,7 +188,7 @@ export default function AdminAutoatendimento() {
     utter.rate = voiceRate;
     utter.pitch = voicePitch;
     utter.volume = voiceVolume;
-    if (selectedVoiceName) {
+    if (selectedVoiceName && selectedVoiceName !== "__default__") {
       const voice = availableVoices.find(v => v.name === selectedVoiceName);
       if (voice) utter.voice = voice;
     } else {
@@ -507,7 +507,7 @@ export default function AdminAutoatendimento() {
                         <Select value={selectedVoiceName} onValueChange={setSelectedVoiceName}>
                           <SelectTrigger className="mt-1"><SelectValue placeholder="Voz padrão do sistema" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Padrão do sistema</SelectItem>
+                            <SelectItem value="__default__">Padrão do sistema</SelectItem>
                             {availableVoices.map(v => (
                               <SelectItem key={v.name} value={v.name}>{v.name} ({v.lang})</SelectItem>
                             ))}
