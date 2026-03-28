@@ -31,7 +31,7 @@ export function useQueueTickets(filters?: { queue_name?: string; status?: string
     queryFn: async () => {
       let query = supabase
         .from("queue_tickets")
-        .select("*, patients(full_name, cpf)")
+        .select("*, patients(full_name, cpf, nome_social)")
         .order("priority", { ascending: false })
         .order("created_at", { ascending: true });
 
