@@ -95,8 +95,8 @@ export default function QueueTV() {
                 });
               });
           }
-          // Track completed/absent for history
-          if (row.status === "concluida" || row.status === "ausente") {
+      // Track any called/completed/absent for history
+          if (["chamada", "concluida", "ausente", "em_atendimento"].includes(row.status) && row.called_at) {
             supabase
               .from("queue_tickets")
               .select("*, patients(full_name, cpf, nome_social)")
@@ -104,7 +104,10 @@ export default function QueueTV() {
               .single()
               .then(({ data }) => {
                 if (!data || !data.called_at) return;
-                setRecentHistory((prev) => [data, ...prev].slice(0, 10));
+                setRecentHistory((prev) => {
+                  const filtered = prev.filter(t => t.id !== data.id);
+                  return [data, ...filtered].slice(0, 10);
+                });
               });
           }
         }
