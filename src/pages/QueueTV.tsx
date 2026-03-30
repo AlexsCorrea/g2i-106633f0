@@ -299,6 +299,7 @@ export default function QueueTV() {
     const ad = ads[currentAdIdx];
     return (
       <div className="fixed inset-0 bg-black flex flex-col">
+        {/* Top bar with branding */}
         <div className="h-16 flex items-center justify-between px-8" style={{ background: primaryColor }}>
           <div className="flex items-center gap-3">
             {config?.logo_url && <img src={config.logo_url} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />}
@@ -306,7 +307,9 @@ export default function QueueTV() {
           </div>
           {showClock && <span className="text-white/80 text-lg font-mono">{timeStr}</span>}
         </div>
-        <div className="flex-1 flex items-center justify-center bg-black">
+
+        {/* Ad content area */}
+        <div className="flex-1 flex items-center justify-center bg-black overflow-hidden">
           {ad.media_type === "video" ? (
             <video key={ad.id} src={ad.media_url} autoPlay muted className="max-h-full max-w-full object-contain"
               onEnded={() => setCurrentAdIdx(prev => (prev + 1) % ads.length)} />
@@ -314,16 +317,31 @@ export default function QueueTV() {
             <img src={ad.media_url} alt={ad.title} className="max-h-full max-w-full object-contain" />
           )}
         </div>
-        {showHistory && recentHistory.length > 0 && (
-          <div className="h-14 flex items-center gap-6 px-8 overflow-hidden" style={{ background: secondaryColor }}>
-            <span className="text-white/60 text-sm font-medium flex-shrink-0">Últimas:</span>
-            {recentHistory.slice(0, 5).map((t) => (
-              <span key={t.id} className="text-white font-bold text-sm flex-shrink-0">
-                {t.ticket_number} → {t.called_to || "—"}
-              </span>
-            ))}
+
+        {/* Persistent recent calls footer */}
+        <div className="flex-shrink-0" style={{ background: secondaryColor }}>
+          <div className="px-6 py-2 border-b border-white/10 flex items-center justify-between">
+            <span className="text-white/70 text-xs font-semibold uppercase tracking-wider">Últimas Chamadas</span>
+            <span className="text-white/30 text-xs">{unitName} • Painel de Chamadas</span>
           </div>
-        )}
+          <div className="px-4 py-2 flex gap-3 overflow-x-auto">
+            {recentHistory.length === 0 ? (
+              <span className="text-white/30 text-sm py-1">Nenhuma chamada recente</span>
+            ) : (
+              recentHistory.slice(0, 6).map((t) => (
+                <div key={t.id} className="flex-shrink-0 bg-white/10 rounded-lg px-4 py-2 flex items-center gap-3 min-w-[180px]">
+                  <span className="text-white font-black text-lg">{t.ticket_number}</span>
+                  <div className="flex flex-col">
+                    <span className="text-white/70 text-xs font-medium">{t.called_to || "—"}</span>
+                    <span className="text-white/40 text-[10px]">
+                      {t.called_at ? new Date(t.called_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—"}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     );
   }
