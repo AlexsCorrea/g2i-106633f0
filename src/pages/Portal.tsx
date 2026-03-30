@@ -184,11 +184,13 @@ export default function Portal() {
     }
   }, [myTicket?.status]);
 
-  const requestNotifications = async () => {
-    if ("Notification" in window) {
-      const perm = await Notification.requestPermission();
-      setNotificationsEnabled(perm === "granted");
-    }
+  const requestNotifications = async (): Promise<boolean> => {
+    if (!("Notification" in window)) { setNotifState("denied"); return false; }
+    const perm = await Notification.requestPermission();
+    const granted = perm === "granted";
+    setNotifState(granted ? "active" : perm === "denied" ? "denied" : "not_configured");
+    setNotificationsEnabled(granted);
+    return granted;
   };
 
   // Load patient's today tickets
@@ -204,8 +206,7 @@ export default function Portal() {
     setTodayTickets(data || []);
   };
 
-  const handleGenerateTicket = async (type: string) => {
-    await requestNotifications();
+  const doGenerateTicket = async (type: string) => {
     try {
       const ticket = await generateTicket.mutateAsync({
         ticket_type: type,
@@ -217,10 +218,35 @@ export default function Portal() {
       setTicketId(ticket.id);
       localStorage.setItem("portal_ticket_id", ticket.id);
       localStorage.setItem("portal_ticket_date", new Date().toISOString().split("T")[0]);
+      setPendingTicketType(null);
+      setShowNotifWarning(false);
       setStep("tracking");
     } catch {
       /* handled */
     }
+  };
+
+  const handleGenerateTicket = async (type: string) => {
+    if (notifState === "active") {
+      await doGenerateTicket(type);
+    } else {
+      setPendingTicketType(type);
+      setStep("confirm-notif");
+    }
+  };
+
+  const handleActivateNotifNow = async () => {
+    const granted = await requestNotifications();
+    if (pendingTicketType) await doGenerateTicket(pendingTicketType);
+  };
+
+  const handleSkipNotif = () => {
+    setShowNotifWarning(true);
+  };
+
+  const handleContinueWithoutNotif = async () => {
+    setShowNotifWarning(false);
+    if (pendingTicketType) await doGenerateTicket(pendingTicketType);
   };
 
   const handleCategoryClick = (cat: TicketCategory) => {
