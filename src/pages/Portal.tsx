@@ -27,10 +27,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGenerateTicket, useQueueTicketById, useQueueTickets } from "@/hooks/useQueueTickets";
 import { useUnitConfig } from "@/hooks/useUnitConfig";
 
+type NotifState = "not_configured" | "denied" | "active";
+
+function getNotifState(): NotifState {
+  if (!("Notification" in window)) return "denied";
+  if (Notification.permission === "granted") return "active";
+  if (Notification.permission === "denied") return "denied";
+  return "not_configured";
+}
+
 type PortalStep =
   | "home"
   | "ticket-category"
   | "ticket-subtype"
+  | "confirm-notif"
   | "tracking"
   | "checkin-identify"
   | "checkin-confirm"
