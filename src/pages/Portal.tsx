@@ -5,10 +5,12 @@ import {
   ArrowLeft,
   Bell,
   BellOff,
+  BellRing,
   Clock,
   Users,
   Search,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   ChevronRight,
   Crown,
@@ -25,10 +27,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGenerateTicket, useQueueTicketById, useQueueTickets } from "@/hooks/useQueueTickets";
 import { useUnitConfig } from "@/hooks/useUnitConfig";
 
+type NotifState = "not_configured" | "denied" | "active";
+
+function getNotifState(): NotifState {
+  if (!("Notification" in window)) return "denied";
+  if (Notification.permission === "granted") return "active";
+  if (Notification.permission === "denied") return "denied";
+  return "not_configured";
+}
+
 type PortalStep =
   | "home"
   | "ticket-category"
   | "ticket-subtype"
+  | "confirm-notif"
   | "tracking"
   | "checkin-identify"
   | "checkin-confirm"
@@ -115,7 +127,9 @@ export default function Portal() {
   const [patientData, setPatientData] = useState<PatientData | null>(null);
   const [updateFields, setUpdateFields] = useState({ phone: "", insurance: "", insurance_number: "" });
   const [todayTickets, setTodayTickets] = useState<any[]>([]);
-
+  const [notifState, setNotifState] = useState<NotifState>(getNotifState);
+  const [pendingTicketType, setPendingTicketType] = useState<string | null>(null);
+  const [showNotifWarning, setShowNotifWarning] = useState(false);
   const generateTicket = useGenerateTicket();
   const { data: myTicket } = useQueueTicketById(ticketId);
   const { data: allTickets } = useQueueTickets({ queue_name: "recepcao", status: "aguardando" });
@@ -170,11 +184,13 @@ export default function Portal() {
     }
   }, [myTicket?.status]);
 
-  const requestNotifications = async () => {
-    if ("Notification" in window) {
-      const perm = await Notification.requestPermission();
-      setNotificationsEnabled(perm === "granted");
-    }
+  const requestNotifications = async (): Promise<boolean> => {
+    if (!("Notification" in window)) { setNotifState("denied"); return false; }
+    const perm = await Notification.requestPermission();
+    const granted = perm === "granted";
+    setNotifState(granted ? "active" : perm === "denied" ? "denied" : "not_configured");
+    setNotificationsEnabled(granted);
+    return granted;
   };
 
   // Load patient's today tickets
@@ -190,8 +206,7 @@ export default function Portal() {
     setTodayTickets(data || []);
   };
 
-  const handleGenerateTicket = async (type: string) => {
-    await requestNotifications();
+  const doGenerateTicket = async (type: string) => {
     try {
       const ticket = await generateTicket.mutateAsync({
         ticket_type: type,
@@ -203,10 +218,35 @@ export default function Portal() {
       setTicketId(ticket.id);
       localStorage.setItem("portal_ticket_id", ticket.id);
       localStorage.setItem("portal_ticket_date", new Date().toISOString().split("T")[0]);
+      setPendingTicketType(null);
+      setShowNotifWarning(false);
       setStep("tracking");
     } catch {
       /* handled */
     }
+  };
+
+  const handleGenerateTicket = async (type: string) => {
+    if (notifState === "active") {
+      await doGenerateTicket(type);
+    } else {
+      setPendingTicketType(type);
+      setStep("confirm-notif");
+    }
+  };
+
+  const handleActivateNotifNow = async () => {
+    const granted = await requestNotifications();
+    if (pendingTicketType) await doGenerateTicket(pendingTicketType);
+  };
+
+  const handleSkipNotif = () => {
+    setShowNotifWarning(true);
+  };
+
+  const handleContinueWithoutNotif = async () => {
+    setShowNotifWarning(false);
+    if (pendingTicketType) await doGenerateTicket(pendingTicketType);
   };
 
   const handleCategoryClick = (cat: TicketCategory) => {
@@ -455,6 +495,31 @@ export default function Portal() {
     const isCalled = myTicket.status === "chamada";
     return (
       <Wrapper>
+        {/* Notif badge top */}
+        <div className="flex justify-center">
+          <button onClick={async () => {
+            if (notifState !== "active") await requestNotifications();
+            setNotifState(getNotifState());
+          }}>
+            {notifState === "active" ? (
+              <div className="flex items-center gap-2 bg-green-500/20 border border-green-400/40 rounded-full px-4 py-2">
+                <Bell className="w-4 h-4 text-green-300" />
+                <span className="text-green-200 text-xs font-semibold">Alertas ativos</span>
+              </div>
+            ) : notifState === "denied" ? (
+              <div className="flex items-center gap-2 bg-red-500/20 border border-red-400/40 rounded-full px-4 py-2">
+                <BellOff className="w-4 h-4 text-red-300" />
+                <span className="text-red-200 text-xs font-semibold">Alertas bloqueados</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-yellow-500/20 border border-yellow-400/40 rounded-full px-4 py-2">
+                <BellOff className="w-4 h-4 text-yellow-300" />
+                <span className="text-yellow-200 text-xs font-semibold">Alertas não configurados</span>
+              </div>
+            )}
+          </button>
+        </div>
+
         <h1 className="text-lg font-bold text-white text-center">Portal {unitConfig?.unit_name || "Solaris"}</h1>
         <div
           className={`bg-white rounded-3xl p-8 shadow-2xl text-center space-y-4 ${isCalled ? "ring-4 ring-green-400 animate-pulse" : ""}`}
@@ -488,13 +553,17 @@ export default function Portal() {
             <p className="text-blue-600 font-medium text-sm">Você está sendo atendido</p>
           )}
         </div>
-        <button
-          onClick={() => setNotificationsEnabled((v) => !v)}
-          className="flex items-center justify-center gap-2 text-white/70 text-sm mx-auto"
-        >
-          {notificationsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
-          {notificationsEnabled ? "Notificações ativas" : "Ativar notificações"}
-        </button>
+
+        {/* Second chance CTA if notifications not active */}
+        {notifState !== "active" && myTicket.status === "aguardando" && (
+          <button
+            onClick={async () => { await requestNotifications(); setNotifState(getNotifState()); }}
+            className="w-full bg-yellow-500/90 hover:bg-yellow-500 text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-3 shadow-lg transition-colors"
+          >
+            <BellRing className="w-6 h-6" />
+            <span>Ative os alertas da sua senha</span>
+          </button>
+        )}
         {isDone && (
           <div className="space-y-3">
             <p className="text-white/60 text-sm text-center">
@@ -523,7 +592,81 @@ export default function Portal() {
     );
   }
 
-  // ── CHECKIN UPDATE ──
+  // ── CONFIRM NOTIFICATIONS ──
+  if (step === "confirm-notif") {
+    if (showNotifWarning) {
+      return (
+        <Wrapper>
+          <div className="w-full max-w-sm space-y-5 text-center">
+            <div className="bg-yellow-500/20 border-2 border-yellow-400/50 rounded-3xl p-6 space-y-4">
+              <AlertTriangle className="w-12 h-12 text-yellow-300 mx-auto" />
+              <p className="text-white font-bold text-lg">Atenção</p>
+              <p className="text-white/80 text-sm leading-relaxed">
+                Você <strong>não receberá</strong> som nem vibração quando sua senha for chamada.
+                Será necessário acompanhar manualmente pelo portal ou painel de chamadas.
+              </p>
+            </div>
+            <button
+              onClick={handleContinueWithoutNotif}
+              disabled={generateTicket.isPending}
+              className="w-full h-14 bg-white text-primary font-bold rounded-2xl text-lg disabled:opacity-50"
+            >
+              {generateTicket.isPending ? "Gerando..." : "Entendi, continuar"}
+            </button>
+            <button
+              onClick={() => setShowNotifWarning(false)}
+              className="text-white/70 hover:text-white text-sm underline"
+            >
+              Voltar
+            </button>
+          </div>
+        </Wrapper>
+      );
+    }
+
+    return (
+      <Wrapper>
+        <div className="bg-white rounded-3xl p-8 shadow-2xl space-y-5 text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+            <Volume2 className="w-8 h-8 text-blue-600" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground">Ative os alertas</h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Receba aviso com <strong>som</strong>, <strong>vibração</strong> e <strong>tela de chamada</strong> quando sua senha for chamada.
+          </p>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3 bg-green-50 rounded-xl p-3 text-left">
+              <Volume2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <span className="text-green-700 text-sm">Som de alerta</span>
+            </div>
+            <div className="flex items-center gap-3 bg-green-50 rounded-xl p-3 text-left">
+              <Smartphone className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <span className="text-green-700 text-sm">Vibração do celular</span>
+            </div>
+            <div className="flex items-center gap-3 bg-green-50 rounded-xl p-3 text-left">
+              <Bell className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <span className="text-green-700 text-sm">Tela de chamada em destaque</span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleActivateNotifNow}
+          disabled={generateTicket.isPending}
+          className="w-full h-14 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-lg shadow-lg transition-colors disabled:opacity-50"
+        >
+          {generateTicket.isPending ? "Gerando..." : "Ativar agora"}
+        </button>
+        <button
+          onClick={handleSkipNotif}
+          className="text-white/60 hover:text-white text-sm underline transition-colors mx-auto block"
+        >
+          Continuar sem alerta
+        </button>
+      </Wrapper>
+    );
+  }
+
   if (step === "checkin-update") {
     return (
       <Wrapper>
