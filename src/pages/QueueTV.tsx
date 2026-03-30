@@ -215,6 +215,11 @@ export default function QueueTV() {
     const next = callQueue[0];
     setCallQueue(prev => prev.slice(1));
     setActiveCall(next);
+    // Add to recent history immediately when displayed
+    setRecentHistory((prev) => {
+      const filtered = prev.filter(t => t.id !== next.ticket.id);
+      return [next.ticket, ...filtered].slice(0, 10);
+    });
     setIdleMode(false);
     setFlashCall(true);
     setPulseScale(true);
