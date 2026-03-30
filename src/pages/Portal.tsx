@@ -588,6 +588,12 @@ export default function Portal() {
           {myTicket.status === "em_atendimento" && (
             <p className="text-blue-600 font-medium text-sm">Você está sendo atendido</p>
           )}
+          {myTicket.status === "aguardando" && (
+            <div className="flex items-center gap-2 bg-blue-50 rounded-xl p-3 mt-2">
+              <Smartphone className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <p className="text-blue-700 text-xs">Mantenha esta tela aberta para receber seus alertas da chamada.</p>
+            </div>
+          )}
         </div>
 
         {/* Second chance CTA if notifications not active */}
