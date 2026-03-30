@@ -681,15 +681,46 @@ export default function Portal() {
               <span className="text-green-700 text-sm">Tela de chamada em destaque</span>
             </div>
           </div>
+
+          {/* iOS-specific guidance */}
+          {isIOS() && !isStandalone() && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left space-y-2">
+              <p className="text-amber-800 text-sm font-semibold flex items-center gap-2">
+                <Smartphone className="w-4 h-4" />
+                iPhone / iPad
+              </p>
+              <p className="text-amber-700 text-xs leading-relaxed">
+                Para receber alertas em segundo plano, adicione este portal à <strong>Tela de Início</strong>:
+              </p>
+              <ol className="text-amber-700 text-xs space-y-1 ml-4 list-decimal">
+                <li>Toque no ícone <strong>Compartilhar</strong> (↑)</li>
+                <li>Selecione <strong>"Adicionar à Tela de Início"</strong></li>
+                <li>Abra o portal pela Tela de Início</li>
+              </ol>
+              <p className="text-amber-600 text-xs italic">
+                Com o portal aberto, som, vibração e tela verde funcionam normalmente.
+              </p>
+            </div>
+          )}
         </div>
 
-        <button
-          onClick={handleActivateNotifNow}
-          disabled={generateTicket.isPending}
-          className="w-full h-14 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-lg shadow-lg transition-colors disabled:opacity-50"
-        >
-          {generateTicket.isPending ? "Gerando..." : "Ativar agora"}
-        </button>
+        {notifState !== "foreground_only" && notifState !== "ios_no_pwa" ? (
+          <button
+            onClick={handleActivateNotifNow}
+            disabled={generateTicket.isPending}
+            className="w-full h-14 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-lg shadow-lg transition-colors disabled:opacity-50"
+          >
+            {generateTicket.isPending ? "Gerando..." : "Ativar alertas e continuar"}
+          </button>
+        ) : (
+          <button
+            onClick={async () => { if (pendingTicketType) await doGenerateTicket(pendingTicketType); }}
+            disabled={generateTicket.isPending}
+            className="w-full h-14 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-lg shadow-lg transition-colors disabled:opacity-50"
+          >
+            {generateTicket.isPending ? "Gerando..." : "Continuar com alertas na tela"}
+          </button>
+        )}
         <button
           onClick={handleSkipNotif}
           className="text-white/60 hover:text-white text-sm underline transition-colors mx-auto block"
