@@ -549,22 +549,7 @@ export default function Portal() {
             if (notifState !== "active") await requestNotifications();
             setNotifState(getNotifState());
           }}>
-            {notifState === "active" ? (
-              <div className="flex items-center gap-2 bg-green-500/20 border border-green-400/40 rounded-full px-4 py-2">
-                <Bell className="w-4 h-4 text-green-300" />
-                <span className="text-green-200 text-xs font-semibold">Alertas ativos</span>
-              </div>
-            ) : notifState === "denied" ? (
-              <div className="flex items-center gap-2 bg-red-500/20 border border-red-400/40 rounded-full px-4 py-2">
-                <BellOff className="w-4 h-4 text-red-300" />
-                <span className="text-red-200 text-xs font-semibold">Alertas bloqueados</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 bg-yellow-500/20 border border-yellow-400/40 rounded-full px-4 py-2">
-                <BellOff className="w-4 h-4 text-yellow-300" />
-                <span className="text-yellow-200 text-xs font-semibold">Alertas não configurados</span>
-              </div>
-            )}
+            <NotifBadge state={notifState} compact />
           </button>
         </div>
 
