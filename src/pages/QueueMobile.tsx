@@ -10,36 +10,59 @@ const ticketTypes = [
   { id: "consulta", label: "Consulta", description: "Sem agendamento" },
 ];
 
-type NotifState = "not_configured" | "denied" | "active";
+type NotifState = "active" | "denied" | "foreground_only" | "ios_no_pwa" | "not_configured";
+
+function isIOS(): boolean {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function isStandalone(): boolean {
+  return (window.matchMedia("(display-mode: standalone)").matches) || (window.navigator as any).standalone === true;
+}
 
 function getNotifState(): NotifState {
-  if (!("Notification" in window)) return "denied";
+  if (!("Notification" in window)) {
+    if (isIOS() && !isStandalone()) return "ios_no_pwa";
+    return "foreground_only";
+  }
   if (Notification.permission === "granted") return "active";
   if (Notification.permission === "denied") return "denied";
   return "not_configured";
 }
 
 function NotifBadge({ state }: { state: NotifState }) {
-  if (state === "active") {
-    return (
-      <div className="flex items-center gap-2 bg-green-500/20 border border-green-400/40 rounded-full px-4 py-2">
-        <Bell className="w-4 h-4 text-green-300" />
-        <span className="text-green-200 text-xs font-semibold">Alertas ativos</span>
-      </div>
-    );
-  }
-  if (state === "denied") {
-    return (
-      <div className="flex items-center gap-2 bg-red-500/20 border border-red-400/40 rounded-full px-4 py-2">
-        <BellOff className="w-4 h-4 text-red-300" />
-        <span className="text-red-200 text-xs font-semibold">Alertas bloqueados</span>
-      </div>
-    );
-  }
+  const configs: Record<NotifState, { icon: React.ReactNode; label: string; bg: string; border: string; text: string }> = {
+    active: {
+      icon: <Bell className="w-4 h-4 text-green-300" />,
+      label: "Alertas ativos",
+      bg: "bg-green-500/20", border: "border-green-400/40", text: "text-green-200",
+    },
+    denied: {
+      icon: <BellOff className="w-4 h-4 text-red-300" />,
+      label: "Notificações recusadas neste dispositivo",
+      bg: "bg-red-500/20", border: "border-red-400/40", text: "text-red-200",
+    },
+    foreground_only: {
+      icon: <Bell className="w-4 h-4 text-blue-300" />,
+      label: "Alertas disponíveis com o portal aberto",
+      bg: "bg-blue-500/20", border: "border-blue-400/40", text: "text-blue-200",
+    },
+    ios_no_pwa: {
+      icon: <Smartphone className="w-4 h-4 text-yellow-300" />,
+      label: "Adicione à Tela de Início para alertas",
+      bg: "bg-yellow-500/20", border: "border-yellow-400/40", text: "text-yellow-200",
+    },
+    not_configured: {
+      icon: <BellOff className="w-4 h-4 text-yellow-300" />,
+      label: "Alertas não configurados",
+      bg: "bg-yellow-500/20", border: "border-yellow-400/40", text: "text-yellow-200",
+    },
+  };
+  const c = configs[state];
   return (
-    <div className="flex items-center gap-2 bg-yellow-500/20 border border-yellow-400/40 rounded-full px-4 py-2">
-      <BellOff className="w-4 h-4 text-yellow-300" />
-      <span className="text-yellow-200 text-xs font-semibold">Alertas não configurados</span>
+    <div className={`flex items-center gap-2 ${c.bg} border ${c.border} rounded-full px-4 py-2`}>
+      {c.icon}
+      <span className={`${c.text} text-xs font-semibold`}>{c.label}</span>
     </div>
   );
 }
