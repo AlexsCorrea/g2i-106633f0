@@ -65,9 +65,9 @@ function NotifBadge({ state, compact }: { state: NotifState; compact?: boolean }
       bg: "bg-blue-500/20", border: "border-blue-400/40", text: "text-blue-200",
     },
     ios_no_pwa: {
-      icon: <Smartphone className="w-4 h-4 text-yellow-300" />,
-      label: "Adicione à Tela de Início para alertas",
-      bg: "bg-yellow-500/20", border: "border-yellow-400/40", text: "text-yellow-200",
+      icon: <Bell className="w-4 h-4 text-blue-300" />,
+      label: "Alertas disponíveis com o portal aberto",
+      bg: "bg-blue-500/20", border: "border-blue-400/40", text: "text-blue-200",
     },
     not_configured: {
       icon: <BellOff className="w-4 h-4 text-yellow-300" />,
