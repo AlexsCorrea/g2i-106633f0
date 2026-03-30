@@ -10,36 +10,59 @@ const ticketTypes = [
   { id: "consulta", label: "Consulta", description: "Sem agendamento" },
 ];
 
-type NotifState = "not_configured" | "denied" | "active";
+type NotifState = "active" | "denied" | "foreground_only" | "ios_no_pwa" | "not_configured";
+
+function isIOS(): boolean {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function isStandalone(): boolean {
+  return (window.matchMedia("(display-mode: standalone)").matches) || (window.navigator as any).standalone === true;
+}
 
 function getNotifState(): NotifState {
-  if (!("Notification" in window)) return "denied";
+  if (!("Notification" in window)) {
+    if (isIOS() && !isStandalone()) return "ios_no_pwa";
+    return "foreground_only";
+  }
   if (Notification.permission === "granted") return "active";
   if (Notification.permission === "denied") return "denied";
   return "not_configured";
 }
 
 function NotifBadge({ state }: { state: NotifState }) {
-  if (state === "active") {
-    return (
-      <div className="flex items-center gap-2 bg-green-500/20 border border-green-400/40 rounded-full px-4 py-2">
-        <Bell className="w-4 h-4 text-green-300" />
-        <span className="text-green-200 text-xs font-semibold">Alertas ativos</span>
-      </div>
-    );
-  }
-  if (state === "denied") {
-    return (
-      <div className="flex items-center gap-2 bg-red-500/20 border border-red-400/40 rounded-full px-4 py-2">
-        <BellOff className="w-4 h-4 text-red-300" />
-        <span className="text-red-200 text-xs font-semibold">Alertas bloqueados</span>
-      </div>
-    );
-  }
+  const configs: Record<NotifState, { icon: React.ReactNode; label: string; bg: string; border: string; text: string }> = {
+    active: {
+      icon: <Bell className="w-4 h-4 text-green-300" />,
+      label: "Alertas ativos",
+      bg: "bg-green-500/20", border: "border-green-400/40", text: "text-green-200",
+    },
+    denied: {
+      icon: <BellOff className="w-4 h-4 text-red-300" />,
+      label: "Notificações recusadas neste dispositivo",
+      bg: "bg-red-500/20", border: "border-red-400/40", text: "text-red-200",
+    },
+    foreground_only: {
+      icon: <Bell className="w-4 h-4 text-blue-300" />,
+      label: "Alertas disponíveis com o portal aberto",
+      bg: "bg-blue-500/20", border: "border-blue-400/40", text: "text-blue-200",
+    },
+    ios_no_pwa: {
+      icon: <Smartphone className="w-4 h-4 text-yellow-300" />,
+      label: "Adicione à Tela de Início para alertas",
+      bg: "bg-yellow-500/20", border: "border-yellow-400/40", text: "text-yellow-200",
+    },
+    not_configured: {
+      icon: <BellOff className="w-4 h-4 text-yellow-300" />,
+      label: "Alertas não configurados",
+      bg: "bg-yellow-500/20", border: "border-yellow-400/40", text: "text-yellow-200",
+    },
+  };
+  const c = configs[state];
   return (
-    <div className="flex items-center gap-2 bg-yellow-500/20 border border-yellow-400/40 rounded-full px-4 py-2">
-      <BellOff className="w-4 h-4 text-yellow-300" />
-      <span className="text-yellow-200 text-xs font-semibold">Alertas não configurados</span>
+    <div className={`flex items-center gap-2 ${c.bg} border ${c.border} rounded-full px-4 py-2`}>
+      {c.icon}
+      <span className={`${c.text} text-xs font-semibold`}>{c.label}</span>
     </div>
   );
 }
@@ -104,7 +127,10 @@ export default function QueueMobile() {
   const refreshNotifState = useCallback(() => setNotifState(getNotifState()), []);
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
-    if (!("Notification" in window)) { setNotifState("denied"); return false; }
+    if (!("Notification" in window)) {
+      setNotifState(getNotifState());
+      return false;
+    }
     const perm = await Notification.requestPermission();
     const granted = perm === "granted";
     setNotifState(granted ? "active" : perm === "denied" ? "denied" : "not_configured");
@@ -240,15 +266,46 @@ export default function QueueMobile() {
                 <span className="text-green-700 text-sm">Tela de chamada em destaque</span>
               </div>
             </div>
+
+            {/* iOS-specific guidance */}
+            {isIOS() && !isStandalone() && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left space-y-2">
+                <p className="text-amber-800 text-sm font-semibold flex items-center gap-2">
+                  <Smartphone className="w-4 h-4" />
+                  iPhone / iPad
+                </p>
+                <p className="text-amber-700 text-xs leading-relaxed">
+                  Para alertas em segundo plano, adicione à <strong>Tela de Início</strong>:
+                </p>
+                <ol className="text-amber-700 text-xs space-y-1 ml-4 list-decimal">
+                  <li>Toque em <strong>Compartilhar</strong> (↑)</li>
+                  <li><strong>"Adicionar à Tela de Início"</strong></li>
+                  <li>Abra pela Tela de Início</li>
+                </ol>
+                <p className="text-amber-600 text-xs italic">
+                  Com o portal aberto, som e vibração funcionam normalmente.
+                </p>
+              </div>
+            )}
           </div>
 
-          <button
-            onClick={handleActivateNow}
-            disabled={generateTicket.isPending}
-            className="w-full h-14 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-lg shadow-lg transition-colors disabled:opacity-50"
-          >
-            {generateTicket.isPending ? "Gerando..." : "Ativar agora"}
-          </button>
+          {notifState !== "foreground_only" && notifState !== "ios_no_pwa" ? (
+            <button
+              onClick={handleActivateNow}
+              disabled={generateTicket.isPending}
+              className="w-full h-14 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-lg shadow-lg transition-colors disabled:opacity-50"
+            >
+              {generateTicket.isPending ? "Gerando..." : "Ativar alertas e continuar"}
+            </button>
+          ) : (
+            <button
+              onClick={() => { if (pendingType) doGenerate(pendingType, false); }}
+              disabled={generateTicket.isPending}
+              className="w-full h-14 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-lg shadow-lg transition-colors disabled:opacity-50"
+            >
+              {generateTicket.isPending ? "Gerando..." : "Continuar com alertas na tela"}
+            </button>
+          )}
           <button
             onClick={handleSkipNotif}
             className="text-white/60 hover:text-white text-sm underline transition-colors"
