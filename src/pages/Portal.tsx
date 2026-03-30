@@ -592,7 +592,81 @@ export default function Portal() {
     );
   }
 
-  // ── CHECKIN UPDATE ──
+  // ── CONFIRM NOTIFICATIONS ──
+  if (step === "confirm-notif") {
+    if (showNotifWarning) {
+      return (
+        <Wrapper>
+          <div className="w-full max-w-sm space-y-5 text-center">
+            <div className="bg-yellow-500/20 border-2 border-yellow-400/50 rounded-3xl p-6 space-y-4">
+              <AlertTriangle className="w-12 h-12 text-yellow-300 mx-auto" />
+              <p className="text-white font-bold text-lg">Atenção</p>
+              <p className="text-white/80 text-sm leading-relaxed">
+                Você <strong>não receberá</strong> som nem vibração quando sua senha for chamada.
+                Será necessário acompanhar manualmente pelo portal ou painel de chamadas.
+              </p>
+            </div>
+            <button
+              onClick={handleContinueWithoutNotif}
+              disabled={generateTicket.isPending}
+              className="w-full h-14 bg-white text-primary font-bold rounded-2xl text-lg disabled:opacity-50"
+            >
+              {generateTicket.isPending ? "Gerando..." : "Entendi, continuar"}
+            </button>
+            <button
+              onClick={() => setShowNotifWarning(false)}
+              className="text-white/70 hover:text-white text-sm underline"
+            >
+              Voltar
+            </button>
+          </div>
+        </Wrapper>
+      );
+    }
+
+    return (
+      <Wrapper>
+        <div className="bg-white rounded-3xl p-8 shadow-2xl space-y-5 text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+            <Volume2 className="w-8 h-8 text-blue-600" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground">Ative os alertas</h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Receba aviso com <strong>som</strong>, <strong>vibração</strong> e <strong>tela de chamada</strong> quando sua senha for chamada.
+          </p>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3 bg-green-50 rounded-xl p-3 text-left">
+              <Volume2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <span className="text-green-700 text-sm">Som de alerta</span>
+            </div>
+            <div className="flex items-center gap-3 bg-green-50 rounded-xl p-3 text-left">
+              <Smartphone className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <span className="text-green-700 text-sm">Vibração do celular</span>
+            </div>
+            <div className="flex items-center gap-3 bg-green-50 rounded-xl p-3 text-left">
+              <Bell className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <span className="text-green-700 text-sm">Tela de chamada em destaque</span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleActivateNotifNow}
+          disabled={generateTicket.isPending}
+          className="w-full h-14 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-lg shadow-lg transition-colors disabled:opacity-50"
+        >
+          {generateTicket.isPending ? "Gerando..." : "Ativar agora"}
+        </button>
+        <button
+          onClick={handleSkipNotif}
+          className="text-white/60 hover:text-white text-sm underline transition-colors mx-auto block"
+        >
+          Continuar sem alerta
+        </button>
+      </Wrapper>
+    );
+  }
+
   if (step === "checkin-update") {
     return (
       <Wrapper>
