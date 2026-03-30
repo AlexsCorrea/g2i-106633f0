@@ -122,7 +122,7 @@ export default function QueueTV() {
     supabase
       .from("queue_tickets")
       .select("*, patients(full_name, cpf, nome_social)")
-      .in("status", ["concluida", "ausente"])
+      .in("status", ["chamada", "em_atendimento", "concluida", "ausente"])
       .gte("created_at", `${today}T00:00:00`)
       .not("called_at", "is", null)
       .order("called_at", { ascending: false })
