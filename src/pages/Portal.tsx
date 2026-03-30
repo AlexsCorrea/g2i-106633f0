@@ -127,7 +127,9 @@ export default function Portal() {
   const [patientData, setPatientData] = useState<PatientData | null>(null);
   const [updateFields, setUpdateFields] = useState({ phone: "", insurance: "", insurance_number: "" });
   const [todayTickets, setTodayTickets] = useState<any[]>([]);
-
+  const [notifState, setNotifState] = useState<NotifState>(getNotifState);
+  const [pendingTicketType, setPendingTicketType] = useState<string | null>(null);
+  const [showNotifWarning, setShowNotifWarning] = useState(false);
   const generateTicket = useGenerateTicket();
   const { data: myTicket } = useQueueTicketById(ticketId);
   const { data: allTickets } = useQueueTickets({ queue_name: "recepcao", status: "aguardando" });
