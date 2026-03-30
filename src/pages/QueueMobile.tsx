@@ -48,9 +48,9 @@ function NotifBadge({ state }: { state: NotifState }) {
       bg: "bg-blue-500/20", border: "border-blue-400/40", text: "text-blue-200",
     },
     ios_no_pwa: {
-      icon: <Smartphone className="w-4 h-4 text-yellow-300" />,
-      label: "Adicione à Tela de Início para alertas",
-      bg: "bg-yellow-500/20", border: "border-yellow-400/40", text: "text-yellow-200",
+      icon: <Bell className="w-4 h-4 text-blue-300" />,
+      label: "Alertas disponíveis com o portal aberto",
+      bg: "bg-blue-500/20", border: "border-blue-400/40", text: "text-blue-200",
     },
     not_configured: {
       icon: <BellOff className="w-4 h-4 text-yellow-300" />,
@@ -267,25 +267,27 @@ export default function QueueMobile() {
               </div>
             </div>
 
-            {/* iOS-specific guidance */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-left">
+              <p className="text-blue-700 text-xs leading-relaxed">
+                💡 Com o portal aberto, som, vibração e tela de chamada funcionam normalmente.
+              </p>
+            </div>
+
             {isIOS() && !isStandalone() && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left space-y-2">
-                <p className="text-amber-800 text-sm font-semibold flex items-center gap-2">
-                  <Smartphone className="w-4 h-4" />
-                  iPhone / iPad
-                </p>
-                <p className="text-amber-700 text-xs leading-relaxed">
-                  Para alertas em segundo plano, adicione à <strong>Tela de Início</strong>:
-                </p>
-                <ol className="text-amber-700 text-xs space-y-1 ml-4 list-decimal">
-                  <li>Toque em <strong>Compartilhar</strong> (↑)</li>
-                  <li><strong>"Adicionar à Tela de Início"</strong></li>
-                  <li>Abra pela Tela de Início</li>
-                </ol>
-                <p className="text-amber-600 text-xs italic">
-                  Com o portal aberto, som e vibração funcionam normalmente.
-                </p>
-              </div>
+              <details className="text-left">
+                <summary className="text-amber-700 text-xs cursor-pointer font-medium">
+                  Dica opcional: adicionar à Tela de Início
+                </summary>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-2 space-y-1">
+                  <p className="text-amber-700 text-xs leading-relaxed">
+                    Para uma experiência ainda melhor, adicione à Tela de Início:
+                  </p>
+                  <ol className="text-amber-700 text-xs space-y-1 ml-4 list-decimal">
+                    <li>Toque em <strong>Compartilhar</strong> (↑)</li>
+                    <li><strong>"Adicionar à Tela de Início"</strong></li>
+                  </ol>
+                </div>
+              </details>
             )}
           </div>
 
@@ -352,6 +354,12 @@ export default function QueueMobile() {
                   <Clock className="w-4 h-4" />
                   <span className="text-sm">~{queuePosition * 5} min</span>
                 </div>
+              </div>
+            )}
+            {myTicket.status === "aguardando" && (
+              <div className="flex items-center gap-2 bg-blue-50 rounded-xl p-3 mt-2">
+                <Smartphone className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                <p className="text-blue-700 text-xs">Mantenha esta tela aberta para receber seus alertas da chamada.</p>
               </div>
             )}
           </div>
