@@ -691,25 +691,28 @@ export default function Portal() {
             </div>
           </div>
 
-          {/* iOS-specific guidance */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-left">
+            <p className="text-blue-700 text-xs leading-relaxed">
+              💡 Com o portal aberto, som, vibração e tela de chamada funcionam normalmente no seu celular.
+            </p>
+          </div>
+
+          {/* iOS optional tip — soft suggestion */}
           {isIOS() && !isStandalone() && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left space-y-2">
-              <p className="text-amber-800 text-sm font-semibold flex items-center gap-2">
-                <Smartphone className="w-4 h-4" />
-                iPhone / iPad
-              </p>
-              <p className="text-amber-700 text-xs leading-relaxed">
-                Para receber alertas em segundo plano, adicione este portal à <strong>Tela de Início</strong>:
-              </p>
-              <ol className="text-amber-700 text-xs space-y-1 ml-4 list-decimal">
-                <li>Toque no ícone <strong>Compartilhar</strong> (↑)</li>
-                <li>Selecione <strong>"Adicionar à Tela de Início"</strong></li>
-                <li>Abra o portal pela Tela de Início</li>
-              </ol>
-              <p className="text-amber-600 text-xs italic">
-                Com o portal aberto, som, vibração e tela verde funcionam normalmente.
-              </p>
-            </div>
+            <details className="text-left">
+              <summary className="text-amber-700 text-xs cursor-pointer font-medium">
+                Dica opcional: adicionar à Tela de Início
+              </summary>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-2 space-y-1">
+                <p className="text-amber-700 text-xs leading-relaxed">
+                  Para uma experiência ainda melhor, você pode adicionar este portal à Tela de Início:
+                </p>
+                <ol className="text-amber-700 text-xs space-y-1 ml-4 list-decimal">
+                  <li>Toque em <strong>Compartilhar</strong> (↑)</li>
+                  <li><strong>"Adicionar à Tela de Início"</strong></li>
+                </ol>
+              </div>
+            </details>
           )}
         </div>
 
