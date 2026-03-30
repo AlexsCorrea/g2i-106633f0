@@ -95,8 +95,8 @@ export default function QueueTV() {
                 });
               });
           }
-          // Track completed/absent for history
-          if (row.status === "concluida" || row.status === "ausente") {
+      // Track any called/completed/absent for history
+          if (["chamada", "concluida", "ausente", "em_atendimento"].includes(row.status) && row.called_at) {
             supabase
               .from("queue_tickets")
               .select("*, patients(full_name, cpf, nome_social)")
@@ -104,7 +104,10 @@ export default function QueueTV() {
               .single()
               .then(({ data }) => {
                 if (!data || !data.called_at) return;
-                setRecentHistory((prev) => [data, ...prev].slice(0, 10));
+                setRecentHistory((prev) => {
+                  const filtered = prev.filter(t => t.id !== data.id);
+                  return [data, ...filtered].slice(0, 10);
+                });
               });
           }
         }
@@ -119,7 +122,7 @@ export default function QueueTV() {
     supabase
       .from("queue_tickets")
       .select("*, patients(full_name, cpf, nome_social)")
-      .in("status", ["concluida", "ausente"])
+      .in("status", ["chamada", "em_atendimento", "concluida", "ausente"])
       .gte("created_at", `${today}T00:00:00`)
       .not("called_at", "is", null)
       .order("called_at", { ascending: false })
@@ -212,6 +215,11 @@ export default function QueueTV() {
     const next = callQueue[0];
     setCallQueue(prev => prev.slice(1));
     setActiveCall(next);
+    // Add to recent history immediately when displayed
+    setRecentHistory((prev) => {
+      const filtered = prev.filter(t => t.id !== next.ticket.id);
+      return [next.ticket, ...filtered].slice(0, 10);
+    });
     setIdleMode(false);
     setFlashCall(true);
     setPulseScale(true);
