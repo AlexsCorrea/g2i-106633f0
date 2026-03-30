@@ -233,7 +233,10 @@ export default function Portal() {
   }, [myTicket?.status]);
 
   const requestNotifications = async (): Promise<boolean> => {
-    if (!("Notification" in window)) { setNotifState("denied"); return false; }
+    if (!("Notification" in window)) {
+      setNotifState(getNotifState());
+      return false;
+    }
     const perm = await Notification.requestPermission();
     const granted = perm === "granted";
     setNotifState(granted ? "active" : perm === "denied" ? "denied" : "not_configured");
