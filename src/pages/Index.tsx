@@ -2,9 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  LogIn, Heart, Shield, Activity, Pill, ClipboardList
-} from "lucide-react";
+import { LogIn, Heart, Shield, Activity, Pill, ClipboardList } from "lucide-react";
 import OperationalHome from "@/components/dashboard/OperationalHome";
 
 const Index = () => {
@@ -32,7 +30,7 @@ const Index = () => {
               <Heart className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Solaris HIS</h1>
+              <h1 className="text-xl font-bold text-foreground">Zurich</h1>
               <p className="text-xs text-muted-foreground">Sistema de Gestão Hospitalar</p>
             </div>
           </div>
@@ -50,12 +48,13 @@ const Index = () => {
             Sistema Seguro e Confiável
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Gestão Completa do<br />
+            Gestão Completa do
+            <br />
             <span className="text-primary">Prontuário Eletrônico</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Registre sinais vitais, medicamentos, evoluções clínicas e escalas de enfermagem
-            de forma integrada e segura.
+            Registre sinais vitais, medicamentos, evoluções clínicas e escalas de enfermagem de forma integrada e
+            segura.
           </p>
           <Button size="lg" onClick={() => navigate("/auth")} className="gap-2">
             <LogIn className="h-5 w-5" />
@@ -67,27 +66,21 @@ const Index = () => {
               <CardHeader>
                 <Activity className="h-8 w-8 text-primary mb-2" />
                 <CardTitle className="text-lg">Sinais Vitais</CardTitle>
-                <CardDescription>
-                  Registro completo de temperatura, pressão, frequência cardíaca e mais
-                </CardDescription>
+                <CardDescription>Registro completo de temperatura, pressão, frequência cardíaca e mais</CardDescription>
               </CardHeader>
             </Card>
             <Card className="text-left">
               <CardHeader>
                 <Pill className="h-8 w-8 text-primary mb-2" />
                 <CardTitle className="text-lg">Prescrições</CardTitle>
-                <CardDescription>
-                  Controle de medicamentos com dosagem, via e frequência
-                </CardDescription>
+                <CardDescription>Controle de medicamentos com dosagem, via e frequência</CardDescription>
               </CardHeader>
             </Card>
             <Card className="text-left">
               <CardHeader>
                 <ClipboardList className="h-8 w-8 text-primary mb-2" />
                 <CardTitle className="text-lg">Evoluções</CardTitle>
-                <CardDescription>
-                  Notas de evolução médica, enfermagem e fisioterapia
-                </CardDescription>
+                <CardDescription>Notas de evolução médica, enfermagem e fisioterapia</CardDescription>
               </CardHeader>
             </Card>
           </div>
