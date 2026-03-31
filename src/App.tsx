@@ -23,6 +23,7 @@ import Portal from "./pages/Portal";
 import CME from "./pages/CME";
 import AdminAutoatendimento from "./pages/AdminAutoatendimento";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
