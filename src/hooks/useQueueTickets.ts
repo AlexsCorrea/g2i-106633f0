@@ -152,7 +152,7 @@ export function useGenerateTicket() {
       queryClient.invalidateQueries({ queryKey: ["queue_tickets"] });
     },
     onError: (error) => {
-      toast.error("Erro ao gerar senha: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
