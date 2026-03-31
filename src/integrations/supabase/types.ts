@@ -14,6 +14,129 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts_payable: {
+        Row: {
+          amount: number
+          category: string | null
+          cost_center: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          payment_method: string | null
+          status: string
+          supplier: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          category?: string | null
+          cost_center?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string
+          supplier: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          cost_center?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string
+          supplier?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_payable_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts_receivable: {
+        Row: {
+          amount: number
+          attendance_id: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          notes: string | null
+          patient_id: string | null
+          received_at: string | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          attendance_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          received_at?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          attendance_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          received_at?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       adverse_events: {
         Row: {
           actions_taken: string | null
@@ -185,6 +308,205 @@ export type Database = {
           },
         ]
       }
+      attendances: {
+        Row: {
+          attendance_type: string
+          closed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          insurance_name: string | null
+          insurance_type: string
+          notes: string | null
+          opened_at: string
+          patient_id: string
+          professional_id: string | null
+          sector: string | null
+          status: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          attendance_type?: string
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          insurance_name?: string | null
+          insurance_type?: string
+          notes?: string | null
+          opened_at?: string
+          patient_id: string
+          professional_id?: string | null
+          sector?: string | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attendance_type?: string
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          insurance_name?: string | null
+          insurance_type?: string
+          notes?: string | null
+          opened_at?: string
+          patient_id?: string
+          professional_id?: string | null
+          sector?: string | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendances_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendances_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendances_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beds: {
+        Row: {
+          bed_number: string
+          bed_type: string
+          created_at: string
+          expected_discharge: string | null
+          id: string
+          notes: string | null
+          patient_id: string | null
+          room: string
+          sector: string | null
+          status: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          bed_number: string
+          bed_type?: string
+          created_at?: string
+          expected_discharge?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          room: string
+          sector?: string | null
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          bed_number?: string
+          bed_type?: string
+          created_at?: string
+          expected_discharge?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          room?: string
+          sector?: string | null
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beds_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_accounts: {
+        Row: {
+          amount: number
+          attendance_id: string | null
+          competence: string | null
+          created_at: string
+          id: string
+          inconsistencies: string | null
+          insurance_name: string | null
+          notes: string | null
+          patient_id: string | null
+          reviewed_by: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          attendance_id?: string | null
+          competence?: string | null
+          created_at?: string
+          id?: string
+          inconsistencies?: string | null
+          insurance_name?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          reviewed_by?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          attendance_id?: string | null
+          competence?: string | null
+          created_at?: string
+          id?: string
+          inconsistencies?: string | null
+          insurance_name?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          reviewed_by?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_accounts_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_accounts_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_accounts_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       braden_scale: {
         Row: {
           activity: number
@@ -241,6 +563,155 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_items: {
+        Row: {
+          budget_id: string
+          created_at: string
+          description: string
+          id: string
+          notes: string | null
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          budget_id: string
+          created_at?: string
+          description: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Update: {
+          budget_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_items_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budgets: {
+        Row: {
+          attendance_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          status: string
+          total_amount: number
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          attendance_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          attendance_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_closings: {
+        Row: {
+          balance: number
+          closing_date: string
+          created_at: string
+          id: string
+          notes: string | null
+          status: string
+          total_expense: number
+          total_income: number
+          updated_at: string
+          verified_by: string | null
+        }
+        Insert: {
+          balance?: number
+          closing_date: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          total_expense?: number
+          total_income?: number
+          updated_at?: string
+          verified_by?: string | null
+        }
+        Update: {
+          balance?: number
+          closing_date?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          total_expense?: number
+          total_income?: number
+          updated_at?: string
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_closings_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1504,6 +1975,80 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          amount: number
+          attendance_id: string | null
+          budget_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          invoice_number: string | null
+          issued_at: string | null
+          notes: string | null
+          patient_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          attendance_id?: string | null
+          budget_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_number?: string | null
+          issued_at?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          attendance_id?: string | null
+          budget_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_number?: string | null
+          issued_at?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medical_history: {
         Row: {
           created_at: string
@@ -2529,6 +3074,180 @@ export type Database = {
           },
         ]
       }
+      staff_schedules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_time: string | null
+          id: string
+          notes: string | null
+          professional_id: string | null
+          professional_name: string
+          schedule_date: string
+          sector: string
+          shift: string
+          start_time: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          professional_id?: string | null
+          professional_name: string
+          schedule_date: string
+          sector: string
+          shift: string
+          start_time?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          professional_id?: string | null
+          professional_name?: string
+          schedule_date?: string
+          sector?: string
+          shift?: string
+          start_time?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_schedules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_schedules_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_items: {
+        Row: {
+          batch: string | null
+          category: string | null
+          code: string | null
+          created_at: string
+          current_balance: number
+          expiry_date: string | null
+          id: string
+          location: string | null
+          min_balance: number | null
+          name: string
+          notes: string | null
+          status: string
+          stock_type: string
+          unit_measure: string
+          updated_at: string
+        }
+        Insert: {
+          batch?: string | null
+          category?: string | null
+          code?: string | null
+          created_at?: string
+          current_balance?: number
+          expiry_date?: string | null
+          id?: string
+          location?: string | null
+          min_balance?: number | null
+          name: string
+          notes?: string | null
+          status?: string
+          stock_type?: string
+          unit_measure?: string
+          updated_at?: string
+        }
+        Update: {
+          batch?: string | null
+          category?: string | null
+          code?: string | null
+          created_at?: string
+          current_balance?: number
+          expiry_date?: string | null
+          id?: string
+          location?: string | null
+          min_balance?: number | null
+          name?: string
+          notes?: string | null
+          status?: string
+          stock_type?: string
+          unit_measure?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          batch: string | null
+          created_at: string
+          destination: string | null
+          id: string
+          moved_at: string
+          movement_type: string
+          notes: string | null
+          origin: string | null
+          performed_by: string | null
+          quantity: number
+          stock_item_id: string
+        }
+        Insert: {
+          batch?: string | null
+          created_at?: string
+          destination?: string | null
+          id?: string
+          moved_at?: string
+          movement_type?: string
+          notes?: string | null
+          origin?: string | null
+          performed_by?: string | null
+          quantity: number
+          stock_item_id: string
+        }
+        Update: {
+          batch?: string | null
+          created_at?: string
+          destination?: string | null
+          id?: string
+          moved_at?: string
+          movement_type?: string
+          notes?: string | null
+          origin?: string | null
+          performed_by?: string | null
+          quantity?: number
+          stock_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       surgical_procedures: {
         Row: {
           anesthesia_type: string | null
@@ -2782,6 +3501,66 @@ export type Database = {
           voice_volume?: number
         }
         Relationships: []
+      }
+      visitors: {
+        Row: {
+          authorized_by: string | null
+          created_at: string
+          document: string | null
+          entry_time: string
+          exit_time: string | null
+          id: string
+          notes: string | null
+          patient_id: string | null
+          relationship: string | null
+          status: string
+          visitor_name: string
+          visitor_type: string
+        }
+        Insert: {
+          authorized_by?: string | null
+          created_at?: string
+          document?: string | null
+          entry_time?: string
+          exit_time?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          relationship?: string | null
+          status?: string
+          visitor_name: string
+          visitor_type?: string
+        }
+        Update: {
+          authorized_by?: string | null
+          created_at?: string
+          document?: string | null
+          entry_time?: string
+          exit_time?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          relationship?: string | null
+          status?: string
+          visitor_name?: string
+          visitor_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitors_authorized_by_fkey"
+            columns: ["authorized_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitors_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vital_signs: {
         Row: {
