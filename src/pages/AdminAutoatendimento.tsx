@@ -172,6 +172,14 @@ export default function AdminAutoatendimento() {
       print_footer_text: printFooterText,
       print_template: printTemplate,
       print_font_size: printFontSize,
+      print_margin_top: printMarginTop,
+      print_margin_bottom: printMarginBottom,
+      print_margin_left: printMarginLeft,
+      print_margin_right: printMarginRight,
+      print_block_spacing: printBlockSpacing,
+      print_cut_extra_height: printCutExtraHeight,
+      print_auto_cut: printAutoCut,
+      result_countdown_seconds: resultCountdown,
     });
   };
 

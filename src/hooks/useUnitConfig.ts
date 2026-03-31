@@ -38,6 +38,14 @@ export interface UnitConfig {
   print_footer_text: string;
   print_template: string;
   print_font_size: string;
+  print_margin_top: number;
+  print_margin_bottom: number;
+  print_margin_left: number;
+  print_margin_right: number;
+  print_block_spacing: number;
+  print_cut_extra_height: number;
+  print_auto_cut: boolean;
+  result_countdown_seconds: number;
 }
 
 export interface UnitAd {
