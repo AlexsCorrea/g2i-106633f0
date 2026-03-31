@@ -15,7 +15,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import {
   Palette, Image, Tv, Monitor, Settings2, Upload, Trash2, GripVertical,
-  ArrowLeft, Eye, Volume2, Clock, ShieldCheck, Megaphone, Play, Mic,
+  ArrowLeft, Eye, Volume2, Clock, ShieldCheck, Megaphone, Play, Mic, Printer,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
