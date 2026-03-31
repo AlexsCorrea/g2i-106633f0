@@ -7,23 +7,32 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Loader2, Clock, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const dayLabels = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const dayShort = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const periodLabels: Record<string, string> = { manha: "Manhã", tarde: "Tarde", noite: "Noite", personalizado: "Personalizado" };
 const blockLabels: Record<string, string> = { atendimento: "Atendimento", procedimento: "Procedimento", exame: "Exame", reserva_tecnica: "Reserva Técnica" };
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
 
 export default function AgendaPeriods() {
   const [selectedAgenda, setSelectedAgenda] = useState<string>("");
   const [showForm, setShowForm] = useState(false);
+  const [selectedDays, setSelectedDays] = useState<number[]>([1]);
   const [form, setForm] = useState({
-    day_of_week: 1, period_type: "manha", start_time: "07:00",
+    period_type: "manha", start_time: "07:00",
     end_time: "12:00", interval_minutes: 30, block_type: "atendimento",
     opening_type: "automatica", allows_fit_in: true, notes: "",
+    valid_from: "", valid_until: "",
   });
 
   const { data: agendas } = useScheduleAgendas();
@@ -33,25 +42,68 @@ export default function AgendaPeriods() {
 
   const filteredPeriods = selectedAgenda ? periods?.filter(p => p.agenda_id === selectedAgenda) : periods;
 
+  const toggleDay = (day: number) => {
+    setSelectedDays(prev =>
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
+  };
+
+  const selectWeekdays = () => setSelectedDays([1, 2, 3, 4, 5]);
+  const selectAll = () => setSelectedDays([0, 1, 2, 3, 4, 5, 6]);
+  const clearDays = () => setSelectedDays([]);
+
+  const slotCount = form.start_time && form.end_time && form.interval_minutes > 0
+    ? Math.max(0, Math.floor((timeToMinutes(form.end_time) - timeToMinutes(form.start_time)) / form.interval_minutes))
+    : 0;
+
   const handleSubmit = async () => {
     if (!selectedAgenda) { toast.error("Selecione uma agenda"); return; }
-    const slotCount = Math.floor(
-      (timeToMinutes(form.end_time) - timeToMinutes(form.start_time)) / form.interval_minutes
-    );
-    await createPeriod.mutateAsync({
-      agenda_id: selectedAgenda,
-      day_of_week: form.day_of_week,
-      period_type: form.period_type,
-      start_time: form.start_time,
-      end_time: form.end_time,
-      interval_minutes: form.interval_minutes,
-      slot_count: slotCount > 0 ? slotCount : null,
-      block_type: form.block_type,
-      opening_type: form.opening_type,
-      allows_fit_in: form.allows_fit_in,
-      notes: form.notes || null,
-    });
+    if (selectedDays.length === 0) { toast.error("Selecione ao menos um dia da semana"); return; }
+
+    let created = 0;
+    for (const day of selectedDays) {
+      try {
+        await createPeriod.mutateAsync({
+          agenda_id: selectedAgenda,
+          day_of_week: day,
+          period_type: form.period_type,
+          start_time: form.start_time,
+          end_time: form.end_time,
+          interval_minutes: form.interval_minutes,
+          slot_count: slotCount > 0 ? slotCount : null,
+          block_type: form.block_type,
+          opening_type: form.opening_type,
+          allows_fit_in: form.allows_fit_in,
+          notes: form.notes || null,
+          valid_from: form.valid_from || null,
+          valid_until: form.valid_until || null,
+        });
+        created++;
+      } catch {
+        toast.error(`Erro ao criar período para ${dayLabels[day]}`);
+      }
+    }
+    if (created > 0) {
+      toast.success(`${created} período(s) criado(s) com sucesso!`);
+    }
     setShowForm(false);
+  };
+
+  const handleDuplicate = (period: any) => {
+    setForm({
+      period_type: period.period_type,
+      start_time: period.start_time?.slice(0, 5) || "07:00",
+      end_time: period.end_time?.slice(0, 5) || "12:00",
+      interval_minutes: period.interval_minutes,
+      block_type: period.block_type,
+      opening_type: period.opening_type,
+      allows_fit_in: period.allows_fit_in,
+      notes: period.notes || "",
+      valid_from: period.valid_from || "",
+      valid_until: period.valid_until || "",
+    });
+    setSelectedDays([]);
+    setShowForm(true);
   };
 
   return (
@@ -61,7 +113,7 @@ export default function AgendaPeriods() {
           <h2 className="text-xl font-bold text-foreground">Períodos da Agenda</h2>
           <p className="text-sm text-muted-foreground">Configure a grade semanal de horários</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="gap-2" disabled={!selectedAgenda}>
+        <Button onClick={() => { setSelectedDays([1]); setShowForm(true); }} className="gap-2" disabled={!selectedAgenda}>
           <Plus className="h-4 w-4" />
           Novo Período
         </Button>
@@ -106,6 +158,9 @@ export default function AgendaPeriods() {
                       <div className="text-muted-foreground">{periodLabels[p.period_type] || p.period_type}</div>
                       <div className="text-muted-foreground">{p.slot_count || "—"} vagas • {p.interval_minutes}min</div>
                       <div className="flex gap-1 pt-1">
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleDuplicate(p)} title="Duplicar para outros dias">
+                          <Copy className="h-3 w-3 text-muted-foreground" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => deletePeriod.mutateAsync(p.id)}>
                           <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
@@ -124,19 +179,42 @@ export default function AgendaPeriods() {
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Novo Período</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Dia da Semana</Label>
-                <Select value={String(form.day_of_week)} onValueChange={(v) => setForm({ ...form, day_of_week: +v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {dayLabels.map((l, i) => <SelectItem key={i} value={String(i)}>{l}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+            {/* Multi-day selector */}
+            <div className="space-y-2">
+              <Label>Dias da Semana</Label>
+              <div className="flex flex-wrap gap-2">
+                {dayLabels.map((label, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => toggleDay(i)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                      selectedDays.includes(i)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-muted-foreground border-border hover:bg-muted/50"
+                    )}
+                  >
+                    {dayShort[i]}
+                  </button>
+                ))}
               </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="link" size="sm" className="h-6 text-[10px] px-0" onClick={selectWeekdays}>Dias úteis</Button>
+                <Button type="button" variant="link" size="sm" className="h-6 text-[10px] px-0" onClick={selectAll}>Todos</Button>
+                <Button type="button" variant="link" size="sm" className="h-6 text-[10px] px-0" onClick={clearDays}>Limpar</Button>
+              </div>
+              {selectedDays.length > 1 && (
+                <p className="text-[10px] text-primary">
+                  O período será criado para {selectedDays.length} dias simultaneamente
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Tipo de Período</Label>
                 <Select value={form.period_type} onValueChange={(v) => setForm({ ...form, period_type: v })}>
@@ -146,7 +224,17 @@ export default function AgendaPeriods() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label>Tipo de bloco</Label>
+                <Select value={form.block_type} onValueChange={(v) => setForm({ ...form, block_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(blockLabels).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label>Início</Label>
@@ -161,16 +249,8 @@ export default function AgendaPeriods() {
                 <Input type="number" value={form.interval_minutes} onChange={(e) => setForm({ ...form, interval_minutes: +e.target.value })} />
               </div>
             </div>
+
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Tipo de bloco</Label>
-                <Select value={form.block_type} onValueChange={(v) => setForm({ ...form, block_type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(blockLabels).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="space-y-1.5">
                 <Label>Abertura</Label>
                 <Select value={form.opening_type} onValueChange={(v) => setForm({ ...form, opening_type: v })}>
@@ -181,27 +261,44 @@ export default function AgendaPeriods() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex items-end pb-1">
+                <div className="flex items-center gap-2">
+                  <Switch checked={form.allows_fit_in} onCheckedChange={(v) => setForm({ ...form, allows_fit_in: v })} />
+                  <Label className="text-sm">Permite encaixe</Label>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center justify-between p-2 rounded-lg border">
-              <Label className="text-sm">Permite encaixe</Label>
-              <Switch checked={form.allows_fit_in} onCheckedChange={(v) => setForm({ ...form, allows_fit_in: v })} />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Vigência inicial</Label>
+                <Input type="date" value={form.valid_from} onChange={(e) => setForm({ ...form, valid_from: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Vigência final</Label>
+                <Input type="date" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} />
+              </div>
             </div>
+
             <div className="space-y-1.5">
               <Label>Observação</Label>
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
-            {form.start_time && form.end_time && form.interval_minutes > 0 && (
+
+            {slotCount > 0 && (
               <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
-                Vagas calculadas: <span className="font-semibold text-foreground">
-                  {Math.max(0, Math.floor((timeToMinutes(form.end_time) - timeToMinutes(form.start_time)) / form.interval_minutes))}
-                </span>
+                Vagas calculadas: <span className="font-semibold text-foreground">{slotCount}</span>
+                {selectedDays.length > 1 && (
+                  <span> × {selectedDays.length} dias = <span className="font-semibold text-foreground">{slotCount * selectedDays.length} vagas totais</span></span>
+                )}
               </div>
             )}
+
             <div className="flex justify-end gap-3 pt-2 border-t">
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
-              <Button onClick={handleSubmit} disabled={createPeriod.isPending}>
+              <Button onClick={handleSubmit} disabled={createPeriod.isPending || selectedDays.length === 0}>
                 {createPeriod.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Criar Período
+                {selectedDays.length > 1 ? `Criar ${selectedDays.length} Períodos` : "Criar Período"}
               </Button>
             </div>
           </div>
@@ -209,9 +306,4 @@ export default function AgendaPeriods() {
       </Dialog>
     </div>
   );
-}
-
-function timeToMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
 }
