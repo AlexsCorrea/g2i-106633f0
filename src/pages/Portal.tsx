@@ -573,7 +573,7 @@ export default function Portal() {
           </button>
         </div>
 
-        <h1 className="text-lg font-bold text-white text-center">Portal {unitConfig?.unit_name || "Solaris"}</h1>
+        <h1 className="text-lg font-bold text-white text-center">Portal {unitConfig?.unit_name || "Zurich"}</h1>
         <div
           className={`bg-white rounded-3xl p-8 shadow-2xl text-center space-y-4 ${isCalled ? "ring-4 ring-green-400 animate-pulse" : ""}`}
         >
