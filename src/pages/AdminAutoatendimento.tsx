@@ -48,6 +48,16 @@ export default function AdminAutoatendimento() {
   const [voicePitch, setVoicePitch] = useState(1.0);
   const [voiceVolume, setVoiceVolume] = useState(1.0);
   const [preCallSound, setPreCallSound] = useState("triple_tone");
+  const [printEnabled, setPrintEnabled] = useState(false);
+  const [printAuto, setPrintAuto] = useState(false);
+  const [printCopies, setPrintCopies] = useState(1);
+  const [printPaperWidth, setPrintPaperWidth] = useState("80mm");
+  const [printShowLogo, setPrintShowLogo] = useState(true);
+  const [printShowQr, setPrintShowQr] = useState(true);
+  const [printHeaderText, setPrintHeaderText] = useState("Aguarde sua chamada no painel");
+  const [printFooterText, setPrintFooterText] = useState("Apresente esta senha quando solicitado");
+  const [printTemplate, setPrintTemplate] = useState("standard");
+  const [printFontSize, setPrintFontSize] = useState("large");
   const [initialized, setInitialized] = useState(false);
 
   const [adTitle, setAdTitle] = useState("");
