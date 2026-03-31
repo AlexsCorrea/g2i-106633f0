@@ -51,7 +51,7 @@ export function useCreateStockItem() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (item: Partial<StockItem>) => {
-      const { data, error } = await supabase.from("stock_items").insert(item).select().single();
+      const { data, error } = await supabase.from("stock_items").insert(item as any).select().single();
       if (error) throw error;
       return data;
     },
