@@ -2281,8 +2281,6 @@ export type Database = {
           id: string
           name: string
           unit: string | null
-          affected_agendas: string[] | null
-          notes: string | null
         }
         Insert: {
           allows_exception?: boolean
@@ -2293,8 +2291,6 @@ export type Database = {
           id?: string
           name: string
           unit?: string | null
-          affected_agendas?: string[] | null
-          notes?: string | null
         }
         Update: {
           allows_exception?: boolean
@@ -2305,8 +2301,6 @@ export type Database = {
           id?: string
           name?: string
           unit?: string | null
-          affected_agendas?: string[] | null
-          notes?: string | null
         }
         Relationships: []
       }
