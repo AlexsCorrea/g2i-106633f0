@@ -146,6 +146,16 @@ export default function AdminAutoatendimento() {
       voice_pitch: voicePitch,
       voice_volume: voiceVolume,
       pre_call_sound: preCallSound,
+      print_enabled: printEnabled,
+      print_auto: printAuto,
+      print_copies: printCopies,
+      print_paper_width: printPaperWidth,
+      print_show_logo: printShowLogo,
+      print_show_qr: printShowQr,
+      print_header_text: printHeaderText,
+      print_footer_text: printFooterText,
+      print_template: printTemplate,
+      print_font_size: printFontSize,
     });
   };
 
