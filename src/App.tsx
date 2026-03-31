@@ -56,6 +56,7 @@ function App() {
                 <Route path="/dashboards" element={<ProtectedRoute><Dashboards /></ProtectedRoute>} />
                 <Route path="/cme" element={<ProtectedRoute><CME /></ProtectedRoute>} />
                 <Route path="/admin-autoatendimento" element={<ProtectedRoute><AdminAutoatendimento /></ProtectedRoute>} />
+                <Route path="/configuracoes" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
                 {/* Salas */}
                 <Route path="/salas/espera" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
