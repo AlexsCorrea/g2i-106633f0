@@ -189,7 +189,7 @@ export default function AgendaOperational() {
     return {
       total: filteredAppointments.length,
       confirmados: filteredAppointments.filter(a => a.status === "confirmado" || a.status === "concluido").length,
-      aguardando: filteredAppointments.filter(a => a.status === "agendado" || a.status === "em_espera").length,
+      aguardando: filteredAppointments.filter(a => a.status === "agendado").length,
     };
   }, [filteredAppointments]);
 
