@@ -96,7 +96,7 @@ export function useUpdateAppointment() {
       toast.success("Agendamento atualizado!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar agendamento: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
