@@ -73,7 +73,7 @@ export function useCreateAccountReceivable() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (a: Partial<AccountReceivable>) => {
-      const { data, error } = await supabase.from("accounts_receivable").insert(a).select().single();
+      const { data, error } = await supabase.from("accounts_receivable").insert(a as any).select().single();
       if (error) throw error;
       return data;
     },

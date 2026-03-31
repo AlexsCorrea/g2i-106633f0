@@ -36,7 +36,7 @@ export function useCreateBed() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (bed: Partial<Bed>) => {
-      const { data, error } = await supabase.from("beds").insert(bed).select().single();
+      const { data, error } = await supabase.from("beds").insert(bed as any).select().single();
       if (error) throw error;
       return data;
     },

@@ -78,7 +78,7 @@ export function useCreateStockMovement() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (mov: Partial<StockMovement>) => {
-      const { data, error } = await supabase.from("stock_movements").insert(mov).select().single();
+      const { data, error } = await supabase.from("stock_movements").insert(mov as any).select().single();
       if (error) throw error;
       return data;
     },

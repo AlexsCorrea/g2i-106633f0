@@ -35,7 +35,7 @@ export function useCreateVisitor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (v: Partial<Visitor>) => {
-      const { data, error } = await supabase.from("visitors").insert(v).select().single();
+      const { data, error } = await supabase.from("visitors").insert(v as any).select().single();
       if (error) throw error;
       return data;
     },

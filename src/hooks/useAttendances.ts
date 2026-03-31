@@ -45,7 +45,7 @@ export function useCreateAttendance() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (att: Partial<Attendance>) => {
-      const { data, error } = await supabase.from("attendances").insert(att).select().single();
+      const { data, error } = await supabase.from("attendances").insert(att as any).select().single();
       if (error) throw error;
       return data;
     },
