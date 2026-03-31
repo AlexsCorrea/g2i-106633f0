@@ -71,7 +71,7 @@ export function useCreateAppointment() {
       toast.success("Agendamento criado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar agendamento: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
