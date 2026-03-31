@@ -14,6 +14,9 @@ import Patients from "./pages/Patients";
 import Prontuario from "./pages/Prontuario";
 import Agenda from "./pages/Agenda";
 import AgendaAdmin from "./pages/AgendaAdmin";
+import AgendaCentroCirurgico from "./pages/AgendaCentroCirurgico";
+import AgendaPrint from "./pages/AgendaPrint";
+import Autoagendamento from "./pages/Autoagendamento";
 import Dashboards from "./pages/Dashboards";
 import Kiosk from "./pages/Kiosk";
 import QueueMobile from "./pages/QueueMobile";
@@ -58,6 +61,7 @@ function App() {
                 <Route path="/portal" element={<Portal />} />
                 <Route path="/painel" element={<QueuePanel />} />
                 <Route path="/painel-tv" element={<QueueTV />} />
+                <Route path="/autoagendamento" element={<Autoagendamento />} />
 
                 {/* Protected routes */}
                 <Route path="/patients" element={<ProtectedRoute><Patients /></ProtectedRoute>} />
@@ -110,8 +114,8 @@ function App() {
                 <Route path="/salas/procedimentos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
 
                 {/* Agenda extras */}
-                <Route path="/agenda/centro-cirurgico" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/agenda/imprimir" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+                <Route path="/agenda/centro-cirurgico" element={<ProtectedRoute><AgendaCentroCirurgico /></ProtectedRoute>} />
+                <Route path="/agenda/imprimir" element={<ProtectedRoute><AgendaPrint /></ProtectedRoute>} />
 
                 {/* Pacientes extras */}
                 <Route path="/pacientes/retornos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
