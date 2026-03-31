@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Patients from "./pages/Patients";
 import Prontuario from "./pages/Prontuario";
 import Agenda from "./pages/Agenda";
+import AgendaAdmin from "./pages/AgendaAdmin";
 import Dashboards from "./pages/Dashboards";
 import Kiosk from "./pages/Kiosk";
 import QueueMobile from "./pages/QueueMobile";
