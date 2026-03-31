@@ -114,8 +114,8 @@ function App() {
                 <Route path="/salas/procedimentos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
 
                 {/* Agenda extras */}
-                <Route path="/agenda/centro-cirurgico" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/agenda/imprimir" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+                <Route path="/agenda/centro-cirurgico" element={<ProtectedRoute><AgendaCentroCirurgico /></ProtectedRoute>} />
+                <Route path="/agenda/imprimir" element={<ProtectedRoute><AgendaPrint /></ProtectedRoute>} />
 
                 {/* Pacientes extras */}
                 <Route path="/pacientes/retornos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />

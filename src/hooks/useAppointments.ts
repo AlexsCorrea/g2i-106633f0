@@ -12,7 +12,7 @@ export interface Appointment {
   appointment_type: "consulta" | "exame" | "procedimento" | "cirurgia" | "retorno" | "fisioterapia";
   scheduled_at: string;
   duration_minutes: number;
-  status: "agendado" | "confirmado" | "em_andamento" | "concluido" | "cancelado" | "nao_compareceu";
+  status: "agendado" | "confirmado" | "em_andamento" | "em_espera" | "concluido" | "cancelado" | "nao_compareceu" | "reagendado" | "encaixe";
   location: string | null;
   notes: string | null;
   created_at: string;
