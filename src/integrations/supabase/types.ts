@@ -247,51 +247,91 @@ export type Database = {
       }
       appointments: {
         Row: {
+          agenda_id: string | null
           appointment_type: string
+          attendance_id: string | null
           created_at: string
           description: string | null
           duration_minutes: number | null
           id: string
+          insurance: string | null
+          is_fit_in: boolean | null
+          is_new_patient: boolean | null
+          is_return: boolean | null
           location: string | null
           notes: string | null
+          origin_channel: string | null
           patient_id: string
+          phone: string | null
+          priority: string | null
           professional_id: string | null
+          room: string | null
           scheduled_at: string
+          specialty: string | null
           status: string
           title: string
           updated_at: string
         }
         Insert: {
+          agenda_id?: string | null
           appointment_type: string
+          attendance_id?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
           id?: string
+          insurance?: string | null
+          is_fit_in?: boolean | null
+          is_new_patient?: boolean | null
+          is_return?: boolean | null
           location?: string | null
           notes?: string | null
+          origin_channel?: string | null
           patient_id: string
+          phone?: string | null
+          priority?: string | null
           professional_id?: string | null
+          room?: string | null
           scheduled_at: string
+          specialty?: string | null
           status?: string
           title: string
           updated_at?: string
         }
         Update: {
+          agenda_id?: string | null
           appointment_type?: string
+          attendance_id?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
           id?: string
+          insurance?: string | null
+          is_fit_in?: boolean | null
+          is_new_patient?: boolean | null
+          is_return?: boolean | null
           location?: string | null
           notes?: string | null
+          origin_channel?: string | null
           patient_id?: string
+          phone?: string | null
+          priority?: string | null
           professional_id?: string | null
+          room?: string | null
           scheduled_at?: string
+          specialty?: string | null
           status?: string
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_agenda_id_fkey"
+            columns: ["agenda_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_agendas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_patient_id_fkey"
             columns: ["patient_id"]
@@ -3250,50 +3290,98 @@ export type Database = {
       }
       surgical_procedures: {
         Row: {
+          accommodation: string | null
           anesthesia_type: string | null
+          anesthetist_name: string | null
+          blood_reserve: string | null
           created_at: string
           description: string | null
           end_time: string | null
+          equipment: string | null
+          expected_stay: string | null
+          fasting_notes: string | null
           id: string
+          insurance: string | null
+          is_inpatient: boolean | null
+          needs_icu: boolean | null
           notes: string | null
+          nursing_notes: string | null
+          opme: string | null
           patient_id: string
+          pre_op_cid: string | null
+          priority: string | null
           procedure_type: string
+          room: string | null
           scheduled_date: string | null
           start_time: string | null
           status: string
           surgeon_id: string
+          surgery_character: string | null
+          surgical_risk: string | null
           team_members: string | null
           updated_at: string
         }
         Insert: {
+          accommodation?: string | null
           anesthesia_type?: string | null
+          anesthetist_name?: string | null
+          blood_reserve?: string | null
           created_at?: string
           description?: string | null
           end_time?: string | null
+          equipment?: string | null
+          expected_stay?: string | null
+          fasting_notes?: string | null
           id?: string
+          insurance?: string | null
+          is_inpatient?: boolean | null
+          needs_icu?: boolean | null
           notes?: string | null
+          nursing_notes?: string | null
+          opme?: string | null
           patient_id: string
+          pre_op_cid?: string | null
+          priority?: string | null
           procedure_type: string
+          room?: string | null
           scheduled_date?: string | null
           start_time?: string | null
           status?: string
           surgeon_id: string
+          surgery_character?: string | null
+          surgical_risk?: string | null
           team_members?: string | null
           updated_at?: string
         }
         Update: {
+          accommodation?: string | null
           anesthesia_type?: string | null
+          anesthetist_name?: string | null
+          blood_reserve?: string | null
           created_at?: string
           description?: string | null
           end_time?: string | null
+          equipment?: string | null
+          expected_stay?: string | null
+          fasting_notes?: string | null
           id?: string
+          insurance?: string | null
+          is_inpatient?: boolean | null
+          needs_icu?: boolean | null
           notes?: string | null
+          nursing_notes?: string | null
+          opme?: string | null
           patient_id?: string
+          pre_op_cid?: string | null
+          priority?: string | null
           procedure_type?: string
+          room?: string | null
           scheduled_date?: string | null
           start_time?: string | null
           status?: string
           surgeon_id?: string
+          surgery_character?: string | null
+          surgical_risk?: string | null
           team_members?: string | null
           updated_at?: string
         }
