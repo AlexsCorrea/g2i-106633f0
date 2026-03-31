@@ -58,6 +58,14 @@ export default function AdminAutoatendimento() {
   const [printFooterText, setPrintFooterText] = useState("Apresente esta senha quando solicitado");
   const [printTemplate, setPrintTemplate] = useState("standard");
   const [printFontSize, setPrintFontSize] = useState("large");
+  const [printMarginTop, setPrintMarginTop] = useState(2);
+  const [printMarginBottom, setPrintMarginBottom] = useState(2);
+  const [printMarginLeft, setPrintMarginLeft] = useState(2);
+  const [printMarginRight, setPrintMarginRight] = useState(2);
+  const [printBlockSpacing, setPrintBlockSpacing] = useState(6);
+  const [printCutExtraHeight, setPrintCutExtraHeight] = useState(10);
+  const [printAutoCut, setPrintAutoCut] = useState(true);
+  const [resultCountdown, setResultCountdown] = useState(30);
   const [initialized, setInitialized] = useState(false);
 
   const [adTitle, setAdTitle] = useState("");
