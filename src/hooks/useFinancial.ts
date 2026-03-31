@@ -47,7 +47,7 @@ export function useCreateAccountPayable() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (a: Partial<AccountPayable>) => {
-      const { data, error } = await supabase.from("accounts_payable").insert(a).select().single();
+      const { data, error } = await supabase.from("accounts_payable").insert(a as any).select().single();
       if (error) throw error;
       return data;
     },
