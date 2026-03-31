@@ -23,7 +23,14 @@ export default function Diagnostico() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("laudos");
   const [search, setSearch] = useState("");
-  const { data: exams, isLoading } = useExamRequests();
+  const { data: exams, isLoading } = useQuery({
+    queryKey: ["all_exam_requests"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("exam_requests").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const filtered = exams?.filter((e: any) =>
     e.exam_type?.toLowerCase().includes(search.toLowerCase())
