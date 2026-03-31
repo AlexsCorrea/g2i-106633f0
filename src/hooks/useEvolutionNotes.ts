@@ -44,10 +44,10 @@ export function useCreateEvolutionNote() {
 
   return useMutation({
     mutationFn: async (note: Omit<EvolutionNote, "id" | "created_at" | "profiles">) => {
-      const validated = evolutionNoteSchema.parse(note);
+      evolutionNoteSchema.parse(note);
       const { data, error } = await supabase
         .from("evolution_notes")
-        .insert(validated)
+        .insert(note)
         .select()
         .single();
 

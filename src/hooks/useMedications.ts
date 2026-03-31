@@ -46,10 +46,10 @@ export function useCreateMedication() {
 
   return useMutation({
     mutationFn: async (medication: Omit<Medication, "id" | "created_at" | "updated_at" | "profiles">) => {
-      const validated = medicationSchema.parse(medication);
+      medicationSchema.parse(medication);
       const { data, error } = await supabase
         .from("medications")
-        .insert(validated)
+        .insert(medication)
         .select()
         .single();
 

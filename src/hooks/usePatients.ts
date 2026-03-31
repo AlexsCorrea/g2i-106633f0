@@ -65,10 +65,10 @@ export function useCreatePatient() {
 
   return useMutation({
     mutationFn: async (patient: Omit<Patient, "id" | "created_at" | "updated_at">) => {
-      const validated = patientSchema.parse(patient);
+      patientSchema.parse(patient);
       const { data, error } = await supabase
         .from("patients")
-        .insert(validated)
+        .insert(patient)
         .select()
         .single();
 

@@ -69,10 +69,10 @@ export function useCreateVitalSign() {
 
   return useMutation({
     mutationFn: async (vitalSign: Omit<VitalSign, "id" | "created_at" | "profiles">) => {
-      const validated = vitalSignsSchema.parse(vitalSign);
+      vitalSignsSchema.parse(vitalSign);
       const { data, error } = await supabase
         .from("vital_signs")
-        .insert(validated)
+        .insert(vitalSign)
         .select()
         .single();
 
