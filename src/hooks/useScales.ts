@@ -174,7 +174,7 @@ export function useCreateMorse() {
       toast.success("Escala de Morse registrada!");
     },
     onError: (error) => {
-      toast.error("Erro ao registrar Morse: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
