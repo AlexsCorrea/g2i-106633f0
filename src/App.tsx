@@ -23,6 +23,7 @@ import Portal from "./pages/Portal";
 import CME from "./pages/CME";
 import AdminAutoatendimento from "./pages/AdminAutoatendimento";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ function App() {
                 <Route path="/dashboards" element={<ProtectedRoute><Dashboards /></ProtectedRoute>} />
                 <Route path="/cme" element={<ProtectedRoute><CME /></ProtectedRoute>} />
                 <Route path="/admin-autoatendimento" element={<ProtectedRoute><AdminAutoatendimento /></ProtectedRoute>} />
+                <Route path="/configuracoes" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
                 {/* Salas */}
                 <Route path="/salas/espera" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
