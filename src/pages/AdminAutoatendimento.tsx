@@ -302,13 +302,14 @@ export default function AdminAutoatendimento() {
         </div>
 
         <Tabs defaultValue="branding" className="space-y-6">
-          <TabsList className="grid grid-cols-6 w-full">
+          <TabsList className="grid grid-cols-7 w-full">
             <TabsTrigger value="branding" className="gap-1"><Palette className="w-4 h-4" /> Identidade</TabsTrigger>
             <TabsTrigger value="privacy" className="gap-1"><ShieldCheck className="w-4 h-4" /> Privacidade</TabsTrigger>
             <TabsTrigger value="tv" className="gap-1"><Tv className="w-4 h-4" /> Painel TV</TabsTrigger>
             <TabsTrigger value="voice" className="gap-1"><Mic className="w-4 h-4" /> Voz</TabsTrigger>
             <TabsTrigger value="ads" className="gap-1"><Megaphone className="w-4 h-4" /> Anúncios</TabsTrigger>
             <TabsTrigger value="totem" className="gap-1"><Monitor className="w-4 h-4" /> Totem</TabsTrigger>
+            <TabsTrigger value="print" className="gap-1"><Printer className="w-4 h-4" /> Impressão</TabsTrigger>
           </TabsList>
 
           {/* BRANDING TAB */}
