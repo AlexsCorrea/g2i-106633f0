@@ -22,9 +22,20 @@ import QueueTV from "./pages/QueueTV";
 import Portal from "./pages/Portal";
 import CME from "./pages/CME";
 import AdminAutoatendimento from "./pages/AdminAutoatendimento";
-import PlaceholderPage from "./pages/PlaceholderPage";
 import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import PlaceholderPage from "./pages/PlaceholderPage";
+
+// Functional module pages
+import AtendimentosAbertura from "./pages/AtendimentosAbertura";
+import Leitos from "./pages/Leitos";
+import Portaria from "./pages/Portaria";
+import Financeiro from "./pages/Financeiro";
+import Faturamento from "./pages/Faturamento";
+import Estoque from "./pages/Estoque";
+import Diagnostico from "./pages/Diagnostico";
+import Escalas from "./pages/Escalas";
+import Assistencial from "./pages/Assistencial";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +69,42 @@ function App() {
                 <Route path="/admin-autoatendimento" element={<ProtectedRoute><AdminAutoatendimento /></ProtectedRoute>} />
                 <Route path="/configuracoes" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
+                {/* Functional modules */}
+                <Route path="/atendimentos/abertura" element={<ProtectedRoute><AtendimentosAbertura /></ProtectedRoute>} />
+                <Route path="/atendimentos/leitos" element={<ProtectedRoute><Leitos /></ProtectedRoute>} />
+                <Route path="/atendimentos/portaria" element={<ProtectedRoute><Portaria /></ProtectedRoute>} />
+                <Route path="/atendimentos/escalas" element={<ProtectedRoute><Escalas /></ProtectedRoute>} />
+                <Route path="/atendimentos/orcamento" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+                <Route path="/atendimentos/nf" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+                <Route path="/atendimentos/relatorios" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+
+                <Route path="/gerenciamento/financeiro" element={<ProtectedRoute><Financeiro /></ProtectedRoute>} />
+                <Route path="/gerenciamento/faturamento" element={<ProtectedRoute><Faturamento /></ProtectedRoute>} />
+                <Route path="/gerenciamento/produtividade" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+                <Route path="/gerenciamento/caixa" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+                <Route path="/gerenciamento/estoque/farmacia" element={<ProtectedRoute><Estoque stockType="farmacia" /></ProtectedRoute>} />
+                <Route path="/gerenciamento/estoque/almoxarifado" element={<ProtectedRoute><Estoque stockType="almoxarifado" /></ProtectedRoute>} />
+                <Route path="/gerenciamento/estoque/laboratorio" element={<ProtectedRoute><Estoque stockType="laboratorio" /></ProtectedRoute>} />
+                <Route path="/gerenciamento/estoque/nutricao" element={<ProtectedRoute><Estoque stockType="nutricao" /></ProtectedRoute>} />
+
+                <Route path="/diagnostico/laudos" element={<ProtectedRoute><Diagnostico /></ProtectedRoute>} />
+                <Route path="/diagnostico/fila" element={<ProtectedRoute><Diagnostico /></ProtectedRoute>} />
+                <Route path="/diagnostico/etiquetas" element={<ProtectedRoute><Diagnostico /></ProtectedRoute>} />
+
+                {/* Assistencial */}
+                <Route path="/assistencial/homecare" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+                <Route path="/assistencial/internados" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+                <Route path="/assistencial/uti" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+                <Route path="/assistencial/pa" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+                <Route path="/assistencial/enfermagem" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+                <Route path="/assistencial/laboratorio" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+                <Route path="/assistencial/scih" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+                <Route path="/assistencial/farmacia" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+                <Route path="/assistencial/procedimentos" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+                <Route path="/assistencial/nutricao" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+                <Route path="/assistencial/triagem" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+                <Route path="/assistencial/oncologia" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
+
                 {/* Salas */}
                 <Route path="/salas/espera" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
                 <Route path="/salas/procedimentos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
@@ -70,44 +117,6 @@ function App() {
                 <Route path="/pacientes/retornos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
                 <Route path="/pacientes/tags" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
                 <Route path="/pacientes/same" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-
-                {/* Atendimentos */}
-                <Route path="/atendimentos/abertura" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/atendimentos/orcamento" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/atendimentos/nf" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/atendimentos/relatorios" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/atendimentos/escalas" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/atendimentos/leitos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/atendimentos/portaria" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-
-                {/* Diagnóstico */}
-                <Route path="/diagnostico/laudos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/diagnostico/fila" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/diagnostico/etiquetas" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-
-                {/* Gerenciamento */}
-                <Route path="/gerenciamento/financeiro" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/gerenciamento/faturamento" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/gerenciamento/produtividade" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/gerenciamento/estoque/farmacia" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/gerenciamento/estoque/almoxarifado" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/gerenciamento/estoque/laboratorio" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/gerenciamento/estoque/nutricao" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/gerenciamento/caixa" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-
-                {/* Assistencial */}
-                <Route path="/assistencial/homecare" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/assistencial/internados" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/assistencial/uti" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/assistencial/pa" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/assistencial/enfermagem" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/assistencial/laboratorio" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/assistencial/scih" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/assistencial/farmacia" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/assistencial/procedimentos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/assistencial/nutricao" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/assistencial/triagem" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-                <Route path="/assistencial/oncologia" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
 
                 {/* CRM */}
                 <Route path="/crm/solicitacoes" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
