@@ -106,6 +106,16 @@ export default function AdminAutoatendimento() {
       setVoicePitch(config.voice_pitch || 1.0);
       setVoiceVolume(config.voice_volume || 1.0);
       setPreCallSound(config.pre_call_sound || "triple_tone");
+      setPrintEnabled(config.print_enabled || false);
+      setPrintAuto(config.print_auto || false);
+      setPrintCopies(config.print_copies || 1);
+      setPrintPaperWidth(config.print_paper_width || "80mm");
+      setPrintShowLogo(config.print_show_logo !== false);
+      setPrintShowQr(config.print_show_qr !== false);
+      setPrintHeaderText(config.print_header_text || "Aguarde sua chamada no painel");
+      setPrintFooterText(config.print_footer_text || "Apresente esta senha quando solicitado");
+      setPrintTemplate(config.print_template || "standard");
+      setPrintFontSize(config.print_font_size || "large");
       setInitialized(true);
     }
   }, [config, initialized]);
