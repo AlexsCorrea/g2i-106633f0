@@ -12,33 +12,66 @@ import {
   DoorOpen, Calendar, Users, ClipboardList, Stethoscope,
   BedDouble, Pill, FileText, AlertTriangle, ArrowRight,
   UserPlus, Clock, Activity, Siren, ListChecks, Bell,
-  FlaskConical, Monitor, Tv, Megaphone
+  FlaskConical, Monitor, Tv, Megaphone, Microscope,
+  HeartPulse, Wallet, CreditCard, BarChart3, Scissors,
+  Receipt, TrendingUp, Beaker,
 } from "lucide-react";
 
+/* ── quick access with categories ── */
 interface QuickAccessItem {
   label: string;
   icon: React.ElementType;
   path: string;
   color: string;
-  description: string;
+  badge?: number;
+  category: "assistencial" | "administrativo" | "gestao";
 }
 
 const quickAccess: QuickAccessItem[] = [
-  { label: "Sala de Espera", icon: DoorOpen, path: "/salas/espera", color: "bg-primary/10 text-primary", description: "Pacientes aguardando" },
-  { label: "Agenda", icon: Calendar, path: "/agenda", color: "bg-accent/10 text-accent", description: "Consultas e procedimentos" },
-  { label: "Pacientes", icon: Users, path: "/patients", color: "bg-info/10 text-info", description: "Cadastro e busca" },
-  { label: "Abertura de Atendimento", icon: ClipboardList, path: "/atendimentos/abertura", color: "bg-warning/10 text-warning", description: "Registrar chegada" },
-  { label: "Internados", icon: BedDouble, path: "/assistencial/internados", color: "bg-destructive/10 text-destructive", description: "Pacientes internados" },
-  { label: "Pronto Atendimento", icon: Siren, path: "/assistencial/pa", color: "bg-destructive/10 text-destructive", description: "Emergência" },
-  { label: "Triagem", icon: ListChecks, path: "/assistencial/triagem", color: "bg-warning/10 text-warning", description: "Classificação de risco" },
-  { label: "Farmácia", icon: Pill, path: "/assistencial/farmacia", color: "bg-accent/10 text-accent", description: "Prescrições pendentes" },
+  // Assistencial
+  { label: "Sala de Espera", icon: DoorOpen, path: "/salas/espera", color: "bg-primary/10 text-primary", badge: 5, category: "assistencial" },
+  { label: "Pronto Atendimento", icon: Siren, path: "/assistencial/pa", color: "bg-destructive/10 text-destructive", badge: 3, category: "assistencial" },
+  { label: "Internados", icon: BedDouble, path: "/assistencial/internados", color: "bg-info/10 text-info", category: "assistencial" },
+  { label: "Triagem", icon: ListChecks, path: "/assistencial/triagem", color: "bg-warning/10 text-warning", badge: 2, category: "assistencial" },
+  { label: "Farmácia", icon: Pill, path: "/assistencial/farmacia", color: "bg-accent/10 text-accent", badge: 8, category: "assistencial" },
+  { label: "Enfermagem", icon: HeartPulse, path: "/assistencial/enfermagem", color: "bg-primary/10 text-primary", category: "assistencial" },
+  // Administrativo
+  { label: "Abertura de Atendimento", icon: ClipboardList, path: "/atendimentos/abertura", color: "bg-warning/10 text-warning", category: "administrativo" },
+  { label: "Agenda", icon: Calendar, path: "/agenda", color: "bg-accent/10 text-accent", category: "administrativo" },
+  { label: "Pacientes", icon: Users, path: "/patients", color: "bg-info/10 text-info", category: "administrativo" },
+  { label: "Leitos", icon: BedDouble, path: "/atendimentos/leitos", color: "bg-primary/10 text-primary", category: "administrativo" },
+  { label: "Laudos", icon: Microscope, path: "/diagnostico/laudos", color: "bg-accent/10 text-accent", badge: 4, category: "administrativo" },
+  { label: "Centro Cirúrgico", icon: Scissors, path: "/agenda/centro-cirurgico", color: "bg-destructive/10 text-destructive", category: "administrativo" },
+  // Gestão
+  { label: "Faturamento", icon: CreditCard, path: "/gerenciamento/faturamento", color: "bg-primary/10 text-primary", category: "gestao" },
+  { label: "Dashboards", icon: BarChart3, path: "/dashboards", color: "bg-accent/10 text-accent", category: "gestao" },
+  { label: "Financeiro", icon: Wallet, path: "/gerenciamento/financeiro", color: "bg-warning/10 text-warning", category: "gestao" },
 ];
 
+/* ── alerts mock ── */
 const alerts = [
-  { text: "3 prescrições pendentes de dispensação", type: "warning" as const },
-  { text: "2 laudos aguardando assinatura", type: "info" as const },
-  { text: "Leito 204B liberado para higienização", type: "info" as const },
+  { text: "8 prescrições pendentes de dispensação na Farmácia", type: "warning" as const, path: "/assistencial/farmacia", module: "Farmácia" },
+  { text: "4 laudos aguardando assinatura no Diagnóstico", type: "warning" as const, path: "/diagnostico/laudos", module: "Diagnóstico" },
+  { text: "2 pacientes na triagem sem classificação de risco", type: "warning" as const, path: "/assistencial/triagem", module: "Triagem" },
+  { text: "Leito 204B liberado para higienização", type: "info" as const, path: "/atendimentos/leitos", module: "Leitos" },
+  { text: "3 retornos agendados sem confirmação", type: "info" as const, path: "/pacientes/retornos", module: "Pacientes" },
 ];
+
+/* ── secondary links ── */
+const secondaryLinks = [
+  { label: "Autoatendimento", icon: Monitor, path: "/kiosk" },
+  { label: "Painel de Chamadas", icon: Megaphone, path: "/painel" },
+  { label: "Painel TV", icon: Tv, path: "/painel-tv" },
+  { label: "CME", icon: FlaskConical, path: "/cme" },
+  { label: "Produtividade", icon: TrendingUp, path: "/gerenciamento/produtividade" },
+  { label: "Config. Autoatendimento", icon: Monitor, path: "/admin-autoatendimento" },
+];
+
+const categoryLabels: Record<string, string> = {
+  assistencial: "Assistencial",
+  administrativo: "Administrativo",
+  gestao: "Gestão",
+};
 
 export default function OperationalHome() {
   const navigate = useNavigate();
@@ -87,7 +120,7 @@ export default function OperationalHome() {
         <div className="lg:col-span-2 space-y-6">
           <TodayAgenda appointments={appointments} isLoading={loadingAppts} />
 
-          {/* Alerts */}
+          {/* Alerts & Pendências */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -95,18 +128,18 @@ export default function OperationalHome() {
                 Alertas e Pendências
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-1.5">
               {alerts.map((alert, i) => (
-                <div
+                <button
                   key={i}
-                  className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50"
+                  onClick={() => navigate(alert.path)}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
                 >
                   <AlertTriangle className={`h-4 w-4 shrink-0 ${alert.type === "warning" ? "text-warning" : "text-info"}`} />
                   <span className="text-sm text-foreground flex-1">{alert.text}</span>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs">
-                    Ver
-                  </Button>
-                </div>
+                  <Badge variant="outline" className="text-[10px] shrink-0">{alert.module}</Badge>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                </button>
               ))}
             </CardContent>
           </Card>
@@ -116,37 +149,42 @@ export default function OperationalHome() {
         <RecentPatientsCard patients={recentPatients} isLoading={loadingPatients} />
       </div>
 
-      {/* Quick Access Grid */}
-      <div>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Acesso Rápido</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-          {quickAccess.map((item) => (
-            <Card
-              key={item.path}
-              className="cursor-pointer hover:shadow-card-hover hover:border-primary/30 transition-all group"
-              onClick={() => navigate(item.path)}
-            >
-              <CardContent className="p-3 text-center">
-                <div className={`h-10 w-10 rounded-lg ${item.color} flex items-center justify-center mx-auto mb-2 group-hover:scale-105 transition-transform`}>
-                  <item.icon className="h-5 w-5" />
-                </div>
-                <div className="text-xs font-medium text-foreground leading-tight">{item.label}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      {/* Quick Access — categorized */}
+      {(["assistencial", "administrativo", "gestao"] as const).map((cat) => {
+        const items = quickAccess.filter((q) => q.category === cat);
+        return (
+          <div key={cat}>
+            <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
+              {categoryLabels[cat]}
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {items.map((item) => (
+                <Card
+                  key={item.path + item.label}
+                  className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all group relative"
+                  onClick={() => navigate(item.path)}
+                >
+                  <CardContent className="p-3 text-center">
+                    <div className={`h-10 w-10 rounded-lg ${item.color} flex items-center justify-center mx-auto mb-2 group-hover:scale-105 transition-transform`}>
+                      <item.icon className="h-5 w-5" />
+                    </div>
+                    <div className="text-xs font-medium text-foreground leading-tight">{item.label}</div>
+                    {item.badge != null && item.badge > 0 && (
+                      <Badge className="absolute top-1.5 right-1.5 h-5 min-w-5 px-1 text-[10px] bg-destructive text-destructive-foreground">
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+      })}
 
       {/* Secondary shortcuts */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-        {[
-          { label: "Autoatendimento", icon: Monitor, path: "/kiosk" },
-          { label: "Painel de Chamadas", icon: Megaphone, path: "/painel" },
-          { label: "Painel TV", icon: Tv, path: "/painel-tv" },
-          { label: "CME", icon: FlaskConical, path: "/cme" },
-          { label: "Dashboards", icon: Activity, path: "/dashboards" },
-          { label: "Config. Autoatendimento", icon: Monitor, path: "/admin-autoatendimento" },
-        ].map((item) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {secondaryLinks.map((item) => (
           <Button
             key={item.path}
             variant="outline"

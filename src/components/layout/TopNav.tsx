@@ -2,343 +2,243 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Heart,
-  LogOut,
-  User,
-  ChevronDown,
-  DoorOpen,
-  Calendar,
-  Users,
-  ClipboardList,
-  Microscope,
-  BarChart3,
-  Stethoscope,
-  Handshake,
-  Bell,
-  Search,
-  CalendarDays,
-  Scissors,
-  Printer,
-  Settings2,
-  UserPlus,
-  Tag,
-  FolderArchive,
-  RotateCcw,
-  FileText,
-  Receipt,
-  Scale,
-  BedDouble,
-  ShieldCheck,
-  FlaskConical,
-  FileBarChart,
-  Pill,
-  Package,
-  Utensils,
-  Wallet,
-  TrendingUp,
-  CreditCard,
-  Activity,
-  Home as HomeIcon,
-  Siren,
-  HeartPulse,
-  Beaker,
-  ShieldAlert,
-  Truck,
-  ListChecks,
-  Radiation,
-  KeyRound,
-  MonitorSmartphone,
+  Heart, LogOut, User, ChevronDown, ChevronRight, DoorOpen, Calendar, Users,
+  ClipboardList, Microscope, BarChart3, Stethoscope, Handshake, Bell, Search,
+  CalendarDays, Scissors, Printer, Settings2, UserPlus, Tag, FolderArchive,
+  RotateCcw, FileText, Receipt, Scale, BedDouble, ShieldCheck, FlaskConical,
+  FileBarChart, Pill, Package, Utensils, Wallet, TrendingUp, CreditCard,
+  Activity, Home as HomeIcon, Siren, HeartPulse, Beaker, ShieldAlert,
+  ListChecks, Radiation, MonitorSmartphone, Truck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/* ── types ── */
+interface SubItem {
+  label: string;
+  icon: React.ElementType;
+  path: string;
+  desc?: string;
+}
+interface MenuGroup {
+  heading?: string;
+  items: SubItem[];
+}
 interface MenuItem {
   label: string;
   icon: React.ElementType;
-  path?: string;
-  items?: { label: string; icon: React.ElementType; path: string; description?: string }[];
+  groups: MenuGroup[];
+  wide?: boolean;         // wide mega-menu (2-col)
+  columns?: 2 | 3;       // how many columns
 }
 
+/* ── menu config ── */
 const menuConfig: MenuItem[] = [
   {
     label: "Salas",
     icon: DoorOpen,
-    items: [
+    groups: [
       {
-        label: "Sala de Espera",
-        icon: DoorOpen,
-        path: "/salas/espera",
-        description: "Pacientes aguardando atendimento",
-      },
-      {
-        label: "Sala de Procedimentos",
-        icon: Stethoscope,
-        path: "/salas/procedimentos",
-        description: "Exames e procedimentos em execução",
+        items: [
+          { label: "Sala de Espera", icon: DoorOpen, path: "/salas/espera", desc: "Pacientes aguardando atendimento" },
+          { label: "Sala de Procedimentos", icon: Stethoscope, path: "/salas/procedimentos", desc: "Exames e procedimentos em execução" },
+        ],
       },
     ],
   },
   {
     label: "Agenda",
     icon: Calendar,
-    items: [
-      { label: "Calendário", icon: CalendarDays, path: "/agenda", description: "Agenda geral e por profissional" },
+    groups: [
       {
-        label: "Centro Cirúrgico",
-        icon: Scissors,
-        path: "/agenda/centro-cirurgico",
-        description: "Mapa e programação cirúrgica",
+        heading: "Operacional",
+        items: [
+          { label: "Calendário", icon: CalendarDays, path: "/agenda", desc: "Agenda geral e por profissional" },
+          { label: "Centro Cirúrgico", icon: Scissors, path: "/agenda/centro-cirurgico", desc: "Mapa e programação cirúrgica" },
+          { label: "Imprimir Agenda", icon: Printer, path: "/agenda/imprimir", desc: "Impressão por profissional ou setor" },
+        ],
       },
       {
-        label: "Imprimir Agenda",
-        icon: Printer,
-        path: "/agenda/imprimir",
-        description: "Impressão por profissional ou setor",
-      },
-      {
-        label: "Gestão de Agendas",
-        icon: Settings2,
-        path: "/agenda/admin",
-        description: "Parametrização e cadastro de agendas",
+        heading: "Administração",
+        items: [
+          { label: "Gestão de Agendas", icon: Settings2, path: "/agenda/admin", desc: "Parametrização, bloqueios e períodos" },
+        ],
       },
     ],
   },
   {
     label: "Pacientes",
     icon: Users,
-    items: [
-      { label: "Pacientes", icon: Users, path: "/patients", description: "Listagem e busca de pacientes" },
+    groups: [
       {
-        label: "Cadastrar Paciente",
-        icon: UserPlus,
-        path: "/patients?new=1",
-        description: "Novo cadastro de paciente",
+        heading: "Cadastro",
+        items: [
+          { label: "Pacientes", icon: Users, path: "/patients", desc: "Listagem e busca" },
+          { label: "Cadastrar Paciente", icon: UserPlus, path: "/patients?new=1", desc: "Novo cadastro completo" },
+        ],
       },
       {
-        label: "Gerenciar Retornos",
-        icon: RotateCcw,
-        path: "/pacientes/retornos",
-        description: "Controle de retornos pendentes",
+        heading: "Gestão",
+        items: [
+          { label: "Gerenciar Retornos", icon: RotateCcw, path: "/pacientes/retornos", desc: "Retornos pendentes e reagendamentos" },
+          { label: "Tags", icon: Tag, path: "/pacientes/tags", desc: "Categorização e classificação" },
+          { label: "SAME", icon: FolderArchive, path: "/pacientes/same", desc: "Prontuário documental e anexos" },
+        ],
       },
-      { label: "Tags", icon: Tag, path: "/pacientes/tags", description: "Categorização de pacientes" },
-      { label: "SAME", icon: FolderArchive, path: "/pacientes/same", description: "Prontuário documental e anexos" },
     ],
   },
   {
     label: "Atendimentos",
     icon: ClipboardList,
-    items: [
+    wide: true,
+    columns: 2,
+    groups: [
       {
-        label: "Abertura de Atendimento",
-        icon: ClipboardList,
-        path: "/atendimentos/abertura",
-        description: "Abertura de ficha e registro de chegada",
+        heading: "Recepção",
+        items: [
+          { label: "Abertura de Atendimento", icon: ClipboardList, path: "/atendimentos/abertura", desc: "Ficha e registro de chegada" },
+          { label: "Orçamento", icon: Receipt, path: "/atendimentos/orcamento", desc: "Orçamentos de procedimentos" },
+          { label: "Nota Fiscal", icon: FileText, path: "/atendimentos/nf", desc: "Solicitação e emissão de NF" },
+        ],
       },
       {
-        label: "Orçamento",
-        icon: Receipt,
-        path: "/atendimentos/orcamento",
-        description: "Orçamentos de procedimentos",
-      },
-      { label: "Nota Fiscal", icon: FileText, path: "/atendimentos/nf", description: "Solicitação e emissão de NF" },
-      {
-        label: "Relatórios",
-        icon: FileBarChart,
-        path: "/atendimentos/relatorios",
-        description: "Relatórios administrativos",
-      },
-      {
-        label: "Escalas",
-        icon: Scale,
-        path: "/atendimentos/escalas",
-        description: "Escalas de plantão e operacionais",
-      },
-      { label: "Leitos", icon: BedDouble, path: "/atendimentos/leitos", description: "Mapa e gestão de leitos" },
-      {
-        label: "Portaria",
-        icon: ShieldCheck,
-        path: "/atendimentos/portaria",
-        description: "Acompanhantes e visitantes",
+        heading: "Operacional",
+        items: [
+          { label: "Leitos", icon: BedDouble, path: "/atendimentos/leitos", desc: "Mapa e gestão de leitos" },
+          { label: "Escalas", icon: Scale, path: "/atendimentos/escalas", desc: "Plantão e escalas operacionais" },
+          { label: "Portaria", icon: ShieldCheck, path: "/atendimentos/portaria", desc: "Acompanhantes e visitantes" },
+          { label: "Relatórios", icon: FileBarChart, path: "/atendimentos/relatorios", desc: "Relatórios administrativos" },
+        ],
       },
     ],
   },
   {
     label: "Diagnóstico",
     icon: Microscope,
-    items: [
-      { label: "Laudos", icon: FileText, path: "/diagnostico/laudos", description: "Digitação e liberação de laudos" },
+    groups: [
       {
-        label: "Fila de Exames",
-        icon: ListChecks,
-        path: "/diagnostico/fila",
-        description: "Exames pendentes e em execução",
-      },
-      {
-        label: "Gerar Etiquetas",
-        icon: Tag,
-        path: "/diagnostico/etiquetas",
-        description: "Etiquetas de materiais e exames",
+        items: [
+          { label: "Laudos", icon: FileText, path: "/diagnostico/laudos", desc: "Digitação e liberação de laudos" },
+          { label: "Fila de Exames", icon: ListChecks, path: "/diagnostico/fila", desc: "Exames pendentes e em execução" },
+          { label: "Gerar Etiquetas", icon: Tag, path: "/diagnostico/etiquetas", desc: "Etiquetas de materiais e exames" },
+        ],
       },
     ],
   },
   {
     label: "Gerenciamento",
     icon: BarChart3,
-    items: [
+    wide: true,
+    columns: 3,
+    groups: [
       {
-        label: "Financeiro",
-        icon: Wallet,
-        path: "/gerenciamento/financeiro",
-        description: "Contas, fluxo de caixa e conciliação",
+        heading: "Financeiro",
+        items: [
+          { label: "Financeiro", icon: Wallet, path: "/gerenciamento/financeiro", desc: "Contas, fluxo de caixa e conciliação" },
+          { label: "Faturamento", icon: CreditCard, path: "/gerenciamento/faturamento", desc: "Convênio, SUS e particular" },
+          { label: "Fechamento de Caixa", icon: Receipt, path: "/gerenciamento/caixa", desc: "Conferência e fechamento diário" },
+        ],
       },
       {
-        label: "Indicadores",
-        icon: TrendingUp,
-        path: "/dashboards",
-        description: "Dashboards e indicadores gerenciais",
+        heading: "Indicadores",
+        items: [
+          { label: "Dashboards", icon: TrendingUp, path: "/dashboards", desc: "Indicadores gerenciais e operacionais" },
+          { label: "Produtividade", icon: Activity, path: "/gerenciamento/produtividade", desc: "Repasses e produtividade" },
+        ],
       },
       {
-        label: "Faturamento",
-        icon: CreditCard,
-        path: "/gerenciamento/faturamento",
-        description: "Convênio, SUS e particular",
-      },
-      {
-        label: "Produtividade",
-        icon: Activity,
-        path: "/gerenciamento/produtividade",
-        description: "Repasses e produtividade",
-      },
-      {
-        label: "Farmácia",
-        icon: Pill,
-        path: "/gerenciamento/estoque/farmacia",
-        description: "Estoque de medicamentos",
-      },
-      {
-        label: "Almoxarifado",
-        icon: Package,
-        path: "/gerenciamento/estoque/almoxarifado",
-        description: "Materiais e insumos",
-      },
-      {
-        label: "Laboratório",
-        icon: Beaker,
-        path: "/gerenciamento/estoque/laboratorio",
-        description: "Insumos laboratoriais",
-      },
-      {
-        label: "Nutrição",
-        icon: Utensils,
-        path: "/gerenciamento/estoque/nutricao",
-        description: "Dietas e insumos nutricionais",
-      },
-      { label: "CME", icon: FlaskConical, path: "/cme", description: "Material esterilizado" },
-      {
-        label: "Fechamento de Caixa",
-        icon: Receipt,
-        path: "/gerenciamento/caixa",
-        description: "Conferência e fechamento diário",
+        heading: "Estoque",
+        items: [
+          { label: "Farmácia", icon: Pill, path: "/gerenciamento/estoque/farmacia", desc: "Medicamentos e controlados" },
+          { label: "Almoxarifado", icon: Package, path: "/gerenciamento/estoque/almoxarifado", desc: "Materiais e insumos" },
+          { label: "Laboratório", icon: Beaker, path: "/gerenciamento/estoque/laboratorio", desc: "Insumos laboratoriais" },
+          { label: "Nutrição", icon: Utensils, path: "/gerenciamento/estoque/nutricao", desc: "Dietas e insumos nutricionais" },
+          { label: "CME", icon: FlaskConical, path: "/cme", desc: "Material esterilizado" },
+        ],
       },
     ],
   },
   {
     label: "Assistencial",
     icon: HeartPulse,
-    items: [
+    wide: true,
+    columns: 3,
+    groups: [
       {
-        label: "Home Care",
-        icon: HomeIcon,
-        path: "/assistencial/homecare",
-        description: "Pacientes admitidos em domicílio",
-      },
-      { label: "Internados", icon: BedDouble, path: "/assistencial/internados", description: "Pacientes internados" },
-      { label: "UTI", icon: HeartPulse, path: "/assistencial/uti", description: "Unidade de Terapia Intensiva" },
-      { label: "Pronto Atendimento", icon: Siren, path: "/assistencial/pa", description: "Atendimento emergencial" },
-      {
-        label: "Enfermagem",
-        icon: Activity,
-        path: "/assistencial/enfermagem",
-        description: "Evolução, checagem e cuidados",
+        heading: "Pacientes Admitidos",
+        items: [
+          { label: "Home Care", icon: HomeIcon, path: "/assistencial/homecare", desc: "Pacientes em domicílio" },
+          { label: "Internados", icon: BedDouble, path: "/assistencial/internados", desc: "Pacientes internados" },
+          { label: "UTI", icon: HeartPulse, path: "/assistencial/uti", desc: "Terapia Intensiva" },
+          { label: "Pronto Atendimento", icon: Siren, path: "/assistencial/pa", desc: "Emergência e urgência" },
+        ],
       },
       {
-        label: "Laboratório",
-        icon: FlaskConical,
-        path: "/assistencial/laboratorio",
-        description: "Solicitações e resultados",
-      },
-      { label: "SCIH", icon: ShieldAlert, path: "/assistencial/scih", description: "Controle de infecção hospitalar" },
-      {
-        label: "Farmácia",
-        icon: Pill,
-        path: "/assistencial/farmacia",
-        description: "Dispensação e atendimento à prescrição",
+        heading: "Setores Executores",
+        items: [
+          { label: "Enfermagem", icon: Activity, path: "/assistencial/enfermagem", desc: "Evolução, checagem e cuidados" },
+          { label: "Farmácia", icon: Pill, path: "/assistencial/farmacia", desc: "Atender prescrição" },
+          { label: "Procedimentos", icon: Stethoscope, path: "/assistencial/procedimentos", desc: "Atender prescrição" },
+          { label: "Nutrição", icon: Utensils, path: "/assistencial/nutricao", desc: "Atender prescrição" },
+          { label: "CME / Expurgo", icon: FlaskConical, path: "/cme", desc: "Esterilização e rastreabilidade" },
+        ],
       },
       {
-        label: "Procedimentos",
-        icon: Stethoscope,
-        path: "/assistencial/procedimentos",
-        description: "Execução de procedimentos",
-      },
-      { label: "Nutrição", icon: Utensils, path: "/assistencial/nutricao", description: "Dietas e acompanhamento" },
-      { label: "CME / Expurgo", icon: FlaskConical, path: "/cme", description: "Esterilização e rastreabilidade" },
-      { label: "Triagem", icon: ListChecks, path: "/assistencial/triagem", description: "Classificação de risco" },
-      {
-        label: "Oncologia",
-        icon: Radiation,
-        path: "/assistencial/oncologia",
-        description: "Prescrições e autorizações",
+        heading: "Especializado",
+        items: [
+          { label: "Laboratório", icon: FlaskConical, path: "/assistencial/laboratorio", desc: "Solicitações e resultados" },
+          { label: "SCIH", icon: ShieldAlert, path: "/assistencial/scih", desc: "Controle de infecção" },
+          { label: "Triagem", icon: ListChecks, path: "/assistencial/triagem", desc: "Classificação de risco" },
+          { label: "Oncologia", icon: Radiation, path: "/assistencial/oncologia", desc: "Prescrições e autorizações" },
+        ],
       },
     ],
   },
   {
     label: "CRM",
     icon: Handshake,
-    items: [
+    groups: [
       {
-        label: "Solicitações",
-        icon: FileText,
-        path: "/crm/solicitacoes",
-        description: "Solicitações de exames e serviços",
+        items: [
+          { label: "Solicitações", icon: FileText, path: "/crm/solicitacoes", desc: "Solicitações de exames e serviços" },
+          { label: "Negociação", icon: Handshake, path: "/crm/negociacao", desc: "Acompanhamento comercial" },
+          { label: "Relacionamento", icon: Users, path: "/crm/relacionamento", desc: "CRM e contatos" },
+        ],
       },
-      { label: "Negociação", icon: Handshake, path: "/crm/negociacao", description: "Acompanhamento comercial" },
-      { label: "Relacionamento", icon: Users, path: "/crm/relacionamento", description: "CRM e contatos" },
     ],
   },
 ];
 
+/* ── component ── */
 export default function TopNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile, signOut } = useAuth();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const navRef = useRef<HTMLElement>(null);
 
   const handleEnter = (label: string) => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     setOpenMenu(label);
   };
   const handleLeave = () => {
-    closeTimer.current = setTimeout(() => setOpenMenu(null), 200);
+    closeTimer.current = setTimeout(() => setOpenMenu(null), 180);
   };
 
-  useEffect(() => {
-    setOpenMenu(null);
-  }, [location.pathname]);
+  useEffect(() => { setOpenMenu(null); }, [location.pathname]);
 
   if (!user) return null;
 
   const roleName = profile?.role
-    ? profile.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    ? profile.role.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
     : "Profissional";
 
   return (
     <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur-md shadow-sm">
-      <div className="max-w-[1800px] mx-auto flex items-center h-14 px-4 gap-1">
+      <div className="max-w-[1920px] mx-auto flex items-center h-14 px-4 gap-0.5">
         {/* Brand */}
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-2 mr-4 shrink-0 hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 mr-3 shrink-0 hover:opacity-80 transition-opacity"
         >
           <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <Heart className="h-4 w-4 text-primary" />
@@ -347,60 +247,90 @@ export default function TopNav() {
         </button>
 
         {/* Menu items */}
-        <nav ref={navRef} className="flex items-center gap-0.5 overflow-x-auto flex-1">
-          {menuConfig.map((menu) => (
-            <div
-              key={menu.label}
-              className="relative"
-              onMouseEnter={() => handleEnter(menu.label)}
-              onMouseLeave={handleLeave}
-            >
-              <button
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap",
-                  openMenu === menu.label
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                )}
-              >
-                <menu.icon className="h-4 w-4" />
-                <span className="hidden xl:inline">{menu.label}</span>
-                <ChevronDown className={cn("h-3 w-3 transition-transform", openMenu === menu.label && "rotate-180")} />
-              </button>
+        <nav className="flex items-center gap-0 overflow-x-auto flex-1">
+          {menuConfig.map((menu) => {
+            const isOpen = openMenu === menu.label;
+            const cols = menu.columns ?? 1;
+            const dropW = cols === 3 ? "w-[680px]" : cols === 2 ? "w-[520px]" : "w-[290px]";
 
-              {/* Dropdown */}
-              {openMenu === menu.label && menu.items && (
-                <div
-                  className="absolute top-full left-0 mt-1 w-72 bg-popover border rounded-lg shadow-lg py-1.5 animate-fade-in z-50"
-                  onMouseEnter={() => handleEnter(menu.label)}
-                  onMouseLeave={handleLeave}
+            return (
+              <div
+                key={menu.label}
+                className="relative"
+                onMouseEnter={() => handleEnter(menu.label)}
+                onMouseLeave={handleLeave}
+              >
+                <button
+                  className={cn(
+                    "flex items-center gap-1 px-2.5 py-2 rounded-md text-[13px] font-medium transition-colors whitespace-nowrap",
+                    isOpen
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                  )}
                 >
-                  {menu.items.map((item) => (
-                    <button
-                      key={item.path}
-                      onClick={() => navigate(item.path)}
-                      className={cn(
-                        "w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
-                        location.pathname === item.path && "bg-primary/5 text-primary",
-                      )}
-                    >
-                      <item.icon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-foreground">{item.label}</div>
-                        {item.description && (
-                          <div className="text-xs text-muted-foreground truncate">{item.description}</div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+                  <menu.icon className="h-4 w-4" />
+                  <span className="hidden xl:inline">{menu.label}</span>
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", isOpen && "rotate-180")} />
+                </button>
+
+                {/* Dropdown */}
+                {isOpen && (
+                  <div
+                    className={cn(
+                      "absolute top-full left-0 mt-1 bg-popover border rounded-xl shadow-xl py-2 animate-fade-in z-50",
+                      dropW,
+                    )}
+                    onMouseEnter={() => handleEnter(menu.label)}
+                    onMouseLeave={handleLeave}
+                  >
+                    <div className={cn(
+                      cols > 1 && "grid gap-0",
+                      cols === 2 && "grid-cols-2",
+                      cols === 3 && "grid-cols-3",
+                    )}>
+                      {menu.groups.map((group, gi) => (
+                        <div
+                          key={gi}
+                          className={cn(
+                            "px-1",
+                            cols > 1 && gi > 0 && "border-l border-border",
+                          )}
+                        >
+                          {group.heading && (
+                            <div className="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                              {group.heading}
+                            </div>
+                          )}
+                          {group.items.map((item) => (
+                            <button
+                              key={item.path + item.label}
+                              onClick={() => navigate(item.path)}
+                              className={cn(
+                                "w-full flex items-start gap-2.5 px-3 py-2 rounded-lg text-left transition-colors hover:bg-muted/60",
+                                location.pathname === item.path && "bg-primary/5 text-primary",
+                              )}
+                            >
+                              <item.icon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                              <div className="min-w-0">
+                                <div className="text-[13px] font-medium text-foreground leading-tight">{item.label}</div>
+                                {item.desc && (
+                                  <div className="text-[11px] text-muted-foreground leading-snug mt-0.5 truncate">{item.desc}</div>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         {/* Right side */}
-        <div className="flex items-center gap-2 ml-2 shrink-0">
+        <div className="flex items-center gap-1.5 ml-2 shrink-0">
           <button
             onClick={() => navigate("/patients")}
             className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
