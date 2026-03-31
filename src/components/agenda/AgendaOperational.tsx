@@ -61,6 +61,9 @@ export default function AgendaOperational() {
   const [selectedAgendaIds, setSelectedAgendaIds] = useState<string[]>([]);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [showAgendaFilter, setShowAgendaFilter] = useState(false);
+  const [isEncaixe, setIsEncaixe] = useState(false);
+  const [checkinAppt, setCheckinAppt] = useState<any>(null);
+  const [checkinNotes, setCheckinNotes] = useState("");
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
@@ -107,11 +110,15 @@ export default function AgendaOperational() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.patient_id || !formData.title || !formData.scheduled_date) return;
+    if (isEncaixe && !formData.notes) {
+      alert("Para encaixes, a justificativa (observações) é obrigatória.");
+      return;
+    }
     const scheduledAt = `${formData.scheduled_date}T${formData.scheduled_time}:00`;
     await createAppointment.mutateAsync({
       patient_id: formData.patient_id,
       professional_id: profile?.id || null,
-      title: formData.title,
+      title: formData.title + (isEncaixe ? " (Encaixe)" : ""),
       description: formData.description || null,
       appointment_type: formData.appointment_type as any,
       scheduled_at: scheduledAt,
@@ -122,6 +129,18 @@ export default function AgendaOperational() {
     });
     setFormData({ patient_id: "", title: "", description: "", appointment_type: "consulta", scheduled_date: "", scheduled_time: "08:00", duration_minutes: 30, location: "", notes: "" });
     setShowForm(false);
+    setIsEncaixe(false);
+  };
+
+  const handleCheckin = async () => {
+    if (!checkinAppt) return;
+    await updateAppointment.mutateAsync({ 
+      id: checkinAppt.id, 
+      status: "em_andamento",
+      notes: checkinNotes ? `${checkinAppt.notes || ''}\nChegada: ${checkinNotes}`.trim() : checkinAppt.notes
+    });
+    setCheckinAppt(null);
+    setCheckinNotes("");
   };
 
   const handleStatusChange = async (id: string, status: string) => {
@@ -167,6 +186,11 @@ export default function AgendaOperational() {
                   ))}
                 </SelectContent>
               </Select>
+              {appointment.status === "agendado" || appointment.status === "confirmado" ? (
+                 <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-emerald-600 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20" onClick={() => setCheckinAppt(appointment)}>
+                   Check-in
+                 </Button>
+              ) : null}
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
                 const patientId = appointment.patient_id;
                 if (patientId) navigate(`/prontuario/${patientId}`);
@@ -310,11 +334,11 @@ export default function AgendaOperational() {
             </div>
 
             <div className="ml-auto flex gap-2">
-              <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => { setFormData({ ...formData, scheduled_date: dateStr, appointment_type: "consulta" }); setShowForm(true); }}>
+              <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => { setIsEncaixe(true); setFormData({ ...formData, scheduled_date: dateStr, appointment_type: "consulta" }); setShowForm(true); }}>
                 <UserCheck className="h-3.5 w-3.5" />
                 Encaixe
               </Button>
-              <Button size="sm" className="h-8 gap-1.5" onClick={() => { setFormData({ ...formData, scheduled_date: dateStr }); setShowForm(true); }}>
+              <Button size="sm" className="h-8 gap-1.5" onClick={() => { setIsEncaixe(false); setFormData({ ...formData, scheduled_date: dateStr }); setShowForm(true); }}>
                 <Plus className="h-3.5 w-3.5" />
                 Agendar
               </Button>
@@ -422,7 +446,16 @@ export default function AgendaOperational() {
       {/* New Appointment Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Novo Agendamento</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>
+              {isEncaixe ? (
+                <span className="flex items-center gap-2 text-violet-600">
+                  <UserCheck className="h-5 w-5" /> 
+                  Novo Encaixe
+                </span>
+              ) : "Novo Agendamento"}
+            </DialogTitle>
+          </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Paciente *</Label>
@@ -458,7 +491,7 @@ export default function AgendaOperational() {
                 <Input type="date" value={formData.scheduled_date} onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })} required />
               </div>
               <div className="space-y-1.5">
-                <Label>Horário *</Label>
+                <Label>Horário {isEncaixe ? "(Sugerido) *" : "*"}</Label>
                 <Input type="time" value={formData.scheduled_time} onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })} required />
               </div>
             </div>
@@ -467,17 +500,61 @@ export default function AgendaOperational() {
               <Input value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder="Ex: Consultório 3" />
             </div>
             <div className="space-y-1.5">
-              <Label>Observações</Label>
-              <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={2} />
+              <Label>{isEncaixe ? "Justificativa (Obrigatória) *" : "Observações"}</Label>
+              <Textarea 
+                value={formData.notes} 
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })} 
+                required={isEncaixe} 
+                placeholder={isEncaixe ? "Explique o motivo do encaixe..." : "Observações gerais"} 
+                rows={2} 
+              />
             </div>
             <div className="flex justify-end gap-3 pt-2 border-t">
               <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
               <Button type="submit" disabled={createAppointment.isPending}>
                 {createAppointment.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Criar Agendamento
+                {isEncaixe ? "Salvar Encaixe" : "Criar Agendamento"}
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Check-in Dialog */}
+      <Dialog open={!!checkinAppt} onOpenChange={(open) => !open && setCheckinAppt(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirmar Check-in</DialogTitle>
+          </DialogHeader>
+          {checkinAppt && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted/50 rounded-lg text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Paciente:</span>
+                  <span className="font-medium text-right">{checkinAppt.patients?.full_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Horário Agendado:</span>
+                  <span className="font-medium">{format(parseISO(checkinAppt.scheduled_at), "HH:mm")}</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Observação de Chegada</Label>
+                <Textarea 
+                  value={checkinNotes} 
+                  onChange={(e) => setCheckinNotes(e.target.value)} 
+                  placeholder="Ex: Paciente chegou acompanhado..." 
+                  rows={2} 
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={() => setCheckinAppt(null)}>Cancelar</Button>
+                <Button onClick={handleCheckin} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  Registrar Chegada
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
