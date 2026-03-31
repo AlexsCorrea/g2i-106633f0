@@ -2089,6 +2089,440 @@ export type Database = {
           },
         ]
       }
+      schedule_agendas: {
+        Row: {
+          absence_notification: boolean
+          accepts_fit_in: boolean
+          accepts_return: boolean
+          agenda_type: string
+          allow_no_professional: boolean
+          allowed_insurances: string[] | null
+          allows_multi_unit: boolean
+          allows_overlap: boolean
+          allows_retroactive: boolean
+          auto_block_holidays: boolean
+          auto_confirm: boolean
+          blocked_insurances: string[] | null
+          code: string | null
+          created_at: string
+          daily_patient_limit: number | null
+          default_duration: number
+          default_interval: number
+          delay_tolerance: number | null
+          description: string | null
+          fit_in_limit_per_shift: number | null
+          id: string
+          instructions: string | null
+          insurance_control: boolean
+          internal_notes: string | null
+          name: string
+          notify_whatsapp: boolean
+          opening_mode: string
+          pre_appointment_reminder: boolean
+          professional_id: string | null
+          reception_rules: string | null
+          requires_confirmation: boolean
+          room_resource: string | null
+          sector: string | null
+          specialty: string | null
+          status: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          absence_notification?: boolean
+          accepts_fit_in?: boolean
+          accepts_return?: boolean
+          agenda_type?: string
+          allow_no_professional?: boolean
+          allowed_insurances?: string[] | null
+          allows_multi_unit?: boolean
+          allows_overlap?: boolean
+          allows_retroactive?: boolean
+          auto_block_holidays?: boolean
+          auto_confirm?: boolean
+          blocked_insurances?: string[] | null
+          code?: string | null
+          created_at?: string
+          daily_patient_limit?: number | null
+          default_duration?: number
+          default_interval?: number
+          delay_tolerance?: number | null
+          description?: string | null
+          fit_in_limit_per_shift?: number | null
+          id?: string
+          instructions?: string | null
+          insurance_control?: boolean
+          internal_notes?: string | null
+          name: string
+          notify_whatsapp?: boolean
+          opening_mode?: string
+          pre_appointment_reminder?: boolean
+          professional_id?: string | null
+          reception_rules?: string | null
+          requires_confirmation?: boolean
+          room_resource?: string | null
+          sector?: string | null
+          specialty?: string | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          absence_notification?: boolean
+          accepts_fit_in?: boolean
+          accepts_return?: boolean
+          agenda_type?: string
+          allow_no_professional?: boolean
+          allowed_insurances?: string[] | null
+          allows_multi_unit?: boolean
+          allows_overlap?: boolean
+          allows_retroactive?: boolean
+          auto_block_holidays?: boolean
+          auto_confirm?: boolean
+          blocked_insurances?: string[] | null
+          code?: string | null
+          created_at?: string
+          daily_patient_limit?: number | null
+          default_duration?: number
+          default_interval?: number
+          delay_tolerance?: number | null
+          description?: string | null
+          fit_in_limit_per_shift?: number | null
+          id?: string
+          instructions?: string | null
+          insurance_control?: boolean
+          internal_notes?: string | null
+          name?: string
+          notify_whatsapp?: boolean
+          opening_mode?: string
+          pre_appointment_reminder?: boolean
+          professional_id?: string | null
+          reception_rules?: string | null
+          requires_confirmation?: boolean
+          room_resource?: string | null
+          sector?: string | null
+          specialty?: string | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      schedule_blocks: {
+        Row: {
+          affected_patients: number | null
+          affected_slots: number | null
+          agenda_id: string
+          block_new_only: boolean
+          block_type: string
+          created_at: string
+          end_date: string
+          end_time: string | null
+          id: string
+          internal_notes: string | null
+          origin: string
+          reason: string
+          recurrence: string | null
+          start_date: string
+          start_time: string | null
+        }
+        Insert: {
+          affected_patients?: number | null
+          affected_slots?: number | null
+          agenda_id: string
+          block_new_only?: boolean
+          block_type?: string
+          created_at?: string
+          end_date: string
+          end_time?: string | null
+          id?: string
+          internal_notes?: string | null
+          origin?: string
+          reason: string
+          recurrence?: string | null
+          start_date: string
+          start_time?: string | null
+        }
+        Update: {
+          affected_patients?: number | null
+          affected_slots?: number | null
+          agenda_id?: string
+          block_new_only?: boolean
+          block_type?: string
+          created_at?: string
+          end_date?: string
+          end_time?: string | null
+          id?: string
+          internal_notes?: string | null
+          origin?: string
+          reason?: string
+          recurrence?: string | null
+          start_date?: string
+          start_time?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_blocks_agenda_id_fkey"
+            columns: ["agenda_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_agendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_holidays: {
+        Row: {
+          allows_exception: boolean
+          auto_block: boolean
+          created_at: string
+          holiday_date: string
+          holiday_type: string
+          id: string
+          name: string
+          unit: string | null
+        }
+        Insert: {
+          allows_exception?: boolean
+          auto_block?: boolean
+          created_at?: string
+          holiday_date: string
+          holiday_type?: string
+          id?: string
+          name: string
+          unit?: string | null
+        }
+        Update: {
+          allows_exception?: boolean
+          auto_block?: boolean
+          created_at?: string
+          holiday_date?: string
+          holiday_type?: string
+          id?: string
+          name?: string
+          unit?: string | null
+        }
+        Relationships: []
+      }
+      schedule_notes: {
+        Row: {
+          agenda_id: string
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note_type: string
+          specific_date: string | null
+        }
+        Insert: {
+          agenda_id: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note_type?: string
+          specific_date?: string | null
+        }
+        Update: {
+          agenda_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note_type?: string
+          specific_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_notes_agenda_id_fkey"
+            columns: ["agenda_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_agendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_periods: {
+        Row: {
+          agenda_id: string
+          allowed_insurances: string[] | null
+          allowed_procedures: string[] | null
+          allows_fit_in: boolean
+          block_type: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          interval_minutes: number
+          notes: string | null
+          opening_type: string
+          period_type: string
+          slot_count: number | null
+          start_time: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          agenda_id: string
+          allowed_insurances?: string[] | null
+          allowed_procedures?: string[] | null
+          allows_fit_in?: boolean
+          block_type?: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          interval_minutes?: number
+          notes?: string | null
+          opening_type?: string
+          period_type?: string
+          slot_count?: number | null
+          start_time: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          agenda_id?: string
+          allowed_insurances?: string[] | null
+          allowed_procedures?: string[] | null
+          allows_fit_in?: boolean
+          block_type?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          interval_minutes?: number
+          notes?: string | null
+          opening_type?: string
+          period_type?: string
+          slot_count?: number | null
+          start_time?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_periods_agenda_id_fkey"
+            columns: ["agenda_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_agendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_special_hours: {
+        Row: {
+          agenda_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          origin: string
+          professional_id: string | null
+          slot_count: number | null
+          slot_type: string
+          specific_date: string
+          start_time: string
+          unit: string | null
+        }
+        Insert: {
+          agenda_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          origin?: string
+          professional_id?: string | null
+          slot_count?: number | null
+          slot_type?: string
+          specific_date: string
+          start_time: string
+          unit?: string | null
+        }
+        Update: {
+          agenda_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          origin?: string
+          professional_id?: string | null
+          slot_count?: number | null
+          slot_type?: string
+          specific_date?: string
+          start_time?: string
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_special_hours_agenda_id_fkey"
+            columns: ["agenda_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_agendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_wait_list: {
+        Row: {
+          agenda_id: string | null
+          appointment_type: string | null
+          created_at: string
+          desired_date: string | null
+          desired_period: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          priority: string
+          professional_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agenda_id?: string | null
+          appointment_type?: string | null
+          created_at?: string
+          desired_date?: string | null
+          desired_period?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          priority?: string
+          professional_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agenda_id?: string | null
+          appointment_type?: string | null
+          created_at?: string
+          desired_date?: string | null
+          desired_period?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          priority?: string
+          professional_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_wait_list_agenda_id_fkey"
+            columns: ["agenda_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_agendas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_wait_list_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       surgical_procedures: {
         Row: {
           anesthesia_type: string | null
