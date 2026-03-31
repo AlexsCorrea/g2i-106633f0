@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/lib/errorHandler";
 
 export interface QueueTicket {
   id: string;
@@ -151,7 +152,7 @@ export function useGenerateTicket() {
       queryClient.invalidateQueries({ queryKey: ["queue_tickets"] });
     },
     onError: (error) => {
-      toast.error("Erro ao gerar senha: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
@@ -207,7 +208,7 @@ export function useCallNextTicket() {
       toast.success(`Senha ${data.ticket_number} chamada!`);
     },
     onError: (error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }

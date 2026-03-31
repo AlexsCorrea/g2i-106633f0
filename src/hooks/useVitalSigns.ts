@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/lib/errorHandler";
+import { vitalSignsSchema } from "@/lib/validations";
 
 export interface VitalSign {
   id: string;
@@ -67,6 +69,7 @@ export function useCreateVitalSign() {
 
   return useMutation({
     mutationFn: async (vitalSign: Omit<VitalSign, "id" | "created_at" | "profiles">) => {
+      vitalSignsSchema.parse(vitalSign);
       const { data, error } = await supabase
         .from("vital_signs")
         .insert(vitalSign)
@@ -81,7 +84,7 @@ export function useCreateVitalSign() {
       toast.success("Sinais vitais registrados!");
     },
     onError: (error) => {
-      toast.error("Erro ao registrar sinais vitais: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }

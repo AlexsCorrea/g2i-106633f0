@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/lib/errorHandler";
 
 export interface Appointment {
   id: string;
@@ -70,7 +71,7 @@ export function useCreateAppointment() {
       toast.success("Agendamento criado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao criar agendamento: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
@@ -95,7 +96,7 @@ export function useUpdateAppointment() {
       toast.success("Agendamento atualizado!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar agendamento: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
@@ -117,7 +118,7 @@ export function useDeleteAppointment() {
       toast.success("Agendamento removido!");
     },
     onError: (error) => {
-      toast.error("Erro ao remover agendamento: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }

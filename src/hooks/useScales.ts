@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/lib/errorHandler";
 
 // Braden Scale
 export interface BradenScale {
@@ -110,7 +111,7 @@ export function useCreateBraden() {
       toast.success("Escala de Braden registrada!");
     },
     onError: (error) => {
-      toast.error("Erro ao registrar Braden: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
@@ -173,7 +174,7 @@ export function useCreateMorse() {
       toast.success("Escala de Morse registrada!");
     },
     onError: (error) => {
-      toast.error("Erro ao registrar Morse: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
@@ -236,7 +237,7 @@ export function useCreateGlasgow() {
       toast.success("Escala de Glasgow registrada!");
     },
     onError: (error) => {
-      toast.error("Erro ao registrar Glasgow: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
