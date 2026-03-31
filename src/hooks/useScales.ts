@@ -111,7 +111,7 @@ export function useCreateBraden() {
       toast.success("Escala de Braden registrada!");
     },
     onError: (error) => {
-      toast.error("Erro ao registrar Braden: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
