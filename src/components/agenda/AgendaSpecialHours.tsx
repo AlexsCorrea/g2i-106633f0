@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useScheduleAgendas, useScheduleSpecialHours, useCreateScheduleSpecialHour, useDeleteScheduleSpecialHour } from "@/hooks/useScheduleAgendas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,9 @@ const originLabels: Record<string, string> = {
 };
 
 export default function AgendaSpecialHours() {
-  const [selectedAgenda, setSelectedAgenda] = useState<string>("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlAgenda = searchParams.get("agenda") || "";
+  const [selectedAgenda, setSelectedAgenda] = useState<string>(urlAgenda);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     specific_date: "", start_time: "08:00", end_time: "12:00",
@@ -31,6 +34,19 @@ export default function AgendaSpecialHours() {
   const { data: specialHours, isLoading } = useScheduleSpecialHours(selectedAgenda || undefined);
   const createSH = useCreateScheduleSpecialHour();
   const deleteSH = useDeleteScheduleSpecialHour();
+
+  useEffect(() => {
+    if (urlAgenda && urlAgenda !== selectedAgenda) {
+      setSelectedAgenda(urlAgenda);
+    }
+  }, [urlAgenda]);
+
+  const handleSelectAgenda = (id: string) => {
+    setSelectedAgenda(id);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("agenda", id);
+    setSearchParams(newParams);
+  };
 
   const filtered = selectedAgenda ? specialHours?.filter(s => s.agenda_id === selectedAgenda) : specialHours;
 
@@ -67,7 +83,7 @@ export default function AgendaSpecialHours() {
         <CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-3">
             <Label className="whitespace-nowrap">Agenda:</Label>
-            <Select value={selectedAgenda} onValueChange={setSelectedAgenda}>
+            <Select value={selectedAgenda} onValueChange={handleSelectAgenda}>
               <SelectTrigger className="w-[300px]"><SelectValue placeholder="Selecione a agenda" /></SelectTrigger>
               <SelectContent>
                 {agendas?.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
@@ -78,10 +94,27 @@ export default function AgendaSpecialHours() {
       </Card>
 
       {!selectedAgenda ? (
-        <Card className="p-8 text-center">
-          <Star className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-          <p className="text-muted-foreground">Selecione uma agenda</p>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {agendas?.map((a) => (
+            <Card key={a.id} className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => handleSelectAgenda(a.id)}>
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold">{a.name}</h4>
+                  <p className="text-xs text-muted-foreground">{a.specialty || "Geral"} • {a.unit || "Sem unidade"}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Star className="h-4 w-4 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          {!agendas?.length && (
+            <div className="col-span-full text-center py-12">
+              <Star className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+              <p className="text-muted-foreground">Nenhuma agenda cadastrada</p>
+            </div>
+          )}
+        </div>
       ) : isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : (

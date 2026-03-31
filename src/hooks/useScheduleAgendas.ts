@@ -281,6 +281,8 @@ export interface ScheduleHoliday {
   unit: string | null;
   auto_block: boolean;
   allows_exception: boolean;
+  affected_agendas: string[] | null;
+  notes: string | null;
   created_at: string;
 }
 
@@ -305,6 +307,19 @@ export function useCreateScheduleHoliday() {
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["schedule_holidays"] }); toast.success("Feriado cadastrado!"); },
     onError: (e: any) => toast.error("Erro: " + e.message),
+  });
+}
+
+export function useCreateScheduleHolidaysBatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (holidays: Partial<ScheduleHoliday>[]) => {
+      const { data, error } = await supabase.from("schedule_holidays").insert(holidays as any).select();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["schedule_holidays"] }); toast.success("Feriados gerados em lote com sucesso!"); },
+    onError: (e: any) => toast.error("Erro ao gerar feriados: " + e.message),
   });
 }
 

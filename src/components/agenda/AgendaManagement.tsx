@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useScheduleAgendas, useCreateScheduleAgenda, useUpdateScheduleAgenda, useDeleteScheduleAgenda } from "@/hooks/useScheduleAgendas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Search, Edit, Trash2, Copy, Eye, Loader2, CalendarDays } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Copy, Eye, Loader2, CalendarDays, MoreVertical, Clock, Star, CalendarOff, Settings, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
 
 const agendaTypeLabels: Record<string, string> = {
@@ -45,6 +47,7 @@ const emptyForm = {
 };
 
 export default function AgendaManagement() {
+  const [, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
@@ -126,6 +129,10 @@ export default function AgendaManagement() {
     if (editingId) await updateAgenda.mutateAsync({ id: editingId, ...payload });
     else await createAgenda.mutateAsync(payload);
     setShowForm(false);
+  };
+
+  const navigateTo = (tab: string, agendaId: string) => {
+    setSearchParams({ tab, agenda: agendaId });
   };
 
   const handleDelete = async (id: string) => {
@@ -217,9 +224,37 @@ export default function AgendaManagement() {
                     <TableCell><Badge className={statusColors[a.status] || ""}>{a.status}</Badge></TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(a)}><Edit className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(a)}><Copy className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(a.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(a)} title="Editar Cadastro"><Edit className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(a)} title="Duplicar"><Copy className="h-3.5 w-3.5" /></Button>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Ações Rápidas">
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>Configurar Agenda</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => navigateTo("periodos", a.id)}>
+                              <Clock className="h-4 w-4 mr-2" /> Grade de Horários
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigateTo("especiais", a.id)}>
+                              <Star className="h-4 w-4 mr-2" /> Horários Especiais
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigateTo("bloqueios", a.id)}>
+                              <CalendarOff className="h-4 w-4 mr-2" /> Bloqueios / Ausências
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => navigateTo("fila", a.id)}>
+                              <ListOrdered className="h-4 w-4 mr-2" /> Ver Fila de Espera
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => handleDelete(a.id)}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Excluir Agenda
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>

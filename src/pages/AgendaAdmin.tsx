@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Calendar, ArrowLeft, Settings2, Clock, CalendarOff, Star, Flag,
-  ListOrdered, FileText, Heart, ChevronRight
+  ListOrdered, FileText, Heart, ChevronRight, Stethoscope, FilePlus, UserCog, Ban, Link2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AgendaManagement from "@/components/agenda/AgendaManagement";
@@ -13,6 +13,7 @@ import AgendaBlocks from "@/components/agenda/AgendaBlocks";
 import AgendaWaitList from "@/components/agenda/AgendaWaitList";
 import AgendaHolidays from "@/components/agenda/AgendaHolidays";
 import AgendaSettings from "@/components/agenda/AgendaSettings";
+import AgendaAuxSettings from "@/components/agenda/admin/AgendaAuxSettings";
 
 const sidebarItems = [
   { id: "agendas", label: "Cadastro de Agendas", icon: Calendar },
@@ -21,13 +22,30 @@ const sidebarItems = [
   { id: "bloqueios", label: "Bloqueios", icon: CalendarOff },
   { id: "feriados", label: "Feriados", icon: Flag },
   { id: "fila", label: "Fila de Espera", icon: ListOrdered },
+  { id: "convenios", label: "Convênios", icon: Link2 },
+  { id: "procedimentos", label: "Procedimentos", icon: FilePlus },
+  { id: "tipos_atendimento", label: "Tipos de Atendimento", icon: Stethoscope },
+  { id: "medicos_externos", label: "Médicos Externos", icon: UserCog },
+  { id: "motivos_bloqueio", label: "Motivos / Justificativas", icon: Ban },
   { id: "config", label: "Configurações Gerais", icon: Settings2 },
 ];
 
 export default function AgendaAdmin() {
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState("agendas");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const activeSection = searchParams.get("tab") || "agendas";
+
+  const setTab = (tabId: string) => {
+    // Preserva o parâmetro 'agenda' se houver
+    const agendaId = searchParams.get("agenda");
+    if (agendaId && tabId !== "agendas") {
+      setSearchParams({ tab: tabId, agenda: agendaId });
+    } else {
+      setSearchParams({ tab: tabId });
+    }
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -38,6 +56,52 @@ export default function AgendaAdmin() {
       case "feriados": return <AgendaHolidays />;
       case "fila": return <AgendaWaitList />;
       case "config": return <AgendaSettings />;
+      case "convenios": return <AgendaAuxSettings 
+          title="Convênios e Planos" 
+          description="Gerencie os convênios que poderão ser atrelados às agendas." 
+          mockData={[
+            { id: "1", name: "Unimed Seguros", detail: "Ativo em 12 agendas", status: "Ativo" },
+            { id: "2", name: "Bradesco Saúde", detail: "Ativo em 5 agendas", status: "Ativo" },
+            { id: "3", name: "Amil Assistência", detail: "Ativo em 15 agendas", status: "Ativo" },
+            { id: "4", name: "SulAmérica Especial", detail: "Ativo em 8 agendas", status: "Inativo" }
+          ]} 
+        />;
+      case "procedimentos": return <AgendaAuxSettings 
+          title="Catálogo de Procedimentos" 
+          description="Procedimentos e exames habilitados por agenda." 
+          mockData={[
+            { id: "1", name: "Endoscopia Digestiva Alta", detail: "Duração Média: 40 min", status: "Ativo" },
+            { id: "2", name: "Ecocardiograma com Doppler", detail: "Duração Média: 30 min", status: "Ativo" },
+            { id: "3", name: "Consulta Psicológica", detail: "Duração Média: 50 min", status: "Ativo" }
+          ]} 
+        />;
+      case "tipos_atendimento": return <AgendaAuxSettings 
+          title="Tipos de Atendimento" 
+          description="Classificações para os agendamentos realizados." 
+          mockData={[
+            { id: "1", name: "Primeira Vez", detail: "Requer cadastro completo", status: "Ativo" },
+            { id: "2", name: "Retorno", detail: "Até 30 dias", status: "Ativo" },
+            { id: "3", name: "Rotina", detail: "Manutenção e revisão", status: "Ativo" },
+            { id: "4", name: "Emergencial", detail: "Encaixe prioritário", status: "Ativo" }
+          ]} 
+        />;
+      case "medicos_externos": return <AgendaAuxSettings 
+          title="Profissionais Externos" 
+          description="Cadastro de médicos parceiros ou não atuantes contínuos." 
+          mockData={[
+            { id: "1", name: "Dr. Roberto Neves", detail: "CRM 43900 - Anestesista Parceiro", status: "Ativo" },
+            { id: "2", name: "Dra. Ana Flávia Rossi", detail: "CRM 99281 - Cirurgiã Geral (Sobraviso)", status: "Ativo" }
+          ]} 
+        />;
+      case "motivos_bloqueio": return <AgendaAuxSettings 
+          title="Motivos / Justificativas" 
+          description="Lista de motivos recorrentes para bloqueios de agenda." 
+          mockData={[
+            { id: "1", name: "Férias Profissional", detail: "Automático sem exceções", status: "Ativo" },
+            { id: "2", name: "Manutenção Predial / Sala", detail: "Requere realocação", status: "Ativo" },
+            { id: "3", name: "Congresso / Curso", detail: "Pode prever substituto", status: "Ativo" }
+          ]} 
+        />;
       default: return <AgendaManagement />;
     }
   };
@@ -82,7 +146,7 @@ export default function AgendaAdmin() {
             {sidebarItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveSection(item.id)}
+                onClick={() => setTab(item.id)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
                   activeSection === item.id

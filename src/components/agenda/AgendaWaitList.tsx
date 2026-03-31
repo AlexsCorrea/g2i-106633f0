@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useScheduleAgendas, useScheduleWaitList, useCreateScheduleWaitListItem, useUpdateScheduleWaitListItem, useDeleteScheduleWaitListItem } from "@/hooks/useScheduleAgendas";
 import { usePatients } from "@/hooks/usePatients";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ const statusLabels: Record<string, { label: string; color: string }> = {
 };
 
 export default function AgendaWaitList() {
+  const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     patient_id: "", agenda_id: "", professional_name: "",
@@ -54,6 +56,19 @@ export default function AgendaWaitList() {
     });
     setShowForm(false);
     setForm({ patient_id: "", agenda_id: "", professional_name: "", desired_date: "", desired_period: "", appointment_type: "consulta", priority: "normal", notes: "" });
+  };
+
+  const handleSchedulePatient = async (item: any) => {
+    // 1. Atualizar status na fila
+    await updateItem.mutateAsync({ id: item.id, status: "agendado" });
+    
+    // 2. Navegar para a Agenda Operacional com os dados
+    const params = new URLSearchParams();
+    if (item.patient_id) params.set("patient", item.patient_id);
+    if (item.agenda_id) params.set("agenda", item.agenda_id);
+    if (item.desired_date) params.set("date", item.desired_date);
+    
+    navigate(`/agenda?${params.toString()}`);
   };
 
   return (
@@ -110,7 +125,7 @@ export default function AgendaWaitList() {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           {item.status === "aguardando" && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600" onClick={() => updateItem.mutateAsync({ id: item.id, status: "agendado" })} title="Marcar como agendado">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600" onClick={() => handleSchedulePatient(item)} title="Agendar Paciente">
                               <CalendarPlus className="h-3.5 w-3.5" />
                             </Button>
                           )}

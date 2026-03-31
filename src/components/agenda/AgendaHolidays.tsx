@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useScheduleHolidays, useCreateScheduleHoliday, useDeleteScheduleHoliday } from "@/hooks/useScheduleAgendas";
+import { useScheduleHolidays, useCreateScheduleHoliday, useDeleteScheduleHoliday, useCreateScheduleHolidaysBatch, useScheduleAgendas } from "@/hooks/useScheduleAgendas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Loader2, Flag } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Plus, Trash2, Loader2, Flag, Zap } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 const typeLabels: Record<string, string> = {
@@ -22,10 +25,13 @@ export default function AgendaHolidays() {
   const [form, setForm] = useState({
     name: "", holiday_type: "nacional", holiday_date: "",
     unit: "", auto_block: true, allows_exception: true,
+    affected_agendas: [] as string[], notes: ""
   });
 
+  const { data: agendas } = useScheduleAgendas();
   const { data: holidays, isLoading } = useScheduleHolidays();
   const createHoliday = useCreateScheduleHoliday();
+  const createHolidaysBatch = useCreateScheduleHolidaysBatch();
   const deleteHoliday = useDeleteScheduleHoliday();
 
   const handleSubmit = async () => {
@@ -37,10 +43,32 @@ export default function AgendaHolidays() {
       unit: form.unit || null,
       auto_block: form.auto_block,
       allows_exception: form.allows_exception,
+      affected_agendas: form.affected_agendas.length > 0 ? form.affected_agendas : null,
+      notes: form.notes || null,
     });
     setShowForm(false);
-    setForm({ name: "", holiday_type: "nacional", holiday_date: "", unit: "", auto_block: true, allows_exception: true });
+    setForm({ name: "", holiday_type: "nacional", holiday_date: "", unit: "", auto_block: true, allows_exception: true, affected_agendas: [], notes: "" });
   };
+
+  const handleGenerateNational = async () => {
+    if (!confirm("Isso gerará os feriados nacionais fixos para o ano atual e próximo. Deseja continuar?")) return;
+    const year = new Date().getFullYear();
+    const years = [year, year + 1];
+    const fixedHolidays = [
+      { name: "Confraternização Universal", date: "01-01" }, { name: "Tiradentes", date: "04-21" },
+      { name: "Dia do Trabalhador", date: "05-01" }, { name: "Independência do Brasil", date: "09-07" },
+      { name: "Nossa Sra. Aparecida", date: "10-12" }, { name: "Finados", date: "11-02" },
+      { name: "Proclamação da República", date: "11-15" }, { name: "Natal", date: "12-25" },
+    ];
+    const toInsert = years.flatMap(y => 
+      fixedHolidays.map(h => ({
+        name: h.name, holiday_type: "nacional", holiday_date: `${y}-${h.date}`,
+        auto_block: true, allows_exception: true, unit: null, affected_agendas: null, notes: "Gerado automaticamente"
+      }))
+    );
+    await createHolidaysBatch.mutateAsync(toInsert);
+  };
+
 
   return (
     <div className="space-y-6">
@@ -49,10 +77,16 @@ export default function AgendaHolidays() {
           <h2 className="text-xl font-bold text-foreground">Feriados</h2>
           <p className="text-sm text-muted-foreground">Configure feriados e bloqueios automáticos</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Feriado
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleGenerateNational} disabled={createHolidaysBatch.isPending} className="gap-2">
+            {createHolidaysBatch.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4 text-emerald-500" />}
+            Gerar Nacionais
+          </Button>
+          <Button onClick={() => setShowForm(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Feriado
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -86,6 +120,7 @@ export default function AgendaHolidays() {
                     <TableCell className="text-muted-foreground">{h.unit || "Todas"}</TableCell>
                     <TableCell>{h.auto_block ? <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">Sim</Badge> : "Não"}</TableCell>
                     <TableCell>{h.allows_exception ? "Sim" : "Não"}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{h.affected_agendas?.length ? `${h.affected_agendas.length} limitadas` : "Todas"}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteHoliday.mutateAsync(h.id)}>
                         <Trash2 className="h-3.5 w-3.5" />
@@ -132,10 +167,44 @@ export default function AgendaHolidays() {
                 <Switch checked={form.auto_block} onCheckedChange={(v) => setForm({ ...form, auto_block: v })} />
               </div>
               <div className="flex items-center justify-between p-2 rounded-lg border">
-                <Label className="text-sm">Permite exceção</Label>
+                <Label className="text-sm">Permite exceção (sobreposição de horário no operacional)</Label>
                 <Switch checked={form.allows_exception} onCheckedChange={(v) => setForm({ ...form, allows_exception: v })} />
               </div>
             </div>
+            
+            <div className="space-y-1.5">
+              <Label>Agendas Afetadas (vazio = todas da unidade)</Label>
+              <ScrollArea className="h-[120px] rounded-md border p-2 bg-muted/20">
+                <div className="space-y-2">
+                  {agendas?.filter(a => !form.unit || a.unit === form.unit).map((a) => (
+                    <div key={a.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`agenda-${a.id}`} 
+                        checked={form.affected_agendas.includes(a.id)}
+                        onCheckedChange={(checked) => {
+                          setForm({
+                            ...form,
+                            affected_agendas: checked 
+                              ? [...form.affected_agendas, a.id] 
+                              : form.affected_agendas.filter(id => id !== a.id)
+                          });
+                        }}
+                      />
+                      <label htmlFor={`agenda-${a.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-muted-foreground">
+                        {a.name} {a.specialty && `(${a.specialty})`}
+                      </label>
+                    </div>
+                  ))}
+                  {agendas?.length === 0 && <div className="text-xs text-muted-foreground p-2">Nenhuma agenda encontrada.</div>}
+                </div>
+              </ScrollArea>
+            </div>
+            
+            <div className="space-y-1.5">
+              <Label>Observação</Label>
+              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+            </div>
+
             <div className="flex justify-end gap-3 pt-2 border-t">
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
               <Button onClick={handleSubmit} disabled={createHoliday.isPending}>
