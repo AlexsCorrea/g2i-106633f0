@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/lib/errorHandler";
+import { medicationSchema } from "@/lib/validations";
 
 export interface Medication {
   id: string;
@@ -44,9 +46,10 @@ export function useCreateMedication() {
 
   return useMutation({
     mutationFn: async (medication: Omit<Medication, "id" | "created_at" | "updated_at" | "profiles">) => {
+      const validated = medicationSchema.parse(medication);
       const { data, error } = await supabase
         .from("medications")
-        .insert(medication)
+        .insert(validated)
         .select()
         .single();
 
@@ -58,7 +61,7 @@ export function useCreateMedication() {
       toast.success("Medicamento prescrito com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao prescrever medicamento: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
@@ -83,7 +86,7 @@ export function useUpdateMedication() {
       toast.success("Medicamento atualizado!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar medicamento: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }

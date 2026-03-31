@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/lib/errorHandler";
+import { patientSchema } from "@/lib/validations";
 
 export interface Patient {
   id: string;
@@ -63,9 +65,10 @@ export function useCreatePatient() {
 
   return useMutation({
     mutationFn: async (patient: Omit<Patient, "id" | "created_at" | "updated_at">) => {
+      const validated = patientSchema.parse(patient);
       const { data, error } = await supabase
         .from("patients")
-        .insert(patient)
+        .insert(validated)
         .select()
         .single();
 
@@ -77,7 +80,7 @@ export function useCreatePatient() {
       toast.success("Paciente cadastrado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao cadastrar paciente: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
@@ -103,7 +106,7 @@ export function useUpdatePatient() {
       toast.success("Paciente atualizado com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar paciente: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }

@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/lib/errorHandler";
+import { evolutionNoteSchema } from "@/lib/validations";
 
 export interface EvolutionNote {
   id: string;
@@ -42,9 +44,10 @@ export function useCreateEvolutionNote() {
 
   return useMutation({
     mutationFn: async (note: Omit<EvolutionNote, "id" | "created_at" | "profiles">) => {
+      const validated = evolutionNoteSchema.parse(note);
       const { data, error } = await supabase
         .from("evolution_notes")
-        .insert(note)
+        .insert(validated)
         .select()
         .single();
 
@@ -56,7 +59,7 @@ export function useCreateEvolutionNote() {
       toast.success("Evolução registrada com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao registrar evolução: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
