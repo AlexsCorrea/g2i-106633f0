@@ -2273,6 +2273,7 @@ export type Database = {
       }
       schedule_holidays: {
         Row: {
+          affected_agendas: string[] | null
           allows_exception: boolean
           auto_block: boolean
           created_at: string
@@ -2280,9 +2281,11 @@ export type Database = {
           holiday_type: string
           id: string
           name: string
+          notes: string | null
           unit: string | null
         }
         Insert: {
+          affected_agendas?: string[] | null
           allows_exception?: boolean
           auto_block?: boolean
           created_at?: string
@@ -2290,9 +2293,11 @@ export type Database = {
           holiday_type?: string
           id?: string
           name: string
+          notes?: string | null
           unit?: string | null
         }
         Update: {
+          affected_agendas?: string[] | null
           allows_exception?: boolean
           auto_block?: boolean
           created_at?: string
@@ -2300,6 +2305,7 @@ export type Database = {
           holiday_type?: string
           id?: string
           name?: string
+          notes?: string | null
           unit?: string | null
         }
         Relationships: []
