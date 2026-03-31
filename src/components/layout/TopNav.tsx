@@ -2,17 +2,52 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Heart, LogOut, User, ChevronDown,
-  DoorOpen, Calendar, Users, ClipboardList, Microscope,
-  BarChart3, Stethoscope, Handshake, Bell, Search,
-  CalendarDays, Scissors, Printer, Settings2,
-  UserPlus, Tag, FolderArchive, RotateCcw,
-  FileText, Receipt, Scale, BedDouble, ShieldCheck,
-  FlaskConical, FileBarChart, Pill, Package, Utensils,
-  Wallet, TrendingUp, CreditCard, Activity,
-  Home as HomeIcon, Siren, HeartPulse, Beaker,
-  ShieldAlert, Truck, ListChecks, Radiation,
-  KeyRound, MonitorSmartphone
+  Heart,
+  LogOut,
+  User,
+  ChevronDown,
+  DoorOpen,
+  Calendar,
+  Users,
+  ClipboardList,
+  Microscope,
+  BarChart3,
+  Stethoscope,
+  Handshake,
+  Bell,
+  Search,
+  CalendarDays,
+  Scissors,
+  Printer,
+  Settings2,
+  UserPlus,
+  Tag,
+  FolderArchive,
+  RotateCcw,
+  FileText,
+  Receipt,
+  Scale,
+  BedDouble,
+  ShieldCheck,
+  FlaskConical,
+  FileBarChart,
+  Pill,
+  Package,
+  Utensils,
+  Wallet,
+  TrendingUp,
+  CreditCard,
+  Activity,
+  Home as HomeIcon,
+  Siren,
+  HeartPulse,
+  Beaker,
+  ShieldAlert,
+  Truck,
+  ListChecks,
+  Radiation,
+  KeyRound,
+  MonitorSmartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,8 +63,18 @@ const menuConfig: MenuItem[] = [
     label: "Salas",
     icon: DoorOpen,
     items: [
-      { label: "Sala de Espera", icon: DoorOpen, path: "/salas/espera", description: "Pacientes aguardando atendimento" },
-      { label: "Sala de Procedimentos", icon: Stethoscope, path: "/salas/procedimentos", description: "Exames e procedimentos em execução" },
+      {
+        label: "Sala de Espera",
+        icon: DoorOpen,
+        path: "/salas/espera",
+        description: "Pacientes aguardando atendimento",
+      },
+      {
+        label: "Sala de Procedimentos",
+        icon: Stethoscope,
+        path: "/salas/procedimentos",
+        description: "Exames e procedimentos em execução",
+      },
     ],
   },
   {
@@ -37,9 +82,24 @@ const menuConfig: MenuItem[] = [
     icon: Calendar,
     items: [
       { label: "Calendário", icon: CalendarDays, path: "/agenda", description: "Agenda geral e por profissional" },
-      { label: "Centro Cirúrgico", icon: Scissors, path: "/agenda/centro-cirurgico", description: "Mapa e programação cirúrgica" },
-      { label: "Imprimir Agenda", icon: Printer, path: "/agenda/imprimir", description: "Impressão por profissional ou setor" },
-      { label: "Gestão de Agendas", icon: Settings2, path: "/agenda/admin", description: "Parametrização e cadastro de agendas" },
+      {
+        label: "Centro Cirúrgico",
+        icon: Scissors,
+        path: "/agenda/centro-cirurgico",
+        description: "Mapa e programação cirúrgica",
+      },
+      {
+        label: "Imprimir Agenda",
+        icon: Printer,
+        path: "/agenda/imprimir",
+        description: "Impressão por profissional ou setor",
+      },
+      {
+        label: "Gestão de Agendas",
+        icon: Settings2,
+        path: "/agenda/admin",
+        description: "Parametrização e cadastro de agendas",
+      },
     ],
   },
   {
@@ -47,8 +107,18 @@ const menuConfig: MenuItem[] = [
     icon: Users,
     items: [
       { label: "Pacientes", icon: Users, path: "/patients", description: "Listagem e busca de pacientes" },
-      { label: "Cadastrar Paciente", icon: UserPlus, path: "/patients?new=1", description: "Novo cadastro de paciente" },
-      { label: "Gerenciar Retornos", icon: RotateCcw, path: "/pacientes/retornos", description: "Controle de retornos pendentes" },
+      {
+        label: "Cadastrar Paciente",
+        icon: UserPlus,
+        path: "/patients?new=1",
+        description: "Novo cadastro de paciente",
+      },
+      {
+        label: "Gerenciar Retornos",
+        icon: RotateCcw,
+        path: "/pacientes/retornos",
+        description: "Controle de retornos pendentes",
+      },
       { label: "Tags", icon: Tag, path: "/pacientes/tags", description: "Categorização de pacientes" },
       { label: "SAME", icon: FolderArchive, path: "/pacientes/same", description: "Prontuário documental e anexos" },
     ],
@@ -57,13 +127,38 @@ const menuConfig: MenuItem[] = [
     label: "Atendimentos",
     icon: ClipboardList,
     items: [
-      { label: "Abertura de Atendimento", icon: ClipboardList, path: "/atendimentos/abertura", description: "Abertura de ficha e registro de chegada" },
-      { label: "Orçamento", icon: Receipt, path: "/atendimentos/orcamento", description: "Orçamentos de procedimentos" },
+      {
+        label: "Abertura de Atendimento",
+        icon: ClipboardList,
+        path: "/atendimentos/abertura",
+        description: "Abertura de ficha e registro de chegada",
+      },
+      {
+        label: "Orçamento",
+        icon: Receipt,
+        path: "/atendimentos/orcamento",
+        description: "Orçamentos de procedimentos",
+      },
       { label: "Nota Fiscal", icon: FileText, path: "/atendimentos/nf", description: "Solicitação e emissão de NF" },
-      { label: "Relatórios", icon: FileBarChart, path: "/atendimentos/relatorios", description: "Relatórios administrativos" },
-      { label: "Escalas", icon: Scale, path: "/atendimentos/escalas", description: "Escalas de plantão e operacionais" },
+      {
+        label: "Relatórios",
+        icon: FileBarChart,
+        path: "/atendimentos/relatorios",
+        description: "Relatórios administrativos",
+      },
+      {
+        label: "Escalas",
+        icon: Scale,
+        path: "/atendimentos/escalas",
+        description: "Escalas de plantão e operacionais",
+      },
       { label: "Leitos", icon: BedDouble, path: "/atendimentos/leitos", description: "Mapa e gestão de leitos" },
-      { label: "Portaria", icon: ShieldCheck, path: "/atendimentos/portaria", description: "Acompanhantes e visitantes" },
+      {
+        label: "Portaria",
+        icon: ShieldCheck,
+        path: "/atendimentos/portaria",
+        description: "Acompanhantes e visitantes",
+      },
     ],
   },
   {
@@ -71,50 +166,140 @@ const menuConfig: MenuItem[] = [
     icon: Microscope,
     items: [
       { label: "Laudos", icon: FileText, path: "/diagnostico/laudos", description: "Digitação e liberação de laudos" },
-      { label: "Fila de Exames", icon: ListChecks, path: "/diagnostico/fila", description: "Exames pendentes e em execução" },
-      { label: "Gerar Etiquetas", icon: Tag, path: "/diagnostico/etiquetas", description: "Etiquetas de materiais e exames" },
+      {
+        label: "Fila de Exames",
+        icon: ListChecks,
+        path: "/diagnostico/fila",
+        description: "Exames pendentes e em execução",
+      },
+      {
+        label: "Gerar Etiquetas",
+        icon: Tag,
+        path: "/diagnostico/etiquetas",
+        description: "Etiquetas de materiais e exames",
+      },
     ],
   },
   {
     label: "Gerenciamento",
     icon: BarChart3,
     items: [
-      { label: "Financeiro", icon: Wallet, path: "/gerenciamento/financeiro", description: "Contas, fluxo de caixa e conciliação" },
-      { label: "Indicadores", icon: TrendingUp, path: "/dashboards", description: "Dashboards e indicadores gerenciais" },
-      { label: "Faturamento", icon: CreditCard, path: "/gerenciamento/faturamento", description: "Convênio, SUS e particular" },
-      { label: "Produtividade", icon: Activity, path: "/gerenciamento/produtividade", description: "Repasses e produtividade" },
-      { label: "Farmácia", icon: Pill, path: "/gerenciamento/estoque/farmacia", description: "Estoque de medicamentos" },
-      { label: "Almoxarifado", icon: Package, path: "/gerenciamento/estoque/almoxarifado", description: "Materiais e insumos" },
-      { label: "Laboratório", icon: Beaker, path: "/gerenciamento/estoque/laboratorio", description: "Insumos laboratoriais" },
-      { label: "Nutrição", icon: Utensils, path: "/gerenciamento/estoque/nutricao", description: "Dietas e insumos nutricionais" },
+      {
+        label: "Financeiro",
+        icon: Wallet,
+        path: "/gerenciamento/financeiro",
+        description: "Contas, fluxo de caixa e conciliação",
+      },
+      {
+        label: "Indicadores",
+        icon: TrendingUp,
+        path: "/dashboards",
+        description: "Dashboards e indicadores gerenciais",
+      },
+      {
+        label: "Faturamento",
+        icon: CreditCard,
+        path: "/gerenciamento/faturamento",
+        description: "Convênio, SUS e particular",
+      },
+      {
+        label: "Produtividade",
+        icon: Activity,
+        path: "/gerenciamento/produtividade",
+        description: "Repasses e produtividade",
+      },
+      {
+        label: "Farmácia",
+        icon: Pill,
+        path: "/gerenciamento/estoque/farmacia",
+        description: "Estoque de medicamentos",
+      },
+      {
+        label: "Almoxarifado",
+        icon: Package,
+        path: "/gerenciamento/estoque/almoxarifado",
+        description: "Materiais e insumos",
+      },
+      {
+        label: "Laboratório",
+        icon: Beaker,
+        path: "/gerenciamento/estoque/laboratorio",
+        description: "Insumos laboratoriais",
+      },
+      {
+        label: "Nutrição",
+        icon: Utensils,
+        path: "/gerenciamento/estoque/nutricao",
+        description: "Dietas e insumos nutricionais",
+      },
       { label: "CME", icon: FlaskConical, path: "/cme", description: "Material esterilizado" },
-      { label: "Fechamento de Caixa", icon: Receipt, path: "/gerenciamento/caixa", description: "Conferência e fechamento diário" },
+      {
+        label: "Fechamento de Caixa",
+        icon: Receipt,
+        path: "/gerenciamento/caixa",
+        description: "Conferência e fechamento diário",
+      },
     ],
   },
   {
     label: "Assistencial",
     icon: HeartPulse,
     items: [
-      { label: "Home Care", icon: HomeIcon, path: "/assistencial/homecare", description: "Pacientes admitidos em domicílio" },
+      {
+        label: "Home Care",
+        icon: HomeIcon,
+        path: "/assistencial/homecare",
+        description: "Pacientes admitidos em domicílio",
+      },
       { label: "Internados", icon: BedDouble, path: "/assistencial/internados", description: "Pacientes internados" },
       { label: "UTI", icon: HeartPulse, path: "/assistencial/uti", description: "Unidade de Terapia Intensiva" },
       { label: "Pronto Atendimento", icon: Siren, path: "/assistencial/pa", description: "Atendimento emergencial" },
-      { label: "Enfermagem", icon: Activity, path: "/assistencial/enfermagem", description: "Evolução, checagem e cuidados" },
-      { label: "Laboratório", icon: FlaskConical, path: "/assistencial/laboratorio", description: "Solicitações e resultados" },
+      {
+        label: "Enfermagem",
+        icon: Activity,
+        path: "/assistencial/enfermagem",
+        description: "Evolução, checagem e cuidados",
+      },
+      {
+        label: "Laboratório",
+        icon: FlaskConical,
+        path: "/assistencial/laboratorio",
+        description: "Solicitações e resultados",
+      },
       { label: "SCIH", icon: ShieldAlert, path: "/assistencial/scih", description: "Controle de infecção hospitalar" },
-      { label: "Farmácia", icon: Pill, path: "/assistencial/farmacia", description: "Dispensação e atendimento à prescrição" },
-      { label: "Procedimentos", icon: Stethoscope, path: "/assistencial/procedimentos", description: "Execução de procedimentos" },
+      {
+        label: "Farmácia",
+        icon: Pill,
+        path: "/assistencial/farmacia",
+        description: "Dispensação e atendimento à prescrição",
+      },
+      {
+        label: "Procedimentos",
+        icon: Stethoscope,
+        path: "/assistencial/procedimentos",
+        description: "Execução de procedimentos",
+      },
       { label: "Nutrição", icon: Utensils, path: "/assistencial/nutricao", description: "Dietas e acompanhamento" },
       { label: "CME / Expurgo", icon: FlaskConical, path: "/cme", description: "Esterilização e rastreabilidade" },
       { label: "Triagem", icon: ListChecks, path: "/assistencial/triagem", description: "Classificação de risco" },
-      { label: "Oncologia", icon: Radiation, path: "/assistencial/oncologia", description: "Prescrições e autorizações" },
+      {
+        label: "Oncologia",
+        icon: Radiation,
+        path: "/assistencial/oncologia",
+        description: "Prescrições e autorizações",
+      },
     ],
   },
   {
     label: "CRM",
     icon: Handshake,
     items: [
-      { label: "Solicitações", icon: FileText, path: "/crm/solicitacoes", description: "Solicitações de exames e serviços" },
+      {
+        label: "Solicitações",
+        icon: FileText,
+        path: "/crm/solicitacoes",
+        description: "Solicitações de exames e serviços",
+      },
       { label: "Negociação", icon: Handshake, path: "/crm/negociacao", description: "Acompanhamento comercial" },
       { label: "Relacionamento", icon: Users, path: "/crm/relacionamento", description: "CRM e contatos" },
     ],
@@ -158,7 +343,7 @@ export default function TopNav() {
           <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <Heart className="h-4 w-4 text-primary" />
           </div>
-          <span className="font-bold text-sm text-foreground hidden lg:inline">Solaris HIS</span>
+          <span className="font-bold text-sm text-foreground hidden lg:inline">Zurich</span>
         </button>
 
         {/* Menu items */}
@@ -175,7 +360,7 @@ export default function TopNav() {
                   "flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap",
                   openMenu === menu.label
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                 )}
               >
                 <menu.icon className="h-4 w-4" />
@@ -196,7 +381,7 @@ export default function TopNav() {
                       onClick={() => navigate(item.path)}
                       className={cn(
                         "w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
-                        location.pathname === item.path && "bg-primary/5 text-primary"
+                        location.pathname === item.path && "bg-primary/5 text-primary",
                       )}
                     >
                       <item.icon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
@@ -223,7 +408,10 @@ export default function TopNav() {
           >
             <Search className="h-4 w-4" />
           </button>
-          <button className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors relative" title="Notificações">
+          <button
+            className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors relative"
+            title="Notificações"
+          >
             <Bell className="h-4 w-4" />
             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
           </button>
