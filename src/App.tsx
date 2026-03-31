@@ -61,6 +61,7 @@ function App() {
                 <Route path="/portal" element={<Portal />} />
                 <Route path="/painel" element={<QueuePanel />} />
                 <Route path="/painel-tv" element={<QueueTV />} />
+                <Route path="/autoagendamento" element={<Autoagendamento />} />
 
                 {/* Protected routes */}
                 <Route path="/patients" element={<ProtectedRoute><Patients /></ProtectedRoute>} />
