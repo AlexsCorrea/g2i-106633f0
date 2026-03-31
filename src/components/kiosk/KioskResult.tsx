@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { CheckCircle2, Printer, Home, Clock, QrCode, AlertCircle } from "lucide-react";
 import type { KioskResultData } from "@/pages/Kiosk";
 import type { UnitConfig } from "@/hooks/useUnitConfig";
@@ -19,9 +19,9 @@ const typeLabels: Record<string, string> = {
 };
 
 export function KioskResult({ data, onBack, config }: Props) {
-  const [countdown, setCountdown] = useState(30);
+  const countdownTotal = (config as any)?.result_countdown_seconds ?? 30;
+  const [countdown, setCountdown] = useState(countdownTotal);
   const [printError, setPrintError] = useState(false);
-  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -50,6 +50,12 @@ export function KioskResult({ data, onBack, config }: Props) {
   const paperWidth = config?.print_paper_width || "80mm";
   const unitName = config?.unit_name || "Hospital";
   const logoUrl = config?.logo_url;
+  const marginTop = (config as any)?.print_margin_top ?? 2;
+  const marginBottom = (config as any)?.print_margin_bottom ?? 2;
+  const marginLeft = (config as any)?.print_margin_left ?? 2;
+  const marginRight = (config as any)?.print_margin_right ?? 2;
+  const blockSpacing = (config as any)?.print_block_spacing ?? 6;
+  const cutExtraHeight = (config as any)?.print_cut_extra_height ?? 10;
 
   const portalUrl = `${window.location.origin}/portal`;
   const now = new Date();
@@ -59,33 +65,34 @@ export function KioskResult({ data, onBack, config }: Props) {
   const handlePrint = () => {
     setPrintError(false);
     try {
-      // Build thermal print content in a new window
       const printWindow = window.open("", "_blank", "width=400,height=600");
-      if (!printWindow) {
-        setPrintError(true);
-        return;
-      }
+      if (!printWindow) { setPrintError(true); return; }
 
       const isCompact = printTemplate === "compact";
       const fontSize = config?.print_font_size === "extra_large" ? "48px" : config?.print_font_size === "large" ? "40px" : "32px";
-
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(portalUrl)}`;
 
       printWindow.document.write(`<!DOCTYPE html><html><head><title>Senha ${data.ticketNumber}</title>
 <style>
-  @page { size: ${paperWidth} auto; margin: 2mm; }
+  @page { size: ${paperWidth} auto; margin: 0; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Courier New', monospace; width: ${paperWidth}; text-align: center; padding: 4mm 2mm; }
+  html, body { width: ${paperWidth}; height: auto; overflow: hidden; }
+  body {
+    font-family: 'Courier New', monospace;
+    text-align: center;
+    padding: ${marginTop}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm;
+  }
+  .divider { border-top: 1px dashed #000; margin: ${blockSpacing}px 0; }
+  .ticket-number { font-size: ${fontSize}; font-weight: 900; letter-spacing: 4px; margin: ${blockSpacing}px 0; }
+  .ticket-type { font-size: 12px; font-weight: bold; text-transform: uppercase; margin: 4px 0; padding: 2px 8px; border: 1px solid #000; display: inline-block; }
   .logo { max-width: 60px; max-height: 40px; margin: 0 auto 4px; }
   .unit-name { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
-  .divider { border-top: 1px dashed #000; margin: 6px 0; }
-  .ticket-number { font-size: ${fontSize}; font-weight: 900; letter-spacing: 4px; margin: 8px 0; }
-  .ticket-type { font-size: 12px; font-weight: bold; text-transform: uppercase; margin: 4px 0; padding: 2px 8px; border: 1px solid #000; display: inline-block; }
   .info { font-size: 11px; margin: 2px 0; }
-  .header-msg { font-size: 11px; font-weight: bold; margin: 6px 0; }
-  .footer-msg { font-size: 10px; color: #555; margin-top: 6px; }
-  .qr { margin: 6px auto; }
+  .header-msg { font-size: 11px; font-weight: bold; margin: ${blockSpacing}px 0 4px; }
+  .footer-msg { font-size: 10px; color: #555; }
+  .qr { margin: ${blockSpacing}px auto; }
   .datetime { font-size: 10px; color: #666; }
+  .cut-space { height: ${cutExtraHeight}mm; }
 </style></head><body>`);
 
       if (printShowLogo && logoUrl && !isCompact) {
@@ -97,7 +104,7 @@ export function KioskResult({ data, onBack, config }: Props) {
       printWindow.document.write(`<div class="ticket-type">${typeLabels[data.ticketType] || data.ticketType}</div>`);
 
       if (data.patientName && !isCompact) {
-        printWindow.document.write(`<div class="info" style="margin-top:6px">${data.patientName}</div>`);
+        printWindow.document.write(`<div class="info" style="margin-top:${blockSpacing}px">${data.patientName}</div>`);
       }
       if (data.professional && !isCompact) {
         printWindow.document.write(`<div class="info">Dr(a). ${data.professional}</div>`);
@@ -117,26 +124,24 @@ export function KioskResult({ data, onBack, config }: Props) {
 
       printWindow.document.write(`<div class="divider"></div>`);
       printWindow.document.write(`<div class="footer-msg">${printFooter}</div>`);
+      printWindow.document.write(`<div class="cut-space"></div>`);
       printWindow.document.write(`</body></html>`);
       printWindow.document.close();
 
-      // Print after images load
-      printWindow.onload = () => {
+      // Print after images load, then close immediately
+      const doPrint = () => {
         try {
           printWindow.print();
-          const copies = (config?.print_copies || 1);
-          for (let i = 1; i < copies; i++) {
-            printWindow.print();
-          }
-        } catch {
-          setPrintError(true);
-        }
-        setTimeout(() => printWindow.close(), 1000);
+          const copies = config?.print_copies || 1;
+          for (let i = 1; i < copies; i++) printWindow.print();
+        } catch { setPrintError(true); }
+        setTimeout(() => { try { printWindow.close(); } catch {} }, 500);
       };
-      // Fallback if onload doesn't fire
+
+      printWindow.onload = doPrint;
+      // Fallback
       setTimeout(() => {
-        try { printWindow.print(); } catch { setPrintError(true); }
-        setTimeout(() => printWindow.close(), 1000);
+        try { if (!printWindow.closed) doPrint(); } catch {}
       }, 2000);
     } catch {
       setPrintError(true);
@@ -152,7 +157,7 @@ export function KioskResult({ data, onBack, config }: Props) {
         </h1>
       </div>
 
-      <div className="bg-white rounded-3xl p-8 shadow-2xl space-y-4" ref={printRef}>
+      <div className="bg-white rounded-3xl p-8 shadow-2xl space-y-4">
         <p className="text-sm text-[hsl(var(--muted-foreground))] uppercase tracking-wider font-medium">Sua senha</p>
         <p className="text-6xl font-black text-[hsl(var(--primary))] tracking-wider">{data.ticketNumber}</p>
         <div className="inline-block bg-[hsl(var(--primary)/0.1)] rounded-full px-4 py-1">

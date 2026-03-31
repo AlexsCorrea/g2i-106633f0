@@ -2215,16 +2215,24 @@ export type Database = {
           pre_call_sound: string
           primary_color: string | null
           print_auto: boolean
+          print_auto_cut: boolean
+          print_block_spacing: number
           print_copies: number
+          print_cut_extra_height: number
           print_enabled: boolean
           print_font_size: string
           print_footer_text: string
           print_header_text: string
+          print_margin_bottom: number
+          print_margin_left: number
+          print_margin_right: number
+          print_margin_top: number
           print_paper_width: string
           print_show_logo: boolean
           print_show_qr: boolean
           print_template: string
           privacy_mode: string
+          result_countdown_seconds: number
           secondary_color: string | null
           show_clock: boolean
           show_history: boolean
@@ -2254,16 +2262,24 @@ export type Database = {
           pre_call_sound?: string
           primary_color?: string | null
           print_auto?: boolean
+          print_auto_cut?: boolean
+          print_block_spacing?: number
           print_copies?: number
+          print_cut_extra_height?: number
           print_enabled?: boolean
           print_font_size?: string
           print_footer_text?: string
           print_header_text?: string
+          print_margin_bottom?: number
+          print_margin_left?: number
+          print_margin_right?: number
+          print_margin_top?: number
           print_paper_width?: string
           print_show_logo?: boolean
           print_show_qr?: boolean
           print_template?: string
           privacy_mode?: string
+          result_countdown_seconds?: number
           secondary_color?: string | null
           show_clock?: boolean
           show_history?: boolean
@@ -2293,16 +2309,24 @@ export type Database = {
           pre_call_sound?: string
           primary_color?: string | null
           print_auto?: boolean
+          print_auto_cut?: boolean
+          print_block_spacing?: number
           print_copies?: number
+          print_cut_extra_height?: number
           print_enabled?: boolean
           print_font_size?: string
           print_footer_text?: string
           print_header_text?: string
+          print_margin_bottom?: number
+          print_margin_left?: number
+          print_margin_right?: number
+          print_margin_top?: number
           print_paper_width?: string
           print_show_logo?: boolean
           print_show_qr?: boolean
           print_template?: string
           privacy_mode?: string
+          result_countdown_seconds?: number
           secondary_color?: string | null
           show_clock?: boolean
           show_history?: boolean

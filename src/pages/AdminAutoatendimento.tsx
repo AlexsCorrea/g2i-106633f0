@@ -58,6 +58,14 @@ export default function AdminAutoatendimento() {
   const [printFooterText, setPrintFooterText] = useState("Apresente esta senha quando solicitado");
   const [printTemplate, setPrintTemplate] = useState("standard");
   const [printFontSize, setPrintFontSize] = useState("large");
+  const [printMarginTop, setPrintMarginTop] = useState(2);
+  const [printMarginBottom, setPrintMarginBottom] = useState(2);
+  const [printMarginLeft, setPrintMarginLeft] = useState(2);
+  const [printMarginRight, setPrintMarginRight] = useState(2);
+  const [printBlockSpacing, setPrintBlockSpacing] = useState(6);
+  const [printCutExtraHeight, setPrintCutExtraHeight] = useState(10);
+  const [printAutoCut, setPrintAutoCut] = useState(true);
+  const [resultCountdown, setResultCountdown] = useState(30);
   const [initialized, setInitialized] = useState(false);
 
   const [adTitle, setAdTitle] = useState("");
@@ -116,6 +124,14 @@ export default function AdminAutoatendimento() {
       setPrintFooterText(config.print_footer_text || "Apresente esta senha quando solicitado");
       setPrintTemplate(config.print_template || "standard");
       setPrintFontSize(config.print_font_size || "large");
+      setPrintMarginTop((config as any).print_margin_top ?? 2);
+      setPrintMarginBottom((config as any).print_margin_bottom ?? 2);
+      setPrintMarginLeft((config as any).print_margin_left ?? 2);
+      setPrintMarginRight((config as any).print_margin_right ?? 2);
+      setPrintBlockSpacing((config as any).print_block_spacing ?? 6);
+      setPrintCutExtraHeight((config as any).print_cut_extra_height ?? 10);
+      setPrintAutoCut((config as any).print_auto_cut !== false);
+      setResultCountdown((config as any).result_countdown_seconds ?? 30);
       setInitialized(true);
     }
   }, [config, initialized]);
@@ -156,6 +172,14 @@ export default function AdminAutoatendimento() {
       print_footer_text: printFooterText,
       print_template: printTemplate,
       print_font_size: printFontSize,
+      print_margin_top: printMarginTop,
+      print_margin_bottom: printMarginBottom,
+      print_margin_left: printMarginLeft,
+      print_margin_right: printMarginRight,
+      print_block_spacing: printBlockSpacing,
+      print_cut_extra_height: printCutExtraHeight,
+      print_auto_cut: printAutoCut,
+      result_countdown_seconds: resultCountdown,
     });
   };
 
@@ -705,7 +729,8 @@ export default function AdminAutoatendimento() {
                 <CardDescription>Configure a emissão de senhas em impressora térmica</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Column 1: General */}
                   <div className="space-y-4">
                     <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Geral</h3>
                     <ToggleRow label="Ativar impressão" desc="Habilita emissão de senha na impressora" icon={<Printer className="w-4 h-4" />} checked={printEnabled} onChange={setPrintEnabled} />
@@ -724,12 +749,12 @@ export default function AdminAutoatendimento() {
                           </Select>
                         </div>
                         <div>
-                          <Label>Largura do papel</Label>
+                          <Label>Formato do papel</Label>
                           <Select value={printPaperWidth} onValueChange={setPrintPaperWidth}>
                             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="58mm">58mm (compacta)</SelectItem>
-                              <SelectItem value="80mm">80mm (padrão)</SelectItem>
+                              <SelectItem value="58mm">58 mm — cupom compacto</SelectItem>
+                              <SelectItem value="80mm">80 mm — padrão de recepção</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -756,53 +781,145 @@ export default function AdminAutoatendimento() {
                             </SelectContent>
                           </Select>
                         </div>
+
+                        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider pt-2">Conteúdo</h3>
+                        <ToggleRow label="Exibir logo" desc="Inclui a logo da unidade no ticket" checked={printShowLogo} onChange={setPrintShowLogo} />
+                        <ToggleRow label="Exibir QR Code" desc="QR Code para acompanhamento no celular" checked={printShowQr} onChange={setPrintShowQr} />
+                        <div>
+                          <Label>Mensagem principal</Label>
+                          <Input value={printHeaderText} onChange={e => setPrintHeaderText(e.target.value)} placeholder="Aguarde sua chamada no painel" className="mt-1" />
+                        </div>
+                        <div>
+                          <Label>Rodapé</Label>
+                          <Input value={printFooterText} onChange={e => setPrintFooterText(e.target.value)} placeholder="Apresente esta senha quando solicitado" className="mt-1" />
+                        </div>
                       </>
                     )}
                   </div>
+
+                  {/* Column 2: Margins & Cut */}
                   {printEnabled && (
                     <div className="space-y-4">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Conteúdo</h3>
-                      <ToggleRow label="Exibir logo" desc="Inclui a logo da unidade no ticket" checked={printShowLogo} onChange={setPrintShowLogo} />
-                      <ToggleRow label="Exibir QR Code" desc="QR Code para acompanhamento no celular" checked={printShowQr} onChange={setPrintShowQr} />
-                      <div>
-                        <Label>Mensagem principal</Label>
-                        <Input value={printHeaderText} onChange={e => setPrintHeaderText(e.target.value)} placeholder="Aguarde sua chamada no painel" className="mt-1" />
+                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Margens e Corte (mm)</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Margem superior</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Slider value={[printMarginTop]} onValueChange={v => setPrintMarginTop(v[0])} min={0} max={15} step={1} className="flex-1" />
+                            <span className="text-xs font-mono w-8 text-right">{printMarginTop}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Margem inferior</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Slider value={[printMarginBottom]} onValueChange={v => setPrintMarginBottom(v[0])} min={0} max={15} step={1} className="flex-1" />
+                            <span className="text-xs font-mono w-8 text-right">{printMarginBottom}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Margem esquerda</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Slider value={[printMarginLeft]} onValueChange={v => setPrintMarginLeft(v[0])} min={0} max={10} step={1} className="flex-1" />
+                            <span className="text-xs font-mono w-8 text-right">{printMarginLeft}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Margem direita</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Slider value={[printMarginRight]} onValueChange={v => setPrintMarginRight(v[0])} min={0} max={10} step={1} className="flex-1" />
+                            <span className="text-xs font-mono w-8 text-right">{printMarginRight}</span>
+                          </div>
+                        </div>
                       </div>
                       <div>
-                        <Label>Rodapé</Label>
-                        <Input value={printFooterText} onChange={e => setPrintFooterText(e.target.value)} placeholder="Apresente esta senha quando solicitado" className="mt-1" />
+                        <Label className="text-xs">Espaçamento entre blocos</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Slider value={[printBlockSpacing]} onValueChange={v => setPrintBlockSpacing(v[0])} min={2} max={15} step={1} className="flex-1" />
+                          <span className="text-xs font-mono w-8 text-right">{printBlockSpacing}</span>
+                        </div>
+                      </div>
+                      <div className="border-t pt-3 space-y-3">
+                        <ToggleRow label="Corte automático" desc="Enviar comando de corte à impressora" checked={printAutoCut} onChange={setPrintAutoCut} />
+                        <div>
+                          <Label className="text-xs">Altura extra antes do corte (mm)</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Slider value={[printCutExtraHeight]} onValueChange={v => setPrintCutExtraHeight(v[0])} min={0} max={30} step={2} className="flex-1" />
+                            <span className="text-xs font-mono w-8 text-right">{printCutExtraHeight}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">Espaço em branco antes do ponto de corte</p>
+                        </div>
                       </div>
 
-                      {/* Print Preview */}
-                      <div>
-                        <Label className="mb-2 block">Pré-visualização</Label>
-                        <div className="border rounded-xl p-4 bg-white max-w-[280px] mx-auto" style={{ fontFamily: "'Courier New', monospace" }}>
-                          <div className="text-center space-y-1">
+                      <div className="border-t pt-3">
+                        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider mb-3">Tela de Resultado</h3>
+                        <div>
+                          <Label>Tempo de retorno automático (segundos)</Label>
+                          <div className="flex items-center gap-4 mt-2">
+                            <Slider value={[resultCountdown]} onValueChange={v => setResultCountdown(v[0])} min={10} max={120} step={5} className="flex-1" />
+                            <span className="text-sm font-mono w-12 text-right">{resultCountdown}s</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">Após emitir a senha, a tela retorna automaticamente após esse tempo</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Column 3: Preview */}
+                  {printEnabled && (
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Pré-visualização</h3>
+                      <div className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-3 bg-muted/30">
+                        <div
+                          className="bg-white mx-auto overflow-hidden"
+                          style={{
+                            width: printPaperWidth === "58mm" ? "200px" : "280px",
+                            fontFamily: "'Courier New', monospace",
+                          }}
+                        >
+                          <div
+                            className="text-center"
+                            style={{
+                              paddingTop: `${printMarginTop * 1.5}px`,
+                              paddingBottom: `${printMarginBottom * 1.5}px`,
+                              paddingLeft: `${printMarginLeft * 1.5}px`,
+                              paddingRight: `${printMarginRight * 1.5}px`,
+                            }}
+                          >
                             {printShowLogo && config?.logo_url && (
                               <img src={config.logo_url} alt="Logo" className="w-12 h-10 object-contain mx-auto" />
                             )}
                             <p className="text-xs font-bold">{unitName || "Hospital"}</p>
-                            <div className="border-t border-dashed border-gray-400 my-1" />
+                            <div className="border-t border-dashed border-gray-400" style={{ margin: `${printBlockSpacing * 0.8}px 0` }} />
                             <p className="font-black tracking-widest" style={{
                               fontSize: printFontSize === "extra_large" ? "36px" : printFontSize === "large" ? "30px" : "24px"
                             }}>P8004</p>
-                            <p className="text-[10px] font-bold border border-gray-800 inline-block px-2 py-0.5">PREFERENCIAL 80+</p>
+                            <p className="text-[10px] font-bold border border-gray-800 inline-block px-2 py-0.5 mt-1">PREFERENCIAL 80+</p>
                             {printTemplate !== "compact" && (
-                              <>
-                                <p className="text-[10px]">01/04/2026 às 14:30</p>
-                              </>
+                              <p className="text-[10px] mt-1">01/04/2026 às 14:30</p>
                             )}
-                            <div className="border-t border-dashed border-gray-400 my-1" />
+                            <div className="border-t border-dashed border-gray-400" style={{ margin: `${printBlockSpacing * 0.8}px 0` }} />
                             <p className="text-[10px] font-bold">{printHeaderText}</p>
                             {printShowQr && printTemplate !== "compact" && (
-                              <div className="bg-gray-100 rounded p-2 mx-auto w-16 h-16 flex items-center justify-center">
+                              <div className="bg-gray-100 rounded p-2 mx-auto w-16 h-16 flex items-center justify-center mt-1">
                                 <span className="text-[8px] text-gray-500">QR Code</span>
                               </div>
                             )}
-                            <div className="border-t border-dashed border-gray-400 my-1" />
+                            <div className="border-t border-dashed border-gray-400" style={{ margin: `${printBlockSpacing * 0.8}px 0` }} />
                             <p className="text-[9px] text-gray-500">{printFooterText}</p>
+                            {/* Cut extra height */}
+                            {printCutExtraHeight > 0 && (
+                              <div style={{ height: `${printCutExtraHeight * 1.5}px` }} />
+                            )}
+                          </div>
+                          {/* Cut line */}
+                          <div className="relative">
+                            <div className="border-t-2 border-dashed border-red-400 w-full" />
+                            <span className="absolute -top-2.5 right-1 text-[8px] text-red-400 bg-white px-1">✂ corte</span>
                           </div>
                         </div>
+                        <p className="text-center text-xs text-muted-foreground mt-3">
+                          Largura: {printPaperWidth} • Modelo: {printTemplate}
+                        </p>
                       </div>
                     </div>
                   )}
