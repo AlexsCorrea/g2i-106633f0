@@ -26,7 +26,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-const STORAGE_KEY = "solaris_panel_prefs";
+const STORAGE_KEY = "zurich_panel_prefs";
 
 const stations = [
   "Guichê 1",
