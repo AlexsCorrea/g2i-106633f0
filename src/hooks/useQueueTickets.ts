@@ -208,7 +208,7 @@ export function useCallNextTicket() {
       toast.success(`Senha ${data.ticket_number} chamada!`);
     },
     onError: (error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }

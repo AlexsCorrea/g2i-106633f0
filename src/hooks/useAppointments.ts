@@ -118,7 +118,7 @@ export function useDeleteAppointment() {
       toast.success("Agendamento removido!");
     },
     onError: (error) => {
-      toast.error("Erro ao remover agendamento: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }

@@ -237,7 +237,7 @@ export function useCreateGlasgow() {
       toast.success("Escala de Glasgow registrada!");
     },
     onError: (error) => {
-      toast.error("Erro ao registrar Glasgow: " + error.message);
+      toast.error(getUserFriendlyError(error));
     },
   });
 }
