@@ -30,11 +30,13 @@ import { useUnitConfig } from "@/hooks/useUnitConfig";
 type NotifState = "active" | "denied" | "foreground_only" | "ios_no_pwa" | "not_configured";
 
 function isIOS(): boolean {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
 }
 
 function isStandalone(): boolean {
-  return (window.matchMedia("(display-mode: standalone)").matches) || (window.navigator as any).standalone === true;
+  return window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true;
 }
 
 function getNotifState(): NotifState {
@@ -48,31 +50,44 @@ function getNotifState(): NotifState {
 }
 
 function NotifBadge({ state, compact }: { state: NotifState; compact?: boolean }) {
-  const configs: Record<NotifState, { icon: React.ReactNode; label: string; bg: string; border: string; text: string }> = {
+  const configs: Record<
+    NotifState,
+    { icon: React.ReactNode; label: string; bg: string; border: string; text: string }
+  > = {
     active: {
       icon: <Bell className="w-4 h-4 text-green-300" />,
       label: "Alertas ativos",
-      bg: "bg-green-500/20", border: "border-green-400/40", text: "text-green-200",
+      bg: "bg-green-500/20",
+      border: "border-green-400/40",
+      text: "text-green-200",
     },
     denied: {
       icon: <BellOff className="w-4 h-4 text-red-300" />,
       label: "Notificações recusadas neste dispositivo",
-      bg: "bg-red-500/20", border: "border-red-400/40", text: "text-red-200",
+      bg: "bg-red-500/20",
+      border: "border-red-400/40",
+      text: "text-red-200",
     },
     foreground_only: {
       icon: <Bell className="w-4 h-4 text-blue-300" />,
       label: "Alertas disponíveis com o portal aberto",
-      bg: "bg-blue-500/20", border: "border-blue-400/40", text: "text-blue-200",
+      bg: "bg-blue-500/20",
+      border: "border-blue-400/40",
+      text: "text-blue-200",
     },
     ios_no_pwa: {
       icon: <Bell className="w-4 h-4 text-blue-300" />,
       label: "Alertas disponíveis com o portal aberto",
-      bg: "bg-blue-500/20", border: "border-blue-400/40", text: "text-blue-200",
+      bg: "bg-blue-500/20",
+      border: "border-blue-400/40",
+      text: "text-blue-200",
     },
     not_configured: {
       icon: <BellOff className="w-4 h-4 text-yellow-300" />,
       label: "Alertas não configurados",
-      bg: "bg-yellow-500/20", border: "border-yellow-400/40", text: "text-yellow-200",
+      bg: "bg-yellow-500/20",
+      border: "border-yellow-400/40",
+      text: "text-yellow-200",
     },
   };
   const c = configs[state];
@@ -548,10 +563,12 @@ export default function Portal() {
       <Wrapper>
         {/* Notif badge top */}
         <div className="flex justify-center">
-          <button onClick={async () => {
-            if (notifState !== "active") await requestNotifications();
-            setNotifState(getNotifState());
-          }}>
+          <button
+            onClick={async () => {
+              if (notifState !== "active") await requestNotifications();
+              setNotifState(getNotifState());
+            }}
+          >
             <NotifBadge state={notifState} compact />
           </button>
         </div>
@@ -599,7 +616,10 @@ export default function Portal() {
         {/* Second chance CTA if notifications not active */}
         {notifState !== "active" && myTicket.status === "aguardando" && (
           <button
-            onClick={async () => { await requestNotifications(); setNotifState(getNotifState()); }}
+            onClick={async () => {
+              await requestNotifications();
+              setNotifState(getNotifState());
+            }}
             className="w-full bg-yellow-500/90 hover:bg-yellow-500 text-white font-bold rounded-2xl p-4 flex items-center justify-center gap-3 shadow-lg transition-colors"
           >
             <BellRing className="w-6 h-6" />
@@ -644,8 +664,8 @@ export default function Portal() {
               <AlertTriangle className="w-12 h-12 text-yellow-300 mx-auto" />
               <p className="text-white font-bold text-lg">Atenção</p>
               <p className="text-white/80 text-sm leading-relaxed">
-                Você <strong>não receberá</strong> som nem vibração quando sua senha for chamada.
-                Será necessário acompanhar manualmente pelo portal ou painel de chamadas.
+                Você <strong>não receberá</strong> som nem vibração quando sua senha for chamada. Será necessário
+                acompanhar manualmente pelo portal ou painel de chamadas.
               </p>
             </div>
             <button
@@ -674,7 +694,8 @@ export default function Portal() {
           </div>
           <h2 className="text-xl font-bold text-foreground">Ative os alertas</h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Receba aviso com <strong>som</strong>, <strong>vibração</strong> e <strong>tela de chamada</strong> quando sua senha for chamada.
+            Receba aviso com <strong>som</strong>, <strong>vibração</strong> e <strong>tela de chamada</strong> quando
+            sua senha for chamada.
           </p>
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3 bg-green-50 rounded-xl p-3 text-left">
@@ -708,8 +729,12 @@ export default function Portal() {
                   Para uma experiência ainda melhor, você pode adicionar este portal à Tela de Início:
                 </p>
                 <ol className="text-amber-700 text-xs space-y-1 ml-4 list-decimal">
-                  <li>Toque em <strong>Compartilhar</strong> (↑)</li>
-                  <li><strong>"Adicionar à Tela de Início"</strong></li>
+                  <li>
+                    Toque em <strong>Compartilhar</strong> (↑)
+                  </li>
+                  <li>
+                    <strong>"Adicionar à Tela de Início"</strong>
+                  </li>
                 </ol>
               </div>
             </details>
@@ -726,7 +751,9 @@ export default function Portal() {
           </button>
         ) : (
           <button
-            onClick={async () => { if (pendingTicketType) await doGenerateTicket(pendingTicketType); }}
+            onClick={async () => {
+              if (pendingTicketType) await doGenerateTicket(pendingTicketType);
+            }}
             disabled={generateTicket.isPending}
             className="w-full h-14 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-lg shadow-lg transition-colors disabled:opacity-50"
           >
@@ -999,7 +1026,7 @@ export default function Portal() {
             <Smartphone className="w-7 h-7 text-white" />
           )}
         </div>
-        <h1 className="text-2xl font-bold text-white">Portal {unitConfig?.unit_name || "Solaris"}</h1>
+        <h1 className="text-2xl font-bold text-white">Portal {unitConfig?.unit_name || "Zurich"}</h1>
         <p className="text-white/60 text-sm">O que deseja fazer?</p>
       </div>
 
