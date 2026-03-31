@@ -124,6 +124,14 @@ export default function AdminAutoatendimento() {
       setPrintFooterText(config.print_footer_text || "Apresente esta senha quando solicitado");
       setPrintTemplate(config.print_template || "standard");
       setPrintFontSize(config.print_font_size || "large");
+      setPrintMarginTop((config as any).print_margin_top ?? 2);
+      setPrintMarginBottom((config as any).print_margin_bottom ?? 2);
+      setPrintMarginLeft((config as any).print_margin_left ?? 2);
+      setPrintMarginRight((config as any).print_margin_right ?? 2);
+      setPrintBlockSpacing((config as any).print_block_spacing ?? 6);
+      setPrintCutExtraHeight((config as any).print_cut_extra_height ?? 10);
+      setPrintAutoCut((config as any).print_auto_cut !== false);
+      setResultCountdown((config as any).result_countdown_seconds ?? 30);
       setInitialized(true);
     }
   }, [config, initialized]);
