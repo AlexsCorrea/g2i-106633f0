@@ -696,6 +696,120 @@ export default function AdminAutoatendimento() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* PRINT TAB */}
+          <TabsContent value="print" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Impressão da Senha</CardTitle>
+                <CardDescription>Configure a emissão de senhas em impressora térmica</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Geral</h3>
+                    <ToggleRow label="Ativar impressão" desc="Habilita emissão de senha na impressora" icon={<Printer className="w-4 h-4" />} checked={printEnabled} onChange={setPrintEnabled} />
+                    {printEnabled && (
+                      <>
+                        <ToggleRow label="Impressão automática" desc="Imprime automaticamente ao gerar a senha" checked={printAuto} onChange={setPrintAuto} />
+                        <div>
+                          <Label>Quantidade de vias</Label>
+                          <Select value={String(printCopies)} onValueChange={v => setPrintCopies(Number(v))}>
+                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">1 via</SelectItem>
+                              <SelectItem value="2">2 vias</SelectItem>
+                              <SelectItem value="3">3 vias</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Largura do papel</Label>
+                          <Select value={printPaperWidth} onValueChange={setPrintPaperWidth}>
+                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="58mm">58mm (compacta)</SelectItem>
+                              <SelectItem value="80mm">80mm (padrão)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Modelo de impressão</Label>
+                          <Select value={printTemplate} onValueChange={setPrintTemplate}>
+                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="standard">Padrão (com QR Code e detalhes)</SelectItem>
+                              <SelectItem value="compact">Compacto (só senha e tipo)</SelectItem>
+                              <SelectItem value="clinic">Clínica (com logo e mensagem)</SelectItem>
+                              <SelectItem value="hospital">Hospital (completo)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Tamanho do número da senha</Label>
+                          <Select value={printFontSize} onValueChange={setPrintFontSize}>
+                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="medium">Médio (32px)</SelectItem>
+                              <SelectItem value="large">Grande (40px)</SelectItem>
+                              <SelectItem value="extra_large">Extra grande (48px)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {printEnabled && (
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Conteúdo</h3>
+                      <ToggleRow label="Exibir logo" desc="Inclui a logo da unidade no ticket" checked={printShowLogo} onChange={setPrintShowLogo} />
+                      <ToggleRow label="Exibir QR Code" desc="QR Code para acompanhamento no celular" checked={printShowQr} onChange={setPrintShowQr} />
+                      <div>
+                        <Label>Mensagem principal</Label>
+                        <Input value={printHeaderText} onChange={e => setPrintHeaderText(e.target.value)} placeholder="Aguarde sua chamada no painel" className="mt-1" />
+                      </div>
+                      <div>
+                        <Label>Rodapé</Label>
+                        <Input value={printFooterText} onChange={e => setPrintFooterText(e.target.value)} placeholder="Apresente esta senha quando solicitado" className="mt-1" />
+                      </div>
+
+                      {/* Print Preview */}
+                      <div>
+                        <Label className="mb-2 block">Pré-visualização</Label>
+                        <div className="border rounded-xl p-4 bg-white max-w-[280px] mx-auto" style={{ fontFamily: "'Courier New', monospace" }}>
+                          <div className="text-center space-y-1">
+                            {printShowLogo && config?.logo_url && (
+                              <img src={config.logo_url} alt="Logo" className="w-12 h-10 object-contain mx-auto" />
+                            )}
+                            <p className="text-xs font-bold">{unitName || "Hospital"}</p>
+                            <div className="border-t border-dashed border-gray-400 my-1" />
+                            <p className="font-black tracking-widest" style={{
+                              fontSize: printFontSize === "extra_large" ? "36px" : printFontSize === "large" ? "30px" : "24px"
+                            }}>P8004</p>
+                            <p className="text-[10px] font-bold border border-gray-800 inline-block px-2 py-0.5">PREFERENCIAL 80+</p>
+                            {printTemplate !== "compact" && (
+                              <>
+                                <p className="text-[10px]">01/04/2026 às 14:30</p>
+                              </>
+                            )}
+                            <div className="border-t border-dashed border-gray-400 my-1" />
+                            <p className="text-[10px] font-bold">{printHeaderText}</p>
+                            {printShowQr && printTemplate !== "compact" && (
+                              <div className="bg-gray-100 rounded p-2 mx-auto w-16 h-16 flex items-center justify-center">
+                                <span className="text-[8px] text-gray-500">QR Code</span>
+                              </div>
+                            )}
+                            <div className="border-t border-dashed border-gray-400 my-1" />
+                            <p className="text-[9px] text-gray-500">{printFooterText}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </div>
