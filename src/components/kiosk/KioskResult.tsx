@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { CheckCircle2, Printer, Home, Clock, QrCode } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
+import { CheckCircle2, Printer, Home, Clock, QrCode, AlertCircle } from "lucide-react";
 import type { KioskResultData } from "@/pages/Kiosk";
+import type { UnitConfig } from "@/hooks/useUnitConfig";
 
 interface Props {
   data: KioskResultData;
   onBack: () => void;
+  config?: UnitConfig | null;
 }
 
 const typeLabels: Record<string, string> = {
@@ -16,23 +18,130 @@ const typeLabels: Record<string, string> = {
   consulta: "Consulta",
 };
 
-export function KioskResult({ data, onBack }: Props) {
+export function KioskResult({ data, onBack, config }: Props) {
   const [countdown, setCountdown] = useState(30);
+  const [printError, setPrintError] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown((prev) => {
-        if (prev <= 1) {
-          onBack();
-          return 0;
-        }
+        if (prev <= 1) { onBack(); return 0; }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
   }, [onBack]);
 
+  // Auto-print if configured
+  useEffect(() => {
+    if (config?.print_enabled && config?.print_auto) {
+      setTimeout(() => handlePrint(), 500);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const printEnabled = config?.print_enabled ?? false;
+  const printShowLogo = config?.print_show_logo ?? true;
+  const printShowQr = config?.print_show_qr ?? true;
+  const printHeader = config?.print_header_text || "Aguarde sua chamada no painel";
+  const printFooter = config?.print_footer_text || "Apresente esta senha quando solicitado";
+  const printTemplate = config?.print_template || "standard";
+  const paperWidth = config?.print_paper_width || "80mm";
+  const unitName = config?.unit_name || "Hospital";
+  const logoUrl = config?.logo_url;
+
   const portalUrl = `${window.location.origin}/portal`;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("pt-BR");
+  const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+  const handlePrint = () => {
+    setPrintError(false);
+    try {
+      // Build thermal print content in a new window
+      const printWindow = window.open("", "_blank", "width=400,height=600");
+      if (!printWindow) {
+        setPrintError(true);
+        return;
+      }
+
+      const isCompact = printTemplate === "compact";
+      const fontSize = config?.print_font_size === "extra_large" ? "48px" : config?.print_font_size === "large" ? "40px" : "32px";
+
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(portalUrl)}`;
+
+      printWindow.document.write(`<!DOCTYPE html><html><head><title>Senha ${data.ticketNumber}</title>
+<style>
+  @page { size: ${paperWidth} auto; margin: 2mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Courier New', monospace; width: ${paperWidth}; text-align: center; padding: 4mm 2mm; }
+  .logo { max-width: 60px; max-height: 40px; margin: 0 auto 4px; }
+  .unit-name { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+  .divider { border-top: 1px dashed #000; margin: 6px 0; }
+  .ticket-number { font-size: ${fontSize}; font-weight: 900; letter-spacing: 4px; margin: 8px 0; }
+  .ticket-type { font-size: 12px; font-weight: bold; text-transform: uppercase; margin: 4px 0; padding: 2px 8px; border: 1px solid #000; display: inline-block; }
+  .info { font-size: 11px; margin: 2px 0; }
+  .header-msg { font-size: 11px; font-weight: bold; margin: 6px 0; }
+  .footer-msg { font-size: 10px; color: #555; margin-top: 6px; }
+  .qr { margin: 6px auto; }
+  .datetime { font-size: 10px; color: #666; }
+</style></head><body>`);
+
+      if (printShowLogo && logoUrl && !isCompact) {
+        printWindow.document.write(`<img src="${logoUrl}" class="logo" />`);
+      }
+      printWindow.document.write(`<div class="unit-name">${unitName}</div>`);
+      printWindow.document.write(`<div class="divider"></div>`);
+      printWindow.document.write(`<div class="ticket-number">${data.ticketNumber}</div>`);
+      printWindow.document.write(`<div class="ticket-type">${typeLabels[data.ticketType] || data.ticketType}</div>`);
+
+      if (data.patientName && !isCompact) {
+        printWindow.document.write(`<div class="info" style="margin-top:6px">${data.patientName}</div>`);
+      }
+      if (data.professional && !isCompact) {
+        printWindow.document.write(`<div class="info">Dr(a). ${data.professional}</div>`);
+      }
+      if (data.time) {
+        printWindow.document.write(`<div class="info">Horário: ${data.time}</div>`);
+      }
+
+      printWindow.document.write(`<div class="divider"></div>`);
+      printWindow.document.write(`<div class="datetime">${dateStr} às ${timeStr}</div>`);
+      printWindow.document.write(`<div class="header-msg">${printHeader}</div>`);
+
+      if (printShowQr && !isCompact) {
+        printWindow.document.write(`<img src="${qrUrl}" class="qr" width="100" height="100" />`);
+        printWindow.document.write(`<div class="info" style="font-size:9px">Acompanhe pelo celular</div>`);
+      }
+
+      printWindow.document.write(`<div class="divider"></div>`);
+      printWindow.document.write(`<div class="footer-msg">${printFooter}</div>`);
+      printWindow.document.write(`</body></html>`);
+      printWindow.document.close();
+
+      // Print after images load
+      printWindow.onload = () => {
+        try {
+          printWindow.print();
+          const copies = (config?.print_copies || 1);
+          for (let i = 1; i < copies; i++) {
+            printWindow.print();
+          }
+        } catch {
+          setPrintError(true);
+        }
+        setTimeout(() => printWindow.close(), 1000);
+      };
+      // Fallback if onload doesn't fire
+      setTimeout(() => {
+        try { printWindow.print(); } catch { setPrintError(true); }
+        setTimeout(() => printWindow.close(), 1000);
+      }, 2000);
+    } catch {
+      setPrintError(true);
+    }
+  };
 
   return (
     <div className="space-y-6 text-center">
@@ -43,7 +152,7 @@ export function KioskResult({ data, onBack }: Props) {
         </h1>
       </div>
 
-      <div className="bg-white rounded-3xl p-8 shadow-2xl space-y-4">
+      <div className="bg-white rounded-3xl p-8 shadow-2xl space-y-4" ref={printRef}>
         <p className="text-sm text-[hsl(var(--muted-foreground))] uppercase tracking-wider font-medium">Sua senha</p>
         <p className="text-6xl font-black text-[hsl(var(--primary))] tracking-wider">{data.ticketNumber}</p>
         <div className="inline-block bg-[hsl(var(--primary)/0.1)] rounded-full px-4 py-1">
@@ -69,10 +178,9 @@ export function KioskResult({ data, onBack }: Props) {
         )}
 
         <p className="text-xs text-[hsl(var(--muted-foreground))]">
-          {new Date().toLocaleDateString("pt-BR")} às {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+          {dateStr} às {timeStr}
         </p>
 
-        {/* QR Code hint */}
         <div className="border-t border-[hsl(var(--border))] pt-4">
           <div className="flex items-center justify-center gap-2 text-[hsl(var(--muted-foreground))]">
             <QrCode className="w-4 h-4" />
@@ -83,13 +191,20 @@ export function KioskResult({ data, onBack }: Props) {
 
       <p className="text-white/80 text-base">Aguarde sua chamada no painel da sala de espera</p>
 
+      {printError && (
+        <div className="flex items-center justify-center gap-2 bg-red-500/20 border border-red-400/40 rounded-xl p-3">
+          <AlertCircle className="w-5 h-5 text-red-300" />
+          <span className="text-red-200 text-sm">Falha na impressão. Sua senha foi gerada normalmente.</span>
+        </div>
+      )}
+
       <div className="flex gap-3">
         <button
-          onClick={() => window.print()}
+          onClick={handlePrint}
           className="flex-1 h-14 bg-white/10 border-2 border-white/30 text-white text-lg font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-white/20 transition-all active:scale-[0.98]"
         >
           <Printer className="w-5 h-5" />
-          Imprimir
+          {printError ? "Reimprimir" : "Imprimir"}
         </button>
         <button
           onClick={onBack}

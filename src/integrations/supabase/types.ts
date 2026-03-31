@@ -2214,6 +2214,16 @@ export type Database = {
           logo_url: string | null
           pre_call_sound: string
           primary_color: string | null
+          print_auto: boolean
+          print_copies: number
+          print_enabled: boolean
+          print_font_size: string
+          print_footer_text: string
+          print_header_text: string
+          print_paper_width: string
+          print_show_logo: boolean
+          print_show_qr: boolean
+          print_template: string
           privacy_mode: string
           secondary_color: string | null
           show_clock: boolean
@@ -2243,6 +2253,16 @@ export type Database = {
           logo_url?: string | null
           pre_call_sound?: string
           primary_color?: string | null
+          print_auto?: boolean
+          print_copies?: number
+          print_enabled?: boolean
+          print_font_size?: string
+          print_footer_text?: string
+          print_header_text?: string
+          print_paper_width?: string
+          print_show_logo?: boolean
+          print_show_qr?: boolean
+          print_template?: string
           privacy_mode?: string
           secondary_color?: string | null
           show_clock?: boolean
@@ -2272,6 +2292,16 @@ export type Database = {
           logo_url?: string | null
           pre_call_sound?: string
           primary_color?: string | null
+          print_auto?: boolean
+          print_copies?: number
+          print_enabled?: boolean
+          print_font_size?: string
+          print_footer_text?: string
+          print_header_text?: string
+          print_paper_width?: string
+          print_show_logo?: boolean
+          print_show_qr?: boolean
+          print_template?: string
           privacy_mode?: string
           secondary_color?: string | null
           show_clock?: boolean

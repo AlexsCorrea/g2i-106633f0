@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { ArrowLeft, Users, UserCheck, Crown, Stethoscope, RefreshCw, ChevronRight } from "lucide-react";
 import { useGenerateTicket } from "@/hooks/useQueueTickets";
 import type { KioskResultData } from "@/pages/Kiosk";
+import type { UnitConfig } from "@/hooks/useUnitConfig";
 
 interface Props {
   onBack: () => void;
   onResult: (data: KioskResultData) => void;
+  config?: UnitConfig | null;
 }
 
 interface TicketCategory {
@@ -53,7 +55,7 @@ const categories: TicketCategory[] = [
   },
 ];
 
-export function KioskTicket({ onBack, onResult }: Props) {
+export function KioskTicket({ onBack, onResult, config }: Props) {
   const generateTicket = useGenerateTicket();
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<TicketCategory | null>(null);

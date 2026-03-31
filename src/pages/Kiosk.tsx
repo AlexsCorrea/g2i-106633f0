@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { KioskHome } from "@/components/kiosk/KioskHome";
 import { KioskTicket } from "@/components/kiosk/KioskTicket";
 import { KioskCheckin } from "@/components/kiosk/KioskCheckin";
@@ -17,13 +17,26 @@ export interface KioskResultData {
   ticketId?: string;
 }
 
+/**
+ * Context-aware timeout multipliers:
+ * - home: no timeout (already home)
+ * - ticket: 1x (selection screen, short)
+ * - checkin: 3x (patient filling forms, longer)
+ * - result: fixed 30s countdown (handled internally)
+ */
+const TIMEOUT_MULTIPLIER: Record<KioskFlow, number> = {
+  home: 0,
+  ticket: 1,
+  checkin: 3,
+  result: 0, // result has its own internal countdown
+};
+
 export default function Kiosk() {
   const [flow, setFlow] = useState<KioskFlow>("home");
   const [resultData, setResultData] = useState<KioskResultData | null>(null);
   const { data: config } = useUnitConfig();
 
-  // Use config timeout (in seconds), convert to ms
-  const timeoutMs = (config?.totem_timeout_seconds || 60) * 1000;
+  const baseTimeoutMs = (config?.totem_timeout_seconds || 60) * 1000;
 
   const goHome = useCallback(() => {
     setFlow("home");
@@ -35,21 +48,34 @@ export default function Kiosk() {
     setFlow("result");
   };
 
+  // Context-aware timeout: different per flow stage
   useEffect(() => {
-    if (flow === "home") return;
+    if (flow === "home" || flow === "result") return; // home=no timeout, result=own countdown
+
+    const multiplier = TIMEOUT_MULTIPLIER[flow];
+    const timeoutMs = baseTimeoutMs * multiplier;
+    if (timeoutMs <= 0) return;
+
     let timer: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
       clearTimeout(timer);
       timer = setTimeout(goHome, timeoutMs);
     };
     resetTimer();
-    const events = ["touchstart", "mousedown", "keydown", "scroll"];
-    events.forEach(e => document.addEventListener(e, resetTimer));
+
+    // Listen to all interaction events including input-related ones
+    const events = [
+      "touchstart", "touchmove", "mousedown", "mousemove",
+      "keydown", "keyup", "keypress", "scroll",
+      "input", "change", "focus", "click",
+    ];
+    events.forEach(e => document.addEventListener(e, resetTimer, { passive: true }));
+
     return () => {
       clearTimeout(timer);
       events.forEach(e => document.removeEventListener(e, resetTimer));
     };
-  }, [flow, goHome, timeoutMs]);
+  }, [flow, goHome, baseTimeoutMs]);
 
   const primaryColor = config?.primary_color || "hsl(210,85%,45%)";
   const secondaryColor = config?.secondary_color || "hsl(210,85%,30%)";
@@ -61,9 +87,9 @@ export default function Kiosk() {
     <div className="min-h-screen flex items-center justify-center p-4" style={bgStyle}>
       <div className="w-full max-w-lg">
         {flow === "home" && <KioskHome onSelect={setFlow} />}
-        {flow === "ticket" && <KioskTicket onBack={goHome} onResult={showResult} />}
+        {flow === "ticket" && <KioskTicket onBack={goHome} onResult={showResult} config={config} />}
         {flow === "checkin" && <KioskCheckin onBack={goHome} onResult={showResult} />}
-        {flow === "result" && resultData && <KioskResult data={resultData} onBack={goHome} />}
+        {flow === "result" && resultData && <KioskResult data={resultData} onBack={goHome} config={config} />}
       </div>
     </div>
   );

@@ -28,6 +28,16 @@ export interface UnitConfig {
   voice_pitch: number;
   voice_volume: number;
   pre_call_sound: string;
+  print_enabled: boolean;
+  print_auto: boolean;
+  print_copies: number;
+  print_paper_width: string;
+  print_show_logo: boolean;
+  print_show_qr: boolean;
+  print_header_text: string;
+  print_footer_text: string;
+  print_template: string;
+  print_font_size: string;
 }
 
 export interface UnitAd {
