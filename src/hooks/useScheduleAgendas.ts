@@ -41,7 +41,7 @@ export interface ScheduleAgenda {
   created_at: string;
   color: string | null;
   updated_at: string;
-  profiles?: { full_name: string } | null;
+  profiles?: { full_name: string; avatar_url?: string | null; specialty?: string | null } | null;
 }
 
 export function useScheduleAgendas(filters?: { status?: string; unit?: string; agenda_type?: string }) {
