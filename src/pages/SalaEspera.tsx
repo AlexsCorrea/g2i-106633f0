@@ -13,7 +13,7 @@ import {
   Phone, Megaphone, ArrowLeft, Heart, RotateCcw, Ban, ChevronRight,
   AlertCircle, Shield, Timer, Loader2
 } from "lucide-react";
-import { format, parseISO, differenceInMinutes } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
