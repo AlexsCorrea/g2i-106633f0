@@ -70,6 +70,7 @@ function formatDatetime(ts: string): string {
 
 export default function AgendaOperational() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"list" | "day" | "week">("day");
   const [showForm, setShowForm] = useState(false);
