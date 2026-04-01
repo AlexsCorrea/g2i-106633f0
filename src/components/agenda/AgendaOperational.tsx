@@ -202,9 +202,24 @@ export default function AgendaOperational() {
     const time = `${String(hour).padStart(2, "0")}:00`;
 
     if (agenda) {
+      // Check blocks first
+      const blockReason = isSlotBlocked(agenda.id, selectedDate, hour);
+      if (blockReason) {
+        toast.error(blockReason);
+        return;
+      }
       const available = isHourAvailable(periods, agenda.id, dayOfWeek, hour);
       if (!available) {
-        toast.error("Horário indisponível. Use 'Encaixe' para agendar fora do período.");
+        toast.error("Esta agenda não possui período aberto neste horário.");
+        return;
+      }
+      // Check conflicts
+      const existingAppts = filteredAppointments.filter(a => {
+        const d = parseLocalTime(a.scheduled_at);
+        return d.getHours() === hour && (a as any).agenda_id === agenda.id;
+      });
+      if (existingAppts.length > 0 && !agenda.allows_overlap) {
+        toast.error("Já existe um agendamento neste horário. Use 'Encaixe' para sobrepor.");
         return;
       }
     }
