@@ -222,10 +222,11 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
     if (!validate()) return;
 
     const scheduledAt = `${form.scheduled_date}T${form.scheduled_time}:00`;
-    const title = form.title || `${appointmentTypes.find(t => t.value === form.appointment_type)?.label || "Consulta"} - ${selectedPatient?.full_name || form.provisional_name}`;
+    const patientName = selectedPatient?.full_name || form.provisional_name;
+    const title = form.title || `${appointmentTypes.find(t => t.value === form.appointment_type)?.label || "Consulta"} - ${patientName}`;
 
     const payload: any = {
-      patient_id: form.patient_id || undefined,
+      patient_id: form.patient_id || null,
       professional_id: profile?.id || null,
       title: title + (isEncaixe ? " (Encaixe)" : ""),
       description: form.procedure_notes || null,
@@ -245,14 +246,22 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
       room: form.room || null,
       specialty: form.specialty || selectedAgenda?.specialty || null,
       phone: form.phone || selectedPatient?.phone || null,
+      provisional_name: isProvisional ? form.provisional_name : null,
+      provisional_birth_date: isProvisional && form.birth_date ? form.birth_date : null,
+      provisional_gender: isProvisional && form.gender ? form.gender : null,
+      provisional_phone: isProvisional && form.phone ? form.phone : null,
     };
 
     if (editAppointment) {
       await updateAppointment.mutateAsync({ id: editAppointment.id, ...payload });
     } else {
-      if (!payload.patient_id) delete payload.patient_id;
       await createAppointment.mutateAsync(payload);
     }
+
+    const toastMsg = isProvisional
+      ? "Agendamento salvo como paciente provisório."
+      : editAppointment ? "Agendamento atualizado!" : "Agendamento criado!";
+    toast.success(toastMsg);
     onOpenChange(false);
   };
 
