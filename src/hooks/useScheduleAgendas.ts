@@ -39,6 +39,7 @@ export interface ScheduleAgenda {
   reception_rules: string | null;
   instructions: string | null;
   created_at: string;
+  color: string | null;
   updated_at: string;
   profiles?: { full_name: string } | null;
 }
