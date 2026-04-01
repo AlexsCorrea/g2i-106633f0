@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppointments, useUpdateAppointment, useDeleteAppointment } from "@/hooks/useAppointments";
 import { useScheduleAgendas, useSchedulePeriods, useScheduleBlocks, useScheduleHolidays, type ScheduleAgenda } from "@/hooks/useScheduleAgendas";
@@ -22,14 +22,16 @@ import {
   Plus, CalendarIcon, Clock, User, Loader2, List,
   LayoutGrid, ChevronLeft, ChevronRight, Trash2, Search,
   FileText, CheckCircle, UserCheck, Edit, Phone, X,
-  Ban, RotateCcw, PlayCircle, DoorOpen, Eye, Filter, AlertTriangle, Lock
+  Ban, RotateCcw, PlayCircle, DoorOpen, Eye, Filter, AlertTriangle, Lock, Users, GripVertical
 } from "lucide-react";
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { isHourAvailable } from "@/lib/agendaAvailability";
+import { isHourAvailable, isTimeAvailable } from "@/lib/agendaAvailability";
 import { toast } from "sonner";
 import AppointmentFormDialog from "./AppointmentFormDialog";
+import MassTransferDialog from "./MassTransferDialog";
+import DragConfirmDialog from "./DragConfirmDialog";
 
 const appointmentTypes = [
   { value: "consulta", label: "Consulta" },
