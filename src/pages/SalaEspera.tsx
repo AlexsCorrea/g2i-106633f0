@@ -203,7 +203,7 @@ export default function SalaEspera() {
                       return (
                         <tr key={a.id} className={cn("hover:bg-muted/20 transition-colors", a.status === "em_andamento" && "bg-amber-50/30")}>
                           <td className="px-4 py-3">
-                            <span className="font-mono font-semibold text-xs">{format(parseISO(a.scheduled_at), "HH:mm")}</span>
+                            <span className="font-mono font-semibold text-xs">{format(new Date(a.scheduled_at), "HH:mm")}</span>
                           </td>
                           <td className="px-4 py-3">
                             <div>
