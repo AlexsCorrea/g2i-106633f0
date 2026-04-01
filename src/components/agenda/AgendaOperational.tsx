@@ -17,6 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Plus, CalendarIcon, Clock, User, Loader2, List,
   LayoutGrid, ChevronLeft, ChevronRight, Trash2, Search,
