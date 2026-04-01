@@ -499,12 +499,32 @@ export default function AgendaOperational() {
             {isMulti && (
               <div className="flex border-b sticky top-0 bg-card z-10">
                 <div className="w-14 shrink-0 border-r bg-muted/30" />
-                {cols.map((ag) => (
-                  <div key={ag!.id} className="flex-1 min-w-[200px] px-3 py-2 border-r text-center" style={{ borderTopWidth: "3px", borderTopColor: (ag as any)?.color || "#6b7280" }}>
-                    <p className="text-xs font-semibold truncate">{ag!.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{ag!.specialty || ag!.unit || ""}</p>
-                  </div>
-                ))}
+                {cols.map((ag) => {
+                  const prof = (ag as any)?.profiles;
+                  const initials = prof?.full_name
+                    ? prof.full_name.split(" ").filter(Boolean).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()
+                    : ag!.name.split(" ").filter(Boolean).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
+                  return (
+                    <div key={ag!.id} className="flex-1 min-w-[200px] px-3 py-2.5 border-r" style={{ borderTopWidth: "3px", borderTopColor: (ag as any)?.color || "hsl(var(--muted-foreground))" }}>
+                      <div className="flex items-center gap-2 justify-center">
+                        {ag!.professional_id && (
+                          <Avatar className="h-7 w-7 shrink-0">
+                            {prof?.avatar_url ? (
+                              <AvatarImage src={prof.avatar_url} alt={prof.full_name || ag!.name} />
+                            ) : null}
+                            <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div className="text-left min-w-0">
+                          <p className="text-xs font-semibold truncate">{prof?.full_name || ag!.name}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{ag!.specialty || prof?.specialty || ag!.unit || ""}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
