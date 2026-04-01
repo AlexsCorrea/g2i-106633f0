@@ -107,7 +107,7 @@ export default function AgendaPrint() {
             <tbody>
               {appointments?.length ? appointments.map(a => (
                 <tr key={a.id} className="border-b hover:bg-muted/20">
-                  <td className="p-2 font-medium">{format(parseISO(a.scheduled_at), "HH:mm")}</td>
+                  <td className="p-2 font-medium">{format(new Date(a.scheduled_at), "HH:mm")}</td>
                   <td className="p-2">{a.patients?.full_name || "—"}</td>
                   <td className="p-2 capitalize">{a.appointment_type}</td>
                   <td className="p-2">{a.profiles?.full_name || "—"}</td>
