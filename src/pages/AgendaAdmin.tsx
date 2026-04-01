@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Calendar, ArrowLeft, Settings2, Clock, CalendarOff, Star, Flag,
-  ListOrdered, FileText, Heart, ChevronRight, Stethoscope, FilePlus, UserCog, Ban, Link2
+  ListOrdered, Heart, ChevronLeft, Stethoscope, FilePlus, UserCog, Ban, Link2,
+  Shield, RotateCcw, FileCheck, BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AgendaManagement from "@/components/agenda/AgendaManagement";
@@ -15,19 +16,42 @@ import AgendaHolidays from "@/components/agenda/AgendaHolidays";
 import AgendaSettings from "@/components/agenda/AgendaSettings";
 import AgendaAuxSettings from "@/components/agenda/admin/AgendaAuxSettings";
 
-const sidebarItems = [
-  { id: "agendas", label: "Cadastro de Agendas", icon: Calendar },
-  { id: "periodos", label: "Períodos", icon: Clock },
-  { id: "especiais", label: "Horários Especiais", icon: Star },
-  { id: "bloqueios", label: "Bloqueios", icon: CalendarOff },
-  { id: "feriados", label: "Feriados", icon: Flag },
-  { id: "fila", label: "Fila de Espera", icon: ListOrdered },
-  { id: "convenios", label: "Convênios", icon: Link2 },
-  { id: "procedimentos", label: "Procedimentos", icon: FilePlus },
-  { id: "tipos_atendimento", label: "Tipos de Atendimento", icon: Stethoscope },
-  { id: "medicos_externos", label: "Médicos Externos", icon: UserCog },
-  { id: "motivos_bloqueio", label: "Motivos / Justificativas", icon: Ban },
-  { id: "config", label: "Configurações Gerais", icon: Settings2 },
+interface SidebarGroup {
+  label: string;
+  items: { id: string; label: string; icon: React.ElementType }[];
+}
+
+const sidebarGroups: SidebarGroup[] = [
+  {
+    label: "Estrutura da Agenda",
+    items: [
+      { id: "agendas", label: "Cadastro de Agendas", icon: Calendar },
+      { id: "periodos", label: "Períodos", icon: Clock },
+      { id: "especiais", label: "Horário Manual", icon: Star },
+      { id: "bloqueios", label: "Bloqueios", icon: CalendarOff },
+      { id: "feriados", label: "Feriados", icon: Flag },
+    ],
+  },
+  {
+    label: "Regras da Agenda",
+    items: [
+      { id: "convenios", label: "Convênios", icon: Link2 },
+      { id: "procedimentos", label: "Procedimentos", icon: FilePlus },
+      { id: "tipos_atendimento", label: "Tipos de Atendimento", icon: Stethoscope },
+      { id: "tipos_orientacoes", label: "Tipos × Orientações", icon: BookOpen },
+      { id: "situacoes", label: "Situações", icon: RotateCcw },
+      { id: "permissoes", label: "Permissões", icon: Shield },
+    ],
+  },
+  {
+    label: "Complementares",
+    items: [
+      { id: "fila", label: "Fila de Espera", icon: ListOrdered },
+      { id: "medicos_externos", label: "Médicos Externos", icon: UserCog },
+      { id: "motivos_bloqueio", label: "Motivos / Justificativas", icon: Ban },
+      { id: "config", label: "Configurações Gerais", icon: Settings2 },
+    ],
+  },
 ];
 
 export default function AgendaAdmin() {
@@ -38,7 +62,6 @@ export default function AgendaAdmin() {
   const activeSection = searchParams.get("tab") || "agendas";
 
   const setTab = (tabId: string) => {
-    // Preserva o parâmetro 'agenda' se houver
     const agendaId = searchParams.get("agenda");
     if (agendaId && tabId !== "agendas") {
       setSearchParams({ tab: tabId, agenda: agendaId });
@@ -56,55 +79,89 @@ export default function AgendaAdmin() {
       case "feriados": return <AgendaHolidays />;
       case "fila": return <AgendaWaitList />;
       case "config": return <AgendaSettings />;
-      case "convenios": return <AgendaAuxSettings 
-          title="Convênios e Planos" 
-          description="Gerencie os convênios que poderão ser atrelados às agendas." 
+      case "convenios": return <AgendaAuxSettings
+          title="Convênios e Planos"
+          description="Gerencie os convênios que poderão ser atrelados às agendas."
           mockData={[
             { id: "1", name: "Unimed Seguros", detail: "Ativo em 12 agendas", status: "Ativo" },
             { id: "2", name: "Bradesco Saúde", detail: "Ativo em 5 agendas", status: "Ativo" },
             { id: "3", name: "Amil Assistência", detail: "Ativo em 15 agendas", status: "Ativo" },
             { id: "4", name: "SulAmérica Especial", detail: "Ativo em 8 agendas", status: "Inativo" }
-          ]} 
+          ]}
         />;
-      case "procedimentos": return <AgendaAuxSettings 
-          title="Catálogo de Procedimentos" 
-          description="Procedimentos e exames habilitados por agenda." 
+      case "procedimentos": return <AgendaAuxSettings
+          title="Catálogo de Procedimentos"
+          description="Procedimentos e exames habilitados por agenda."
           mockData={[
             { id: "1", name: "Endoscopia Digestiva Alta", detail: "Duração Média: 40 min", status: "Ativo" },
             { id: "2", name: "Ecocardiograma com Doppler", detail: "Duração Média: 30 min", status: "Ativo" },
             { id: "3", name: "Consulta Psicológica", detail: "Duração Média: 50 min", status: "Ativo" }
-          ]} 
+          ]}
         />;
-      case "tipos_atendimento": return <AgendaAuxSettings 
-          title="Tipos de Atendimento" 
-          description="Classificações para os agendamentos realizados." 
+      case "tipos_atendimento": return <AgendaAuxSettings
+          title="Tipos de Atendimento"
+          description="Classificações para os agendamentos realizados."
           mockData={[
             { id: "1", name: "Primeira Vez", detail: "Requer cadastro completo", status: "Ativo" },
             { id: "2", name: "Retorno", detail: "Até 30 dias", status: "Ativo" },
             { id: "3", name: "Rotina", detail: "Manutenção e revisão", status: "Ativo" },
             { id: "4", name: "Emergencial", detail: "Encaixe prioritário", status: "Ativo" }
-          ]} 
+          ]}
         />;
-      case "medicos_externos": return <AgendaAuxSettings 
-          title="Profissionais Externos" 
-          description="Cadastro de médicos parceiros ou não atuantes contínuos." 
+      case "tipos_orientacoes": return <AgendaAuxSettings
+          title="Tipos × Orientações"
+          description="Vincule orientações e questionários pré-consulta aos tipos de atendimento."
+          mockData={[
+            { id: "1", name: "Consulta → Jejum 8h", detail: "Endoscopia / Exames laboratoriais", status: "Ativo" },
+            { id: "2", name: "Retorno → Trazer exames anteriores", detail: "Todas as especialidades", status: "Ativo" },
+            { id: "3", name: "Cirurgia → Questionário pré-operatório", detail: "Centro Cirúrgico", status: "Ativo" }
+          ]}
+        />;
+      case "situacoes": return <AgendaAuxSettings
+          title="Situações do Agendamento"
+          description="Gerencie os status e transições válidas entre situações."
+          mockData={[
+            { id: "1", name: "Agendado", detail: "Status inicial padrão", status: "Ativo" },
+            { id: "2", name: "Confirmado", detail: "Confirmação pelo paciente ou recepção", status: "Ativo" },
+            { id: "3", name: "Aguardando", detail: "Paciente na sala de espera", status: "Ativo" },
+            { id: "4", name: "Em Atendimento", detail: "Consulta em andamento", status: "Ativo" },
+            { id: "5", name: "Atendido", detail: "Consulta finalizada", status: "Ativo" },
+            { id: "6", name: "Faltou", detail: "Paciente não compareceu", status: "Ativo" },
+            { id: "7", name: "Cancelado", detail: "Cancelamento pelo paciente ou unidade", status: "Ativo" }
+          ]}
+        />;
+      case "permissoes": return <AgendaAuxSettings
+          title="Permissões da Agenda"
+          description="Controle quais perfis podem agendar, cancelar e gerenciar cada agenda."
+          mockData={[
+            { id: "1", name: "Recepção — Agendar/Cancelar", detail: "Todas as agendas ambulatoriais", status: "Ativo" },
+            { id: "2", name: "Médico — Visualizar/Encaixar", detail: "Agenda própria", status: "Ativo" },
+            { id: "3", name: "Administrador — Acesso total", detail: "Todas as agendas", status: "Ativo" },
+            { id: "4", name: "Enfermagem — Visualizar apenas", detail: "Agendas do setor", status: "Ativo" }
+          ]}
+        />;
+      case "medicos_externos": return <AgendaAuxSettings
+          title="Profissionais Externos"
+          description="Cadastro de médicos parceiros ou não atuantes contínuos."
           mockData={[
             { id: "1", name: "Dr. Roberto Neves", detail: "CRM 43900 - Anestesista Parceiro", status: "Ativo" },
             { id: "2", name: "Dra. Ana Flávia Rossi", detail: "CRM 99281 - Cirurgiã Geral (Sobraviso)", status: "Ativo" }
-          ]} 
+          ]}
         />;
-      case "motivos_bloqueio": return <AgendaAuxSettings 
-          title="Motivos / Justificativas" 
-          description="Lista de motivos recorrentes para bloqueios de agenda." 
+      case "motivos_bloqueio": return <AgendaAuxSettings
+          title="Motivos / Justificativas"
+          description="Lista de motivos recorrentes para bloqueios de agenda."
           mockData={[
             { id: "1", name: "Férias Profissional", detail: "Automático sem exceções", status: "Ativo" },
             { id: "2", name: "Manutenção Predial / Sala", detail: "Requere realocação", status: "Ativo" },
             { id: "3", name: "Congresso / Curso", detail: "Pode prever substituto", status: "Ativo" }
-          ]} 
+          ]}
         />;
       default: return <AgendaManagement />;
     }
   };
+
+  const activeLabel = sidebarGroups.flatMap(g => g.items).find(i => i.id === activeSection)?.label || "Cadastro de Agendas";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -137,48 +194,56 @@ export default function AgendaAdmin() {
       </header>
 
       <div className="flex">
-        {/* Sidebar */}
+        {/* Main content — LEFT */}
+        <main className="flex-1 p-6 max-w-[1400px]">
+          {renderContent()}
+        </main>
+
+        {/* Sidebar — RIGHT */}
         <aside className={cn(
-          "border-r bg-card/50 min-h-[calc(100vh-57px)] transition-all duration-200 flex-shrink-0",
+          "border-l bg-card/50 min-h-[calc(100vh-57px)] transition-all duration-200 flex-shrink-0",
           sidebarCollapsed ? "w-14" : "w-64"
         )}>
-          <div className="p-2 space-y-0.5">
-            {sidebarItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setTab(item.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
-                  activeSection === item.id
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+          <div className="p-2 space-y-4">
+            {sidebarGroups.map((group) => (
+              <div key={group.label}>
+                {!sidebarCollapsed && (
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    {group.label}
+                  </p>
                 )}
-                title={sidebarCollapsed ? item.label : undefined}
-              >
-                <item.icon className="h-4 w-4 flex-shrink-0" />
-                {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-                {!sidebarCollapsed && activeSection === item.id && (
-                  <ChevronRight className="h-3.5 w-3.5 ml-auto flex-shrink-0" />
-                )}
-              </button>
+                <div className="space-y-0.5">
+                  {group.items.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setTab(item.id)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                        activeSection === item.id
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      )}
+                      title={sidebarCollapsed ? item.label : undefined}
+                    >
+                      <item.icon className="h-4 w-4 flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="truncate text-left">{item.label}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
 
-          <div className="p-2 mt-4 border-t">
+          <div className="p-2 mt-2 border-t">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
             >
-              <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", sidebarCollapsed ? "" : "rotate-180")} />
-              {!sidebarCollapsed && <span>Recolher menu</span>}
+              <ChevronLeft className={cn("h-3.5 w-3.5 transition-transform", sidebarCollapsed ? "rotate-180" : "")} />
+              {!sidebarCollapsed && <span>Recolher</span>}
             </button>
           </div>
         </aside>
-
-        {/* Main content */}
-        <main className="flex-1 p-6 max-w-[1400px]">
-          {renderContent()}
-        </main>
       </div>
     </div>
   );
