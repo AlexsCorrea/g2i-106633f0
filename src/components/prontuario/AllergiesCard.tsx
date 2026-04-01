@@ -17,7 +17,7 @@ const typeIcons = {
   medicamento: Pill,
   alimento: Apple,
   contraste: Syringe,
-  inseto: Bug,
+  inseto: ShieldAlert,
   outro: AlertOctagon,
 };
 
