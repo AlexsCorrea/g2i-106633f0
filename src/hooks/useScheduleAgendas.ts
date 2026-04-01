@@ -41,7 +41,7 @@ export interface ScheduleAgenda {
   created_at: string;
   color: string | null;
   updated_at: string;
-  profiles?: { full_name: string } | null;
+  profiles?: { full_name: string; avatar_url?: string | null; specialty?: string | null } | null;
 }
 
 export function useScheduleAgendas(filters?: { status?: string; unit?: string; agenda_type?: string }) {
@@ -59,7 +59,24 @@ export function useScheduleAgendas(filters?: { status?: string; unit?: string; a
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as ScheduleAgenda[];
+
+      // Fetch linked profiles for avatar display
+      const profIds = [...new Set((data || []).map(a => a.professional_id).filter(Boolean))] as string[];
+      let profilesMap: Record<string, { full_name: string; avatar_url: string | null; specialty: string | null }> = {};
+      if (profIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url, specialty")
+          .in("id", profIds);
+        if (profiles) {
+          profiles.forEach(p => { profilesMap[p.id] = p; });
+        }
+      }
+
+      return (data || []).map(a => ({
+        ...a,
+        profiles: a.professional_id ? profilesMap[a.professional_id] || null : null,
+      })) as ScheduleAgenda[];
     },
   });
 }
