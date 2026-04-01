@@ -166,23 +166,28 @@ export default function AgendaOperational() {
 
   const handleCheckin = async () => {
     if (!checkinAppt) return;
+    const oldStatus = checkinAppt.status;
     await updateAppointment.mutateAsync({
       id: checkinAppt.id,
       status: "chegou" as any,
       notes: checkinNotes ? `${checkinAppt.notes || ''}\n[Chegada] ${checkinNotes}`.trim() : checkinAppt.notes
     });
+    createLog.mutate({ appointment_id: checkinAppt.id, action: "check-in", old_status: oldStatus, new_status: "chegou", changed_by: profile?.id, details: checkinNotes ? { notes: checkinNotes } : null });
     setCheckinAppt(null);
     setCheckinNotes("");
     if (selectedAppt?.id === checkinAppt.id) setSelectedAppt(null);
   };
 
   const quickAction = async (id: string, status: string) => {
+    const appt = appointments.find(a => a.id === id);
     await updateAppointment.mutateAsync({ id, status: status as any });
+    createLog.mutate({ appointment_id: id, action: "status_change", old_status: appt?.status || null, new_status: status, changed_by: profile?.id });
     if (selectedAppt?.id === id) setSelectedAppt(null);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir este agendamento?")) return;
+    createLog.mutate({ appointment_id: id, action: "deleted", changed_by: profile?.id });
     await deleteAppointment.mutateAsync(id);
     if (selectedAppt?.id === id) setSelectedAppt(null);
   };
