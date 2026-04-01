@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Search, UserPlus, AlertCircle, AlertTriangle, Lock, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const appointmentTypes = [
   { value: "consulta", label: "Consulta" },
