@@ -327,28 +327,35 @@ export default function AgendaOperational() {
     if (!dragConfirmData) return;
     const { appointmentId, targetAgendaId: tAgId, newScheduledAt, isTransfer, sourceTime, targetTime, sourceAgenda, targetAgenda } = dragConfirmData;
     const appt = appointments.find(a => a.id === appointmentId);
-    await updateAppointment.mutateAsync({
-      id: appointmentId,
-      agenda_id: tAgId,
-      scheduled_at: newScheduledAt,
-    } as any);
-    createLog.mutate({
-      appointment_id: appointmentId,
-      action: isTransfer ? "transfer" : "reschedule",
-      old_status: appt?.status || null,
-      new_status: appt?.status || null,
-      changed_by: profile?.id,
-      details: {
-        type: isTransfer ? "transfer" : "reschedule",
-        source_agenda: sourceAgenda,
-        target_agenda: targetAgenda,
-        original_time: sourceTime,
-        new_time: targetTime,
-      } as any,
-    });
-    setDragConfirmOpen(false);
-    setDragConfirmData(null);
-    toast.success(isTransfer ? "Agendamento transferido!" : "Agendamento remarcado!");
+    setDragSaving(true);
+    try {
+      await updateAppointment.mutateAsync({
+        id: appointmentId,
+        agenda_id: tAgId,
+        scheduled_at: newScheduledAt,
+      } as any);
+      createLog.mutate({
+        appointment_id: appointmentId,
+        action: isTransfer ? "transfer" : "reschedule",
+        old_status: appt?.status || null,
+        new_status: appt?.status || null,
+        changed_by: profile?.id,
+        details: {
+          type: isTransfer ? "transfer" : "reschedule",
+          source_agenda: sourceAgenda,
+          target_agenda: targetAgenda,
+          original_time: sourceTime,
+          new_time: targetTime,
+        } as any,
+      });
+      toast.success(isTransfer ? "Agendamento transferido!" : "Agendamento remarcado!");
+    } catch (err) {
+      toast.error("Erro ao mover agendamento. O card foi mantido na posição original.");
+    } finally {
+      setDragSaving(false);
+      setDragConfirmOpen(false);
+      setDragConfirmData(null);
+    }
   };
 
   // Dynamic hour range based on displayed agendas' periods
