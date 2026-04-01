@@ -51,7 +51,7 @@ export default function AgendaHolidays() {
   };
 
   const handleGenerateNational = async () => {
-    if (!confirm("Isso gerará os feriados nacionais fixos para o ano atual e próximo. Deseja continuar?")) return;
+    if (!confirm("Isso gerará os feriados nacionais fixos para o ano atual e próximo. Duplicados serão ignorados. Deseja continuar?")) return;
     const year = new Date().getFullYear();
     const years = [year, year + 1];
     const fixedHolidays = [
@@ -60,13 +60,21 @@ export default function AgendaHolidays() {
       { name: "Nossa Sra. Aparecida", date: "10-12" }, { name: "Finados", date: "11-02" },
       { name: "Proclamação da República", date: "11-15" }, { name: "Natal", date: "12-25" },
     ];
-    const toInsert = years.flatMap(y => 
+    // Filter out already existing holidays
+    const existing = holidays || [];
+    const existingKeys = new Set(existing.map(h => `${h.holiday_date}|${h.name}|${h.holiday_type}`));
+    const toInsert = years.flatMap(y =>
       fixedHolidays.map(h => ({
         name: h.name, holiday_type: "nacional", holiday_date: `${y}-${h.date}`,
         auto_block: true, allows_exception: true, unit: null, affected_agendas: null, notes: "Gerado automaticamente"
       }))
-    );
+    ).filter(h => !existingKeys.has(`${h.holiday_date}|${h.name}|${h.holiday_type}`));
+    if (toInsert.length === 0) {
+      toast.info("Todos os feriados nacionais já estão cadastrados.");
+      return;
+    }
     await createHolidaysBatch.mutateAsync(toInsert);
+    toast.success(`${toInsert.length} feriado(s) adicionado(s). Duplicados ignorados.`);
   };
 
 
