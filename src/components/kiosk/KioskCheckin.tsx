@@ -112,7 +112,7 @@ export function KioskCheckin({ onBack, onResult }: Props) {
           .lte("scheduled_at", `${today}T23:59:59`)
           .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`);
         if (aErr) throw aErr;
-
+        console.log("[check-in] Appointments for patient:", { patientId: matchedPatient.id, count: appts?.length, statuses: appts?.map((a: any) => a.status) });
         (appts || []).forEach((a: any) => {
           foundAppointments.push({
             id: a.id,
