@@ -102,6 +102,8 @@ export default function AgendaOperational() {
   const { data: allHolidays } = useScheduleHolidays();
   const updateAppointment = useUpdateAppointment();
   const deleteAppointment = useDeleteAppointment();
+  const createLog = useCreateAppointmentLog();
+  const { data: selectedApptLogs } = useAppointmentLogs(selectedAppt?.id);
 
   const periods = allPeriods || [];
   const blocks = allBlocks || [];
