@@ -1,0 +1,143 @@
+import { useState } from "react";
+import { useAgendaStatuses, useCreateAgendaStatus, useUpdateAgendaStatus, useDeleteAgendaStatus } from "@/hooks/useAgendaStatuses";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Edit, Trash2, Loader2, Lock, ArrowRight } from "lucide-react";
+
+const statusLabels: Record<string, string> = {
+  agendado: "Agendado", confirmado: "Confirmado", chegou: "Chegou", em_espera: "Em Espera",
+  em_atendimento: "Em Atendimento", concluido: "Concluído", cancelado: "Cancelado",
+  nao_compareceu: "Não Compareceu", reagendado: "Reagendado", encaixe: "Encaixe",
+};
+
+export default function AdminStatuses() {
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: "", color: "#6b7280", icon: "", display_order: "0", active: true, allowed_transitions: "", is_system: false });
+
+  const { data: statuses, isLoading } = useAgendaStatuses();
+  const create = useCreateAgendaStatus();
+  const update = useUpdateAgendaStatus();
+  const remove = useDeleteAgendaStatus();
+
+  const openNew = () => {
+    setEditId(null);
+    setForm({ name: "", color: "#6b7280", icon: "", display_order: String((statuses?.length || 0) + 1), active: true, allowed_transitions: "", is_system: false });
+    setShowForm(true);
+  };
+
+  const openEdit = (item: any) => {
+    setEditId(item.id);
+    setForm({
+      name: item.name, color: item.color, icon: item.icon || "",
+      display_order: String(item.display_order), active: item.active,
+      allowed_transitions: (item.allowed_transitions || []).join(", "),
+      is_system: item.is_system,
+    });
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name) return;
+    const transitions = form.allowed_transitions ? form.allowed_transitions.split(",").map(t => t.trim()).filter(Boolean) : [];
+    const payload = { name: form.name, color: form.color, icon: form.icon || null, display_order: parseInt(form.display_order) || 0, active: form.active, allowed_transitions: transitions, is_system: form.is_system };
+    if (editId) await update.mutateAsync({ id: editId, ...payload });
+    else await create.mutateAsync(payload);
+    setShowForm(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Situações do Agendamento</h2>
+          <p className="text-sm text-muted-foreground">Gerencie os status e transições válidas entre situações.</p>
+        </div>
+        <Button onClick={openNew} className="gap-2"><Plus className="h-4 w-4" />Nova Situação</Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">#</TableHead>
+                  <TableHead>Situação</TableHead>
+                  <TableHead>Cor</TableHead>
+                  <TableHead>Transições permitidas</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(statuses || []).map(item => (
+                  <TableRow key={item.id}>
+                    <TableCell className="text-muted-foreground">{item.display_order}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                        {statusLabels[item.name] || item.name}
+                      </div>
+                    </TableCell>
+                    <TableCell><code className="text-xs bg-muted px-1.5 py-0.5 rounded">{item.color}</code></TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {(item.allowed_transitions || []).map(t => (
+                          <Badge key={t} variant="secondary" className="text-xs gap-1"><ArrowRight className="h-2.5 w-2.5" />{statusLabels[t] || t}</Badge>
+                        ))}
+                        {(item.allowed_transitions || []).length === 0 && <span className="text-xs text-muted-foreground">Estado final</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell>{item.is_system ? <Badge variant="outline" className="gap-1"><Lock className="h-3 w-3" />Sistema</Badge> : "Personalizado"}</TableCell>
+                    <TableCell><Badge variant="outline" className={item.active ? "bg-emerald-100 text-emerald-700 border-emerald-200" : ""}>{item.active ? "Ativo" : "Inativo"}</Badge></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(item)}><Edit className="h-3.5 w-3.5" /></Button>
+                        {!item.is_system && <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove.mutate(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button>}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(statuses || []).length === 0 && <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Nenhuma situação cadastrada.</TableCell></TableRow>}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>{editId ? "Editar Situação" : "Nova Situação"}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Nome (slug) *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="ex: em_triagem" disabled={form.is_system} /></div>
+              <div className="space-y-2"><Label>Cor</Label><div className="flex gap-2"><Input type="color" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} className="w-12 h-9 p-1" /><Input value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} className="flex-1" /></div></div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Ícone (lucide)</Label><Input value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="ex: clock" /></div>
+              <div className="space-y-2"><Label>Ordem</Label><Input type="number" value={form.display_order} onChange={e => setForm(f => ({ ...f, display_order: e.target.value }))} /></div>
+            </div>
+            <div className="space-y-2"><Label>Transições permitidas (slugs separados por vírgula)</Label><Input value={form.allowed_transitions} onChange={e => setForm(f => ({ ...f, allowed_transitions: e.target.value }))} placeholder="confirmado, cancelado, reagendado" /></div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2"><Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} /><Label>Ativo</Label></div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
+              <Button onClick={handleSave} disabled={!form.name}>Salvar</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
