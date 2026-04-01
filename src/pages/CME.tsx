@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -218,7 +218,7 @@ function MateriaisTab({ search }: { search: string }) {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" />Novo Material</Button></DialogTrigger>
           <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Novo Material</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Novo Material</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-3">
               <Input placeholder="Código *" value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} />
               <Input placeholder="Nome *" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
@@ -321,7 +321,7 @@ function KitsTab({ search }: { search: string }) {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" />Novo Kit</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Novo Kit</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Novo Kit</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-3">
               <Input placeholder="Código" value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} />
               <Input placeholder="Nome *" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
@@ -434,7 +434,7 @@ function ExpurgoTab({ search }: { search: string }) {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" />Receber Material</Button></DialogTrigger>
           <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Receber Material Contaminado</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Receber Material Contaminado</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-3">
               <Select value={form.setor_origem} onValueChange={(v) => setForm({ ...form, setor_origem: v })}>
                 <SelectTrigger><SelectValue placeholder="Setor de Origem *" /></SelectTrigger>
@@ -633,7 +633,7 @@ function ProcessamentoTab({ search }: { search: string }) {
 
           <Dialog open={openTriagem} onOpenChange={setOpenTriagem}>
             <DialogContent>
-              <DialogHeader><DialogTitle>Triagem do Material</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Triagem do Material</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
               <div className="space-y-3">
                 <Select value={triagemForm.criticidade} onValueChange={(v) => setTriagemForm({ ...triagemForm, criticidade: v })}>
                   <SelectTrigger><SelectValue placeholder="Criticidade" /></SelectTrigger>
@@ -714,7 +714,7 @@ function ProcessamentoTab({ search }: { search: string }) {
 
           <Dialog open={openLimpeza} onOpenChange={setOpenLimpeza}>
             <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>Registro de Limpeza</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Registro de Limpeza</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <Select value={limpezaForm.tipo_limpeza} onValueChange={(v) => setLimpezaForm({ ...limpezaForm, tipo_limpeza: v })}>
@@ -773,7 +773,7 @@ function ProcessamentoTab({ search }: { search: string }) {
 
           <Dialog open={openPreparo} onOpenChange={setOpenPreparo}>
             <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>Preparo e Embalagem</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Preparo e Embalagem</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
               <div className="space-y-3">
                 <Select value={preparoForm.embalagem_utilizada} onValueChange={(v) => setPreparoForm({ ...preparoForm, embalagem_utilizada: v })}>
                   <SelectTrigger><SelectValue placeholder="Tipo de embalagem" /></SelectTrigger>
@@ -855,7 +855,7 @@ function EsterilizacaoTab({ search }: { search: string }) {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" />Nova Carga</Button></DialogTrigger>
           <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Nova Carga de Esterilização</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Nova Carga de Esterilização</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-3">
               <Input placeholder="Nº Carga *" value={form.numero_carga} onChange={(e) => setForm({ ...form, numero_carga: e.target.value })} />
               <Input placeholder="Lote *" value={form.lote} onChange={(e) => setForm({ ...form, lote: e.target.value })} />
@@ -974,7 +974,7 @@ function QualidadeTab() {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" />Novo Teste</Button></DialogTrigger>
           <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Registrar Teste de Qualidade</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Registrar Teste de Qualidade</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-3">
               <Select value={form.tipo_teste} onValueChange={(v) => setForm({ ...form, tipo_teste: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -1082,7 +1082,7 @@ function ArmazenamentoTab({ search }: { search: string }) {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" />Registrar Armazenamento</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Armazenar Material Esterilizado</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Armazenar Material Esterilizado</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-3">
               <Input placeholder="Lote *" value={form.lote} onChange={(e) => setForm({ ...form, lote: e.target.value })} />
               <Input type="number" placeholder="Quantidade" value={form.quantidade} onChange={(e) => setForm({ ...form, quantidade: parseInt(e.target.value) || 1 })} />
@@ -1205,7 +1205,7 @@ function DistribuicaoTab({ search }: { search: string }) {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" />Nova Distribuição</Button></DialogTrigger>
           <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Distribuir Material Esterilizado</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Distribuir Material Esterilizado</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-3">
               <Select value={form.armazenamento_id} onValueChange={(v) => setForm({ ...form, armazenamento_id: v })}>
                 <SelectTrigger className="col-span-2"><SelectValue placeholder="Material disponível *" /></SelectTrigger>
@@ -1300,7 +1300,7 @@ function DevolucoesTab({ search }: { search: string }) {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" />Registrar Devolução</Button></DialogTrigger>
           <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Registrar Devolução</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Registrar Devolução</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
             <div className="space-y-3">
               {distribuicoes && (
                 <Select value={form.distribuicao_id} onValueChange={(v) => setForm({ ...form, distribuicao_id: v })}>
@@ -1391,7 +1391,7 @@ function EquipamentosTab({ search }: { search: string }) {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" />Novo Equipamento</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Cadastrar Equipamento</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Cadastrar Equipamento</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-3">
               <Input placeholder="Nome *" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
               <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
@@ -1472,7 +1472,7 @@ function NaoConformidadeTab() {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button variant="destructive" className="gap-1"><Plus className="h-4 w-4" />Registrar NC</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Nova Não Conformidade</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Nova Não Conformidade</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-3">
               <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -1713,7 +1713,7 @@ function RequisicoesCCTab() {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="gap-1"><Plus className="h-4 w-4" />Nova Requisição CC</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Requisição de Material — Centro Cirúrgico</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Requisição de Material — Centro Cirúrgico</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-3">
               {kits && (
                 <Select value={form.kit_id} onValueChange={(v) => setForm({ ...form, kit_id: v })}>

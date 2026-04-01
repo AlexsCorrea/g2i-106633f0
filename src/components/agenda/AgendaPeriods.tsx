@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Loader2, Clock, Copy } from "lucide-react";
 import { toast } from "sonner";
@@ -213,7 +213,7 @@ export default function AgendaPeriods() {
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Novo Período</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Novo Período</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
           <div className="space-y-4">
             {/* Multi-day selector */}
             <div className="space-y-2">

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -210,7 +210,7 @@ export default function AtendimentosAbertura() {
       {/* New Attendance Dialog */}
       <Dialog open={showNew} onOpenChange={setShowNew}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Abertura de Atendimento</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Abertura de Atendimento</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>Paciente *</Label>

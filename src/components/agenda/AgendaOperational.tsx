@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
@@ -1036,7 +1036,7 @@ export default function AgendaOperational() {
       {/* Check-in Dialog */}
       <Dialog open={!!checkinAppt} onOpenChange={open => !open && setCheckinAppt(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><UserCheck className="h-5 w-5 text-teal-600" />Registrar Chegada</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><UserCheck className="h-5 w-5 text-teal-600" />Registrar Chegada</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
           {checkinAppt && (
             <div className="space-y-4">
               <div className="p-3 bg-muted/50 rounded-lg text-sm space-y-1">
