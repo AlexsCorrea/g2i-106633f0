@@ -79,12 +79,15 @@ export function KioskCheckin({ onBack, onResult }: Props) {
       const today = new Date().toISOString().split("T")[0];
       const foundAppointments: FoundAppointment[] = [];
 
-      // === PATH 1: Search registered patients by CPF ===
+      // === PATH 1: Search registered patients by CPF (masked or unmasked) ===
+      const maskedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
       const { data: patients, error: pErr } = await supabase
         .from("patients")
         .select("id, full_name, birth_date, phone, health_insurance, health_insurance_number, updated_at")
-        .eq("cpf", cleanCpf);
+        .or(`cpf.eq.${cleanCpf},cpf.eq.${maskedCpf}`);
       if (pErr) throw pErr;
+
+      console.log("[check-in] CPF search:", { cleanCpf, maskedCpf, today, birthDate, patientsFound: patients?.length });
 
       const matchedPatient = patients?.find((p: any) => p.birth_date === birthDate);
 
