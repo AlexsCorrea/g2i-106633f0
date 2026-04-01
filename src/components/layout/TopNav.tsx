@@ -228,7 +228,7 @@ export default function TopNav() {
     : "Profissional";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-card shadow-sm">
+    <header className="sticky top-0 z-[60] border-b border-border bg-card shadow-sm isolate">
       <div className="max-w-[1920px] mx-auto flex items-center h-12 px-4">
         {/* Brand */}
         <button
