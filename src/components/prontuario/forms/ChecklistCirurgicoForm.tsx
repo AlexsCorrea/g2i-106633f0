@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
 interface ChecklistCirurgicoFormProps {
@@ -82,7 +82,8 @@ export function ChecklistCirurgicoForm({ patientId, open, onOpenChange }: Checkl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Checklist de Segurança Cirúrgica (OMS)</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Checklist de Segurança Cirúrgica (OMS)</DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
           {renderSection("SIGN IN (Antes da Indução Anestésica)", signInItems, signIn, setSignIn)}
           {renderSection("TIME OUT (Antes da Incisão)", timeOutItems, timeOut, setTimeOut)}

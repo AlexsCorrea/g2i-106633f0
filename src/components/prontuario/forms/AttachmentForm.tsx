@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
 interface AttachmentFormProps {
@@ -38,7 +38,8 @@ export function AttachmentForm({ patientId, open, onOpenChange }: AttachmentForm
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Novo Anexo / Documento</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Novo Anexo / Documento</DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1"><Label className="text-xs">Tipo de Documento *</Label><Select value={form.document_type} onValueChange={v => setForm({ ...form, document_type: v })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="..." /></SelectTrigger><SelectContent><SelectItem value="Laudo externo">Laudo Externo</SelectItem><SelectItem value="Exame externo">Exame Externo</SelectItem><SelectItem value="Receita">Receita</SelectItem><SelectItem value="Atestado">Atestado</SelectItem><SelectItem value="Declaração">Declaração</SelectItem><SelectItem value="Relatório médico">Relatório Médico</SelectItem><SelectItem value="Encaminhamento">Encaminhamento</SelectItem><SelectItem value="Outro">Outro</SelectItem></SelectContent></Select></div>
           <div className="space-y-1"><Label className="text-xs">Título *</Label><Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="h-8 text-xs" placeholder="Título do documento" required /></div>

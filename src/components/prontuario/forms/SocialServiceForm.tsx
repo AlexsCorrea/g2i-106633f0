@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
 interface SocialServiceFormProps {
@@ -38,7 +38,8 @@ export function SocialServiceForm({ patientId, open, onOpenChange }: SocialServi
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Atendimento Social</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Atendimento Social</DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1"><Label className="text-xs">Tipo de Atendimento</Label><Select value={form.visit_type} onValueChange={v => setForm({ ...form, visit_type: v })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="..." /></SelectTrigger><SelectContent><SelectItem value="Acolhimento inicial">Acolhimento inicial</SelectItem><SelectItem value="Acompanhamento">Acompanhamento</SelectItem><SelectItem value="Orientação de alta">Orientação de alta</SelectItem><SelectItem value="Atendimento familiar">Atendimento familiar</SelectItem><SelectItem value="Encaminhamento externo">Encaminhamento externo</SelectItem></SelectContent></Select></div>
           <div className="space-y-1"><Label className="text-xs">Situação Social *</Label><Textarea value={form.social_situation} onChange={e => setForm({ ...form, social_situation: e.target.value })} className="min-h-[80px] text-xs" placeholder="Contexto social, vulnerabilidades..." required /></div>

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 
@@ -55,7 +55,8 @@ export function NutritionForm({ patientId, open, onOpenChange, initialTab = "nut
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Nutrição</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Nutrição</DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Tabs value={tab} onValueChange={v => setTab(v as any)}>
             <TabsList className="grid w-full grid-cols-2">

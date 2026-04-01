@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Search, UserPlus, AlertCircle, AlertTriangle, Lock, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -347,6 +347,7 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
                 </>
               )}
             </DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription>
           </DialogHeader>
         </div>
 

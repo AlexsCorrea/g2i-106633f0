@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
 interface PsychologyFormProps {
@@ -39,7 +39,8 @@ export function PsychologyForm({ patientId, open, onOpenChange }: PsychologyForm
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Evolução Psicológica</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Evolução Psicológica</DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1"><Label className="text-xs">Estado Emocional</Label><Select value={form.emotional_state} onValueChange={v => setForm({ ...form, emotional_state: v })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="..." /></SelectTrigger><SelectContent><SelectItem value="Eutímico">Eutímico</SelectItem><SelectItem value="Ansioso">Ansioso</SelectItem><SelectItem value="Deprimido">Deprimido</SelectItem><SelectItem value="Irritado">Irritado</SelectItem><SelectItem value="Lábil">Lábil</SelectItem><SelectItem value="Apático">Apático</SelectItem></SelectContent></Select></div>

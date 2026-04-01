@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -184,6 +184,7 @@ export function DentistryForm({ patientId, open, onOpenChange }: DentistryFormPr
           <DialogTitle className="flex items-center gap-2">
             <Smile className="h-5 w-5 text-primary" /> Atendimento Odontológico Completo
           </DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
