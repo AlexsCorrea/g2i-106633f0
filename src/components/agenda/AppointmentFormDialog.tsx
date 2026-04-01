@@ -191,8 +191,8 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!form.patient_id && !isProvisional) e.patient = "Selecione um paciente";
-    if (isProvisional && !form.provisional_name) e.provisional_name = "Informe o nome provisório";
-    if (isProvisional && !form.phone) e.phone = "Informe o celular do paciente provisório";
+    if (isProvisional && !form.provisional_name.trim()) e.provisional_name = "Preencha o nome do paciente provisório";
+    if (isProvisional && !form.birth_date) e.birth_date = "Preencha a data de nascimento";
     if (!form.scheduled_date) e.date = "Informe a data";
     if (!form.scheduled_time) e.time = "Informe o horário";
     if (!form.appointment_type) e.type = "Selecione o tipo";
