@@ -641,55 +641,111 @@ export default function AgendaOperational() {
               </div>
             )}
 
-            {/* Time rows */}
+            {/* Time rows with sub-slots */}
             <div className="divide-y">
-              {hours.map(hour => (
-                <div key={hour} className="flex min-h-[52px]">
-                  <div className="w-14 shrink-0 py-2 px-2 text-xs font-medium text-muted-foreground border-r bg-muted/30 text-center">
-                    {String(hour).padStart(2, "0")}:00
-                  </div>
-                  {cols.map((ag, ci) => {
-                    const available = ag ? isHourAvailable(periods, ag.id, dayOfWeek, hour) : true;
-                    const blockReason = ag ? isSlotBlocked(ag.id, selectedDate, hour) : null;
-                    const colAppts = filteredAppointments.filter(a => {
-                      const d = parseLocalTime(a.scheduled_at);
-                      if (d.getHours() !== hour) return false;
-                      if (ag && (a as any).agenda_id !== ag.id) return false;
-                      return true;
-                    });
+              {hours.map(hour => {
+                // Determine finest interval for this hour across all displayed agendas
+                const intervals = cols.map(ag => ag?.default_interval || 60);
+                const finest = Math.min(...intervals.filter(i => i > 0), 60);
+                const subSlotCount = Math.max(Math.floor(60 / finest), 1);
+                const subSlots = Array.from({ length: subSlotCount }, (_, i) => i * finest);
 
-                    return (
-                      <div key={ag?.id || ci} className={cn(
-                        "flex-1 min-w-[200px] p-1 space-y-1",
-                        isMulti && "border-r",
-                        blockReason && "bg-destructive/5",
-                        !available && !blockReason && "bg-muted/40"
-                      )}>
-                        {colAppts.map(a => renderAppointmentCard(a, isMulti))}
-                        {!colAppts.length && blockReason && (
-                          <div className="w-full h-full min-h-[36px] rounded flex items-center justify-center gap-1 text-destructive/40" title={blockReason}>
-                            <Ban className="h-3 w-3" />
-                            <span className="text-[9px] truncate max-w-[120px]">{blockReason}</span>
-                          </div>
-                        )}
-                        {!colAppts.length && !blockReason && available && (
-                          <button
-                            className="w-full h-full min-h-[36px] rounded border border-dashed border-muted-foreground/10 hover:bg-muted/20 transition-colors flex items-center justify-center"
-                            onClick={() => handleSlotClick(hour, ag)}>
-                            <Plus className="h-3 w-3 text-muted-foreground/20" />
-                          </button>
-                        )}
-                        {!colAppts.length && !blockReason && !available && (
-                          <div className="w-full h-full min-h-[36px] rounded flex items-center justify-center gap-1 text-muted-foreground/30">
-                            <Lock className="h-3 w-3" />
-                            <span className="text-[9px]">Fechado</span>
-                          </div>
-                        )}
+                return (
+                  <div key={hour} className="flex">
+                    <div className="w-14 shrink-0 border-r bg-muted/30 flex flex-col">
+                      <div className="py-2 px-2 text-xs font-medium text-muted-foreground text-center">
+                        {String(hour).padStart(2, "0")}:00
                       </div>
-                    );
-                  })}
-                </div>
-              ))}
+                    </div>
+                    {cols.map((ag, ci) => {
+                      const agInterval = ag?.default_interval || 30;
+                      const agSubSlots = Array.from({ length: Math.max(Math.floor(60 / agInterval), 1) }, (_, i) => i * agInterval);
+                      const blockReason = ag ? isSlotBlocked(ag.id, selectedDate, hour) : null;
+
+                      return (
+                        <div key={ag?.id || ci} className={cn("flex-1 min-w-[200px] flex flex-col", isMulti && "border-r")}>
+                          {agSubSlots.map(minOffset => {
+                            const slotTime = `${String(hour).padStart(2, "0")}:${String(minOffset).padStart(2, "0")}`;
+                            const slotKey = `${ag?.id || ci}-${slotTime}`;
+                            const available = ag ? isTimeAvailable(periods, ag.id, dayOfWeek, slotTime) : true;
+                            const isDragOver = dragOverSlot === slotKey;
+
+                            // Find appointments at this exact sub-slot
+                            const slotAppts = filteredAppointments.filter(a => {
+                              const d = parseLocalTime(a.scheduled_at);
+                              if (d.getHours() !== hour) return false;
+                              // Map to nearest interval
+                              const apptMin = d.getMinutes();
+                              const snapped = Math.floor(apptMin / agInterval) * agInterval;
+                              if (snapped !== minOffset) return false;
+                              if (ag && (a as any).agenda_id !== ag.id) return false;
+                              return true;
+                            });
+
+                            const minHeight = agSubSlots.length > 2 ? "min-h-[28px]" : agSubSlots.length > 1 ? "min-h-[32px]" : "min-h-[48px]";
+
+                            return (
+                              <div
+                                key={slotKey}
+                                className={cn(
+                                  "p-0.5 border-b border-dashed border-border/30 last:border-b-0 transition-colors",
+                                  minHeight,
+                                  blockReason && "bg-destructive/5",
+                                  !available && !blockReason && "bg-muted/40",
+                                  isDragOver && available && !blockReason && "bg-primary/10 ring-1 ring-inset ring-primary/30",
+                                  isDragOver && (!available || blockReason) && "bg-destructive/10",
+                                )}
+                                onDragOver={available && !blockReason ? (e) => handleDragOver(e, slotKey) : undefined}
+                                onDragLeave={handleDragLeave}
+                                onDrop={available && !blockReason ? (e) => handleDrop(e, slotTime, ag) : undefined}
+                              >
+                                {/* Sub-slot time label for intervals < 60 */}
+                                {agSubSlots.length > 1 && minOffset > 0 && !slotAppts.length && !blockReason && available && (
+                                  <span className="text-[8px] text-muted-foreground/40 pl-1 select-none">{slotTime}</span>
+                                )}
+
+                                {slotAppts.map(a => (
+                                  <div
+                                    key={a.id}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, a)}
+                                    className="cursor-grab active:cursor-grabbing"
+                                  >
+                                    {renderAppointmentCard(a, isMulti)}
+                                  </div>
+                                ))}
+
+                                {!slotAppts.length && blockReason && minOffset === 0 && (
+                                  <div className="w-full h-full rounded flex items-center justify-center gap-1 text-destructive/40" title={blockReason}>
+                                    <Ban className="h-3 w-3" />
+                                    <span className="text-[9px] truncate max-w-[120px]">{blockReason}</span>
+                                  </div>
+                                )}
+
+                                {!slotAppts.length && !blockReason && available && (
+                                  <button
+                                    className="w-full h-full rounded border border-dashed border-transparent hover:border-muted-foreground/15 hover:bg-muted/20 transition-all flex items-center justify-center group/slot"
+                                    onClick={() => handleSlotClick(slotTime, ag)}
+                                  >
+                                    <Plus className="h-3 w-3 text-muted-foreground/0 group-hover/slot:text-muted-foreground/30 transition-opacity" />
+                                  </button>
+                                )}
+
+                                {!slotAppts.length && !blockReason && !available && minOffset === 0 && (
+                                  <div className="w-full h-full rounded flex items-center justify-center gap-1 text-muted-foreground/30">
+                                    <Lock className="h-3 w-3" />
+                                    <span className="text-[9px]">Fechado</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </CardContent>
