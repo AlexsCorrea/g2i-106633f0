@@ -4,7 +4,7 @@ import { useCreateMultidisciplinaryNote } from "@/hooks/useMultidisciplinaryNote
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
 interface MultidisciplinaryFormProps {
@@ -35,7 +35,8 @@ export function MultidisciplinaryForm({ patientId, specialty, specialtyLabel, op
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Nova Evolução - {specialtyLabel}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Nova Evolução - {specialtyLabel}</DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Evolução *</Label>

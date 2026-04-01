@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Loader2, Lock, ArrowRight } from "lucide-react";
 
@@ -117,7 +117,7 @@ export default function AdminStatuses() {
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{editId ? "Editar Situação" : "Nova Situação"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editId ? "Editar Situação" : "Nova Situação"}</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Nome (slug) *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="ex: em_triagem" disabled={form.is_system} /></div>

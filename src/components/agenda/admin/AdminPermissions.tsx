@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Loader2, Shield } from "lucide-react";
 
@@ -131,7 +131,7 @@ export default function AdminPermissions() {
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Nova Permissão</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Nova Permissão</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Perfil / Papel *</Label>

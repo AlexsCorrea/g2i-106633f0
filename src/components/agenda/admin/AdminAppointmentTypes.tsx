@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Edit, Trash2, Loader2, GripVertical } from "lucide-react";
 
@@ -103,7 +103,7 @@ export default function AdminAppointmentTypes() {
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{editId ? "Editar Tipo" : "Novo Tipo de Atendimento"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editId ? "Editar Tipo" : "Novo Tipo de Atendimento"}</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2"><Label>Nome *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="space-y-2"><Label>Descrição</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ShieldCheck, Plus, Search, Loader2, ArrowLeft, LogIn, LogOut, User } from "lucide-react";
@@ -132,7 +132,7 @@ export default function Portaria() {
 
       <Dialog open={showNew} onOpenChange={setShowNew}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Registrar Entrada</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Registrar Entrada</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <div><Label>Nome do Visitante *</Label><Input value={form.visitor_name} onChange={(e) => setForm({ ...form, visitor_name: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">

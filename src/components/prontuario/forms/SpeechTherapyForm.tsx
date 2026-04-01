@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
 interface SpeechTherapyFormProps {
@@ -39,7 +39,8 @@ export function SpeechTherapyForm({ patientId, open, onOpenChange }: SpeechThera
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Evolução Fonoaudiológica</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Evolução Fonoaudiológica</DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1"><Label className="text-xs">Avaliação da Deglutição</Label><Select value={form.swallowing_assessment} onValueChange={v => setForm({ ...form, swallowing_assessment: v })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="..." /></SelectTrigger><SelectContent><SelectItem value="Normal">Normal</SelectItem><SelectItem value="Disfagia leve">Disfagia leve</SelectItem><SelectItem value="Disfagia moderada">Disfagia moderada</SelectItem><SelectItem value="Disfagia grave">Disfagia grave</SelectItem><SelectItem value="Não avaliável">Não avaliável (IOT/TQT)</SelectItem></SelectContent></Select></div>

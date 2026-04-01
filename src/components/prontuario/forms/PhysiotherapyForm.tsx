@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
 interface PhysiotherapyFormProps {
@@ -40,7 +40,8 @@ export function PhysiotherapyForm({ patientId, open, onOpenChange }: Physiothera
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Evolução Fisioterapêutica</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Evolução Fisioterapêutica</DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1"><Label className="text-xs">Modalidade</Label><Select value={form.modality} onValueChange={v => setForm({ ...form, modality: v })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="..." /></SelectTrigger><SelectContent><SelectItem value="Respiratória">Respiratória</SelectItem><SelectItem value="Motora">Motora</SelectItem><SelectItem value="Respiratória + Motora">Respiratória + Motora</SelectItem><SelectItem value="Neurológica">Neurológica</SelectItem></SelectContent></Select></div>

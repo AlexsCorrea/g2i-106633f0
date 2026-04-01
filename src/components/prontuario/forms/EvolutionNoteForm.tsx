@@ -5,7 +5,7 @@ import { useCreateVitalSign } from "@/hooks/useVitalSigns";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Stethoscope } from "lucide-react";
@@ -112,6 +112,7 @@ export function EvolutionNoteForm({ patientId, open, onOpenChange, initialSpecia
               <Badge variant="secondary" className="text-xs ml-2">{selectedSpecLabel}</Badge>
             )}
           </DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">

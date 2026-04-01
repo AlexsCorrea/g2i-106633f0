@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Package, Plus, Search, Loader2, ArrowLeft, ArrowDownRight, ArrowUpRight, AlertTriangle } from "lucide-react";
@@ -127,7 +127,7 @@ export default function Estoque({ stockType: propType }: Props) {
       {/* New Item */}
       <Dialog open={showNew} onOpenChange={setShowNew}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Novo Item de Estoque</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Novo Item de Estoque</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <div><Label>Nome *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
@@ -149,7 +149,7 @@ export default function Estoque({ stockType: propType }: Props) {
       {/* Movement */}
       <Dialog open={!!showMovement} onOpenChange={() => setShowMovement(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Registrar Movimentação</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Registrar Movimentação</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <div>
               <Label>Tipo</Label>

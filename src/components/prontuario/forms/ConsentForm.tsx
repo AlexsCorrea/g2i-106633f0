@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
 interface ConsentFormProps {
@@ -41,7 +41,8 @@ export function ConsentForm({ patientId, open, onOpenChange }: ConsentFormProps)
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Termo de Consentimento</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Termo de Consentimento</DialogTitle>
+          <DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1"><Label className="text-xs">Tipo de Termo *</Label><Select value={form.consent_type} onValueChange={v => setForm({ ...form, consent_type: v })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="..." /></SelectTrigger><SelectContent><SelectItem value="TCLE">TCLE (Consentimento Livre e Esclarecido)</SelectItem><SelectItem value="Consentimento cirúrgico">Consentimento Cirúrgico</SelectItem><SelectItem value="Consentimento anestésico">Consentimento Anestésico</SelectItem><SelectItem value="Consentimento hemotransfusão">Hemotransfusão</SelectItem><SelectItem value="Recusa de tratamento">Recusa de Tratamento</SelectItem><SelectItem value="Alta a pedido">Alta a Pedido</SelectItem></SelectContent></Select></div>
           <div className="space-y-1"><Label className="text-xs">Procedimento / Tratamento *</Label><Input value={form.procedure_name} onChange={e => setForm({ ...form, procedure_name: e.target.value })} className="h-8 text-xs" placeholder="Nome do procedimento" required /></div>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -124,7 +124,7 @@ export default function Financeiro() {
       {/* New Payable */}
       <Dialog open={showNewPay} onOpenChange={setShowNewPay}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Nova Conta a Pagar</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Nova Conta a Pagar</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <div><Label>Fornecedor *</Label><Input value={payForm.supplier} onChange={(e) => setPayForm({ ...payForm, supplier: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
@@ -146,7 +146,7 @@ export default function Financeiro() {
       {/* New Receivable */}
       <Dialog open={showNewRec} onOpenChange={setShowNewRec}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Novo Recebível</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Novo Recebível</DialogTitle><DialogDescription className="sr-only">Formulário</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Origem</Label>
