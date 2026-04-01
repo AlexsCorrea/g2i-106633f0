@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Trash2, Loader2, Flag, Zap } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 
 const typeLabels: Record<string, string> = {
   nacional: "Nacional", estadual: "Estadual", municipal: "Municipal",
