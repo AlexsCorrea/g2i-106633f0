@@ -81,7 +81,7 @@ export default function SalaEspera() {
   };
 
   const getWaitTime = (a: Appointment) => {
-    const scheduled = parseISO(a.scheduled_at);
+    const scheduled = new Date(a.scheduled_at);
     const now = new Date();
     const mins = differenceInMinutes(now, scheduled);
     if (mins < 0) return null;
