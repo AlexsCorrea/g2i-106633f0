@@ -91,6 +91,17 @@ export default function AgendaOperational() {
   const [formDefaultDate, setFormDefaultDate] = useState<string>("");
   const [formDefaultTime, setFormDefaultTime] = useState<string>("08:00");
   const [formDefaultAgenda, setFormDefaultAgenda] = useState<string>("");
+  const [showMassTransfer, setShowMassTransfer] = useState(false);
+
+  // Drag & drop state
+  const [dragAppt, setDragAppt] = useState<any>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<string | null>(null);
+  const [dragConfirmOpen, setDragConfirmOpen] = useState(false);
+  const [dragConfirmData, setDragConfirmData] = useState<{
+    patientName: string; sourceAgenda: string; targetAgenda: string;
+    sourceTime: string; targetTime: string; isTransfer: boolean;
+    appointmentId: string; targetAgendaId: string; newScheduledAt: string;
+  } | null>(null);
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
