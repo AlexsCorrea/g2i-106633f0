@@ -1,0 +1,1 @@
+ALTER TABLE public.schedule_agendas ADD COLUMN IF NOT EXISTS color text DEFAULT '#3b82f6';

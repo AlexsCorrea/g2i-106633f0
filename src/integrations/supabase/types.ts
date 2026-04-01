@@ -2689,6 +2689,7 @@ export type Database = {
           auto_confirm: boolean
           blocked_insurances: string[] | null
           code: string | null
+          color: string | null
           created_at: string
           daily_patient_limit: number | null
           default_duration: number
@@ -2728,6 +2729,7 @@ export type Database = {
           auto_confirm?: boolean
           blocked_insurances?: string[] | null
           code?: string | null
+          color?: string | null
           created_at?: string
           daily_patient_limit?: number | null
           default_duration?: number
@@ -2767,6 +2769,7 @@ export type Database = {
           auto_confirm?: boolean
           blocked_insurances?: string[] | null
           code?: string | null
+          color?: string | null
           created_at?: string
           daily_patient_limit?: number | null
           default_duration?: number
