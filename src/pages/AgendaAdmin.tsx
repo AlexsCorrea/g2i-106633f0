@@ -14,6 +14,12 @@ import AgendaBlocks from "@/components/agenda/AgendaBlocks";
 import AgendaWaitList from "@/components/agenda/AgendaWaitList";
 import AgendaHolidays from "@/components/agenda/AgendaHolidays";
 import AgendaSettings from "@/components/agenda/AgendaSettings";
+import AdminInsurances from "@/components/agenda/admin/AdminInsurances";
+import AdminProcedures from "@/components/agenda/admin/AdminProcedures";
+import AdminAppointmentTypes from "@/components/agenda/admin/AdminAppointmentTypes";
+import AdminOrientations from "@/components/agenda/admin/AdminOrientations";
+import AdminStatuses from "@/components/agenda/admin/AdminStatuses";
+import AdminPermissions from "@/components/agenda/admin/AdminPermissions";
 import AgendaAuxSettings from "@/components/agenda/admin/AgendaAuxSettings";
 
 interface SidebarGroup {
@@ -79,67 +85,12 @@ export default function AgendaAdmin() {
       case "feriados": return <AgendaHolidays />;
       case "fila": return <AgendaWaitList />;
       case "config": return <AgendaSettings />;
-      case "convenios": return <AgendaAuxSettings
-          title="Convênios e Planos"
-          description="Gerencie os convênios que poderão ser atrelados às agendas."
-          mockData={[
-            { id: "1", name: "Unimed Seguros", detail: "Ativo em 12 agendas", status: "Ativo" },
-            { id: "2", name: "Bradesco Saúde", detail: "Ativo em 5 agendas", status: "Ativo" },
-            { id: "3", name: "Amil Assistência", detail: "Ativo em 15 agendas", status: "Ativo" },
-            { id: "4", name: "SulAmérica Especial", detail: "Ativo em 8 agendas", status: "Inativo" }
-          ]}
-        />;
-      case "procedimentos": return <AgendaAuxSettings
-          title="Catálogo de Procedimentos"
-          description="Procedimentos e exames habilitados por agenda."
-          mockData={[
-            { id: "1", name: "Endoscopia Digestiva Alta", detail: "Duração Média: 40 min", status: "Ativo" },
-            { id: "2", name: "Ecocardiograma com Doppler", detail: "Duração Média: 30 min", status: "Ativo" },
-            { id: "3", name: "Consulta Psicológica", detail: "Duração Média: 50 min", status: "Ativo" }
-          ]}
-        />;
-      case "tipos_atendimento": return <AgendaAuxSettings
-          title="Tipos de Atendimento"
-          description="Classificações para os agendamentos realizados."
-          mockData={[
-            { id: "1", name: "Primeira Vez", detail: "Requer cadastro completo", status: "Ativo" },
-            { id: "2", name: "Retorno", detail: "Até 30 dias", status: "Ativo" },
-            { id: "3", name: "Rotina", detail: "Manutenção e revisão", status: "Ativo" },
-            { id: "4", name: "Emergencial", detail: "Encaixe prioritário", status: "Ativo" }
-          ]}
-        />;
-      case "tipos_orientacoes": return <AgendaAuxSettings
-          title="Tipos × Orientações"
-          description="Vincule orientações e questionários pré-consulta aos tipos de atendimento."
-          mockData={[
-            { id: "1", name: "Consulta → Jejum 8h", detail: "Endoscopia / Exames laboratoriais", status: "Ativo" },
-            { id: "2", name: "Retorno → Trazer exames anteriores", detail: "Todas as especialidades", status: "Ativo" },
-            { id: "3", name: "Cirurgia → Questionário pré-operatório", detail: "Centro Cirúrgico", status: "Ativo" }
-          ]}
-        />;
-      case "situacoes": return <AgendaAuxSettings
-          title="Situações do Agendamento"
-          description="Gerencie os status e transições válidas entre situações."
-          mockData={[
-            { id: "1", name: "Agendado", detail: "Status inicial padrão", status: "Ativo" },
-            { id: "2", name: "Confirmado", detail: "Confirmação pelo paciente ou recepção", status: "Ativo" },
-            { id: "3", name: "Aguardando", detail: "Paciente na sala de espera", status: "Ativo" },
-            { id: "4", name: "Em Atendimento", detail: "Consulta em andamento", status: "Ativo" },
-            { id: "5", name: "Atendido", detail: "Consulta finalizada", status: "Ativo" },
-            { id: "6", name: "Faltou", detail: "Paciente não compareceu", status: "Ativo" },
-            { id: "7", name: "Cancelado", detail: "Cancelamento pelo paciente ou unidade", status: "Ativo" }
-          ]}
-        />;
-      case "permissoes": return <AgendaAuxSettings
-          title="Permissões da Agenda"
-          description="Controle quais perfis podem agendar, cancelar e gerenciar cada agenda."
-          mockData={[
-            { id: "1", name: "Recepção — Agendar/Cancelar", detail: "Todas as agendas ambulatoriais", status: "Ativo" },
-            { id: "2", name: "Médico — Visualizar/Encaixar", detail: "Agenda própria", status: "Ativo" },
-            { id: "3", name: "Administrador — Acesso total", detail: "Todas as agendas", status: "Ativo" },
-            { id: "4", name: "Enfermagem — Visualizar apenas", detail: "Agendas do setor", status: "Ativo" }
-          ]}
-        />;
+      case "convenios": return <AdminInsurances />;
+      case "procedimentos": return <AdminProcedures />;
+      case "tipos_atendimento": return <AdminAppointmentTypes />;
+      case "tipos_orientacoes": return <AdminOrientations />;
+      case "situacoes": return <AdminStatuses />;
+      case "permissoes": return <AdminPermissions />;
       case "medicos_externos": return <AgendaAuxSettings
           title="Profissionais Externos"
           description="Cadastro de médicos parceiros ou não atuantes contínuos."
@@ -161,11 +112,8 @@ export default function AgendaAdmin() {
     }
   };
 
-  const activeLabel = sidebarGroups.flatMap(g => g.items).find(i => i.id === activeSection)?.label || "Cadastro de Agendas";
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -194,12 +142,10 @@ export default function AgendaAdmin() {
       </header>
 
       <div className="flex">
-        {/* Main content — LEFT */}
         <main className="flex-1 p-6 max-w-[1400px]">
           {renderContent()}
         </main>
 
-        {/* Sidebar — RIGHT */}
         <aside className={cn(
           "border-l bg-card/50 min-h-[calc(100vh-57px)] transition-all duration-200 flex-shrink-0",
           sidebarCollapsed ? "w-14" : "w-64"
