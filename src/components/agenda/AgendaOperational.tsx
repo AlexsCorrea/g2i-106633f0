@@ -97,6 +97,7 @@ export default function AgendaOperational() {
   const [dragAppt, setDragAppt] = useState<any>(null);
   const [dragOverSlot, setDragOverSlot] = useState<string | null>(null);
   const [dragConfirmOpen, setDragConfirmOpen] = useState(false);
+  const [dragSaving, setDragSaving] = useState(false);
   const [dragConfirmData, setDragConfirmData] = useState<{
     patientName: string; sourceAgenda: string; targetAgenda: string;
     sourceTime: string; targetTime: string; isTransfer: boolean;
