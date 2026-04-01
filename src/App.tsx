@@ -28,6 +28,7 @@ import AdminAutoatendimento from "./pages/AdminAutoatendimento";
 import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import SalaEspera from "./pages/SalaEspera";
 
 // Functional module pages
 import AtendimentosAbertura from "./pages/AtendimentosAbertura";
@@ -110,7 +111,7 @@ function App() {
                 <Route path="/assistencial/oncologia" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
 
                 {/* Salas */}
-                <Route path="/salas/espera" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+                <Route path="/salas/espera" element={<ProtectedRoute><SalaEspera /></ProtectedRoute>} />
                 <Route path="/salas/procedimentos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
 
                 {/* Agenda extras */}
