@@ -1054,8 +1054,9 @@ export default function AgendaOperational() {
       {/* Drag Confirm Dialog */}
       <DragConfirmDialog
         open={dragConfirmOpen}
-        onOpenChange={setDragConfirmOpen}
+        onOpenChange={(v) => { if (!v && !dragSaving) { setDragConfirmOpen(false); setDragConfirmData(null); } }}
         onConfirm={confirmDrag}
+        loading={dragSaving}
         data={dragConfirmData}
       />
 
