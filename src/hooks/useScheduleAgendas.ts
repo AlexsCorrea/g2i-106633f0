@@ -50,7 +50,7 @@ export function useScheduleAgendas(filters?: { status?: string; unit?: string; a
     queryFn: async () => {
       let query = supabase
         .from("schedule_agendas")
-        .select("*")
+        .select("*, profiles:professional_id(full_name, avatar_url, specialty)")
         .order("name", { ascending: true });
 
       if (filters?.status) query = query.eq("status", filters.status);
