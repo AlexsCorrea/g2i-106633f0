@@ -210,6 +210,7 @@ export default function SalaEspera() {
                               <span className="font-medium text-sm">{a.patients?.full_name || (a as any).provisional_name || a.title}</span>
                               <div className="flex items-center gap-2 mt-0.5">
                                 {!a.patient_id && <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-50 text-amber-600 border-amber-200">Cadastro pendente</Badge>}
+                                {(a as any).is_fit_in && <Badge variant="outline" className="text-[9px] px-1 py-0 bg-violet-50 text-violet-600 border-violet-200">Encaixe</Badge>}
                                 {(a as any).is_return && <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-50 text-blue-600 border-blue-200">Retorno</Badge>}
                                 {(a as any).is_new_patient && <Badge variant="outline" className="text-[9px] px-1 py-0 bg-emerald-50 text-emerald-600 border-emerald-200">Novo</Badge>}
                                 {(a as any).priority === "urgente" && <Badge variant="outline" className="text-[9px] px-1 py-0 bg-destructive/10 text-destructive border-destructive/20">Urgente</Badge>}
