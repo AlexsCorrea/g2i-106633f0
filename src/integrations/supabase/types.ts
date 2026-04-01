@@ -194,6 +194,279 @@ export type Database = {
           },
         ]
       }
+      agenda_appointment_types: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          name: string
+          requires_return_days: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name: string
+          requires_return_days?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+          requires_return_days?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agenda_insurances: {
+        Row: {
+          active: boolean
+          agenda_id: string
+          code: string | null
+          created_at: string
+          daily_limit: number | null
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          agenda_id: string
+          code?: string | null
+          created_at?: string
+          daily_limit?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          agenda_id?: string
+          code?: string | null
+          created_at?: string
+          daily_limit?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_insurances_agenda_id_fkey"
+            columns: ["agenda_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_agendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agenda_permissions: {
+        Row: {
+          agenda_id: string
+          can_admin: boolean
+          can_cancel: boolean
+          can_create: boolean
+          can_edit: boolean
+          can_fit_in: boolean
+          can_open_attendance: boolean
+          can_reschedule: boolean
+          can_view: boolean
+          created_at: string
+          id: string
+          profile_id: string | null
+          role_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          agenda_id: string
+          can_admin?: boolean
+          can_cancel?: boolean
+          can_create?: boolean
+          can_edit?: boolean
+          can_fit_in?: boolean
+          can_open_attendance?: boolean
+          can_reschedule?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          profile_id?: string | null
+          role_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agenda_id?: string
+          can_admin?: boolean
+          can_cancel?: boolean
+          can_create?: boolean
+          can_edit?: boolean
+          can_fit_in?: boolean
+          can_open_attendance?: boolean
+          can_reschedule?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          profile_id?: string | null
+          role_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_permissions_agenda_id_fkey"
+            columns: ["agenda_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_agendas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agenda_procedures: {
+        Row: {
+          active: boolean
+          agenda_id: string
+          code: string | null
+          created_at: string
+          custom_name: string | null
+          duration_minutes: number | null
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          agenda_id: string
+          code?: string | null
+          created_at?: string
+          custom_name?: string | null
+          duration_minutes?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          agenda_id?: string
+          code?: string | null
+          created_at?: string
+          custom_name?: string | null
+          duration_minutes?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_procedures_agenda_id_fkey"
+            columns: ["agenda_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_agendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agenda_statuses: {
+        Row: {
+          active: boolean
+          allowed_transitions: string[] | null
+          color: string
+          created_at: string
+          display_order: number
+          icon: string | null
+          id: string
+          is_system: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          allowed_transitions?: string[] | null
+          color?: string
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          allowed_transitions?: string[] | null
+          color?: string
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agenda_type_orientations: {
+        Row: {
+          active: boolean
+          appointment_type_id: string
+          created_at: string
+          display_order: number
+          field_type: string
+          id: string
+          options: Json | null
+          question: string
+          required: boolean
+        }
+        Insert: {
+          active?: boolean
+          appointment_type_id: string
+          created_at?: string
+          display_order?: number
+          field_type?: string
+          id?: string
+          options?: Json | null
+          question: string
+          required?: boolean
+        }
+        Update: {
+          active?: boolean
+          appointment_type_id?: string
+          created_at?: string
+          display_order?: number
+          field_type?: string
+          id?: string
+          options?: Json | null
+          question?: string
+          required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_type_orientations_appointment_type_id_fkey"
+            columns: ["appointment_type_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_appointment_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       allergies: {
         Row: {
           allergen: string
