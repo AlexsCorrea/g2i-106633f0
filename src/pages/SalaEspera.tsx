@@ -62,10 +62,9 @@ export default function SalaEspera() {
         return true;
       })
       .sort((a, b) => {
-        // Priority: em_andamento first, then by arrival time
-        const statusOrder: Record<string, number> = { em_andamento: 0, em_espera: 1, chegou: 2, confirmado: 3 };
-        const aOrder = statusOrder[a.status] ?? 4;
-        const bOrder = statusOrder[b.status] ?? 4;
+        const statusOrder: Record<string, number> = { em_andamento: 0, em_espera: 1, chegou: 2, confirmado: 3, agendado: 4, encaixe: 5, reagendado: 6, nao_compareceu: 7, concluido: 8, cancelado: 9 };
+        const aOrder = statusOrder[a.status] ?? 10;
+        const bOrder = statusOrder[b.status] ?? 10;
         if (aOrder !== bOrder) return aOrder - bOrder;
         return new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
       });
