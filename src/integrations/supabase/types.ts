@@ -245,6 +245,39 @@ export type Database = {
           },
         ]
       }
+      appointment_logs: {
+        Row: {
+          action: string
+          appointment_id: string
+          changed_by: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          new_status: string | null
+          old_status: string | null
+        }
+        Insert: {
+          action: string
+          appointment_id: string
+          changed_by?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+        }
+        Update: {
+          action?: string
+          appointment_id?: string
+          changed_by?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           agenda_id: string | null
@@ -261,10 +294,14 @@ export type Database = {
           location: string | null
           notes: string | null
           origin_channel: string | null
-          patient_id: string
+          patient_id: string | null
           phone: string | null
           priority: string | null
           professional_id: string | null
+          provisional_birth_date: string | null
+          provisional_gender: string | null
+          provisional_name: string | null
+          provisional_phone: string | null
           room: string | null
           scheduled_at: string
           specialty: string | null
@@ -287,10 +324,14 @@ export type Database = {
           location?: string | null
           notes?: string | null
           origin_channel?: string | null
-          patient_id: string
+          patient_id?: string | null
           phone?: string | null
           priority?: string | null
           professional_id?: string | null
+          provisional_birth_date?: string | null
+          provisional_gender?: string | null
+          provisional_name?: string | null
+          provisional_phone?: string | null
           room?: string | null
           scheduled_at: string
           specialty?: string | null
@@ -313,10 +354,14 @@ export type Database = {
           location?: string | null
           notes?: string | null
           origin_channel?: string | null
-          patient_id?: string
+          patient_id?: string | null
           phone?: string | null
           priority?: string | null
           professional_id?: string | null
+          provisional_birth_date?: string | null
+          provisional_gender?: string | null
+          provisional_name?: string | null
+          provisional_phone?: string | null
           room?: string | null
           scheduled_at?: string
           specialty?: string | null

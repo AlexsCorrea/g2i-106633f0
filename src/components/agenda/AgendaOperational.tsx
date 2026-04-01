@@ -1,7 +1,9 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppointments, useUpdateAppointment, useDeleteAppointment } from "@/hooks/useAppointments";
-import { useScheduleAgendas, useSchedulePeriods, type ScheduleAgenda } from "@/hooks/useScheduleAgendas";
+import { useScheduleAgendas, useSchedulePeriods, useScheduleBlocks, useScheduleHolidays, type ScheduleAgenda } from "@/hooks/useScheduleAgendas";
+import { useAppointmentLogs, useCreateAppointmentLog } from "@/hooks/useAppointmentLogs";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,6 +70,7 @@ function formatDatetime(ts: string): string {
 
 export default function AgendaOperational() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"list" | "day" | "week">("day");
   const [showForm, setShowForm] = useState(false);
@@ -95,10 +98,39 @@ export default function AgendaOperational() {
   const { data: weekAppointments } = useAppointments(viewMode === "week" ? {} : undefined);
   const { data: agendas } = useScheduleAgendas();
   const { data: allPeriods } = useSchedulePeriods();
+  const { data: allBlocks } = useScheduleBlocks();
+  const { data: allHolidays } = useScheduleHolidays();
   const updateAppointment = useUpdateAppointment();
   const deleteAppointment = useDeleteAppointment();
+  const createLog = useCreateAppointmentLog();
+  const { data: selectedApptLogs } = useAppointmentLogs(selectedAppt?.id);
 
   const periods = allPeriods || [];
+  const blocks = allBlocks || [];
+  const holidays = allHolidays || [];
+
+  // Check if a slot is blocked
+  const isSlotBlocked = (agendaId: string, date: Date, hour: number): string | null => {
+    const dateStr2 = format(date, "yyyy-MM-dd");
+    // Check holidays
+    const holiday = holidays.find(h => h.holiday_date === dateStr2 && h.auto_block &&
+      (!h.affected_agendas?.length || h.affected_agendas.includes(agendaId)));
+    if (holiday) return `Feriado: ${holiday.name}`;
+    // Check blocks
+    const block = blocks.find(b => {
+      if (b.agenda_id !== agendaId) return false;
+      if (dateStr2 < b.start_date || dateStr2 > b.end_date) return false;
+      if (b.block_type === "total") return true;
+      if (b.start_time && b.end_time) {
+        const bsh = parseInt(b.start_time.split(":")[0], 10);
+        const beh = parseInt(b.end_time.split(":")[0], 10);
+        return hour >= bsh && hour < beh;
+      }
+      return true;
+    });
+    if (block) return `Bloqueado: ${block.reason}`;
+    return null;
+  };
 
   const activeAgendas = useMemo(() => agendas?.filter(a => a.status === "ativa") || [], [agendas]);
   const displayedAgendas = useMemo(() => {
@@ -134,23 +166,28 @@ export default function AgendaOperational() {
 
   const handleCheckin = async () => {
     if (!checkinAppt) return;
+    const oldStatus = checkinAppt.status;
     await updateAppointment.mutateAsync({
       id: checkinAppt.id,
       status: "chegou" as any,
       notes: checkinNotes ? `${checkinAppt.notes || ''}\n[Chegada] ${checkinNotes}`.trim() : checkinAppt.notes
     });
+    createLog.mutate({ appointment_id: checkinAppt.id, action: "check-in", old_status: oldStatus, new_status: "chegou", changed_by: profile?.id, details: checkinNotes ? { notes: checkinNotes } : null });
     setCheckinAppt(null);
     setCheckinNotes("");
     if (selectedAppt?.id === checkinAppt.id) setSelectedAppt(null);
   };
 
   const quickAction = async (id: string, status: string) => {
+    const appt = appointments.find(a => a.id === id);
     await updateAppointment.mutateAsync({ id, status: status as any });
+    createLog.mutate({ appointment_id: id, action: "status_change", old_status: appt?.status || null, new_status: status, changed_by: profile?.id });
     if (selectedAppt?.id === id) setSelectedAppt(null);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir este agendamento?")) return;
+    createLog.mutate({ appointment_id: id, action: "deleted", changed_by: profile?.id });
     await deleteAppointment.mutateAsync(id);
     if (selectedAppt?.id === id) setSelectedAppt(null);
   };
@@ -175,16 +212,49 @@ export default function AgendaOperational() {
     const time = `${String(hour).padStart(2, "0")}:00`;
 
     if (agenda) {
+      // Check blocks first
+      const blockReason = isSlotBlocked(agenda.id, selectedDate, hour);
+      if (blockReason) {
+        toast.error(blockReason);
+        return;
+      }
       const available = isHourAvailable(periods, agenda.id, dayOfWeek, hour);
       if (!available) {
-        toast.error("Horário indisponível. Use 'Encaixe' para agendar fora do período.");
+        toast.error("Esta agenda não possui período aberto neste horário.");
+        return;
+      }
+      // Check conflicts
+      const existingAppts = filteredAppointments.filter(a => {
+        const d = parseLocalTime(a.scheduled_at);
+        return d.getHours() === hour && (a as any).agenda_id === agenda.id;
+      });
+      if (existingAppts.length > 0 && !agenda.allows_overlap) {
+        toast.error("Já existe um agendamento neste horário. Use 'Encaixe' para sobrepor.");
         return;
       }
     }
     openNewAppointment(dateStr, time, agenda?.id);
   };
 
-  const hours = Array.from({ length: 14 }, (_, i) => i + 7);
+  // Dynamic hour range based on displayed agendas' periods
+  const hours = useMemo(() => {
+    const dayOfWeek = selectedDate.getDay();
+    let minHour = 7, maxHour = 20;
+    if (periods.length > 0 && displayedAgendas.length > 0) {
+      let foundAny = false;
+      displayedAgendas.forEach(ag => {
+        const agPeriods = periods.filter(p => p.agenda_id === ag.id && p.day_of_week === dayOfWeek);
+        agPeriods.forEach(p => {
+          const sh = parseInt(p.start_time.split(":")[0], 10);
+          const eh = parseInt(p.end_time.split(":")[0], 10);
+          if (!foundAny) { minHour = sh; maxHour = eh; foundAny = true; }
+          else { minHour = Math.min(minHour, sh); maxHour = Math.max(maxHour, eh); }
+        });
+      });
+    }
+    const length = Math.max(maxHour - minHour, 1);
+    return Array.from({ length }, (_, i) => i + minHour);
+  }, [selectedDate, periods, displayedAgendas]);
 
   const stats = useMemo(() => {
     if (!filteredAppointments) return { total: 0, confirmados: 0, aguardando: 0, emEspera: 0, chegou: 0 };
@@ -310,7 +380,7 @@ export default function AgendaOperational() {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>
-            <h3 className="font-semibold text-base">{a.patients?.full_name || a.title}</h3>
+            <h3 className="font-semibold text-base">{a.patients?.full_name || (a as any).provisional_name || a.title}</h3>
             {isProvisional && (
               <div className="flex items-center gap-1.5 mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
                 <AlertTriangle className="h-3 w-3" />
@@ -350,6 +420,27 @@ export default function AgendaOperational() {
             {(a as any).is_return && <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">Retorno</Badge>}
             {(a as any).is_new_patient && <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">Paciente Novo</Badge>}
           </div>
+
+          {/* Audit trail */}
+          {selectedApptLogs && selectedApptLogs.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <span className="text-xs text-muted-foreground font-semibold block mb-2">Histórico</span>
+                <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                  {selectedApptLogs.map(log => (
+                    <div key={log.id} className="text-[10px] flex items-start gap-2 text-muted-foreground">
+                      <Clock className="h-3 w-3 mt-0.5 shrink-0" />
+                      <div>
+                        <span className="font-medium text-foreground">{log.action === "status_change" ? `${statusConfig[log.old_status || ""]?.label || log.old_status} → ${statusConfig[log.new_status || ""]?.label || log.new_status}` : log.action === "check-in" ? "Check-in realizado" : log.action === "deleted" ? "Excluído" : log.action}</span>
+                        <span className="block">{new Date(log.created_at).toLocaleString("pt-BR")}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Actions */}
@@ -425,6 +516,7 @@ export default function AgendaOperational() {
                   </div>
                   {cols.map((ag, ci) => {
                     const available = ag ? isHourAvailable(periods, ag.id, dayOfWeek, hour) : true;
+                    const blockReason = ag ? isSlotBlocked(ag.id, selectedDate, hour) : null;
                     const colAppts = filteredAppointments.filter(a => {
                       const d = parseLocalTime(a.scheduled_at);
                       if (d.getHours() !== hour) return false;
@@ -436,17 +528,24 @@ export default function AgendaOperational() {
                       <div key={ag?.id || ci} className={cn(
                         "flex-1 min-w-[200px] p-1 space-y-1",
                         isMulti && "border-r",
-                        !available && "bg-muted/40"
+                        blockReason && "bg-destructive/5",
+                        !available && !blockReason && "bg-muted/40"
                       )}>
                         {colAppts.map(a => renderAppointmentCard(a, isMulti))}
-                        {!colAppts.length && available && (
+                        {!colAppts.length && blockReason && (
+                          <div className="w-full h-full min-h-[36px] rounded flex items-center justify-center gap-1 text-destructive/40" title={blockReason}>
+                            <Ban className="h-3 w-3" />
+                            <span className="text-[9px] truncate max-w-[120px]">{blockReason}</span>
+                          </div>
+                        )}
+                        {!colAppts.length && !blockReason && available && (
                           <button
                             className="w-full h-full min-h-[36px] rounded border border-dashed border-muted-foreground/10 hover:bg-muted/20 transition-colors flex items-center justify-center"
                             onClick={() => handleSlotClick(hour, ag)}>
                             <Plus className="h-3 w-3 text-muted-foreground/20" />
                           </button>
                         )}
-                        {!colAppts.length && !available && (
+                        {!colAppts.length && !blockReason && !available && (
                           <div className="w-full h-full min-h-[36px] rounded flex items-center justify-center gap-1 text-muted-foreground/30">
                             <Lock className="h-3 w-3" />
                             <span className="text-[9px]">Fechado</span>

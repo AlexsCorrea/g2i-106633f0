@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Search, UserPlus, AlertCircle, AlertTriangle, Lock, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const appointmentTypes = [
   { value: "consulta", label: "Consulta" },
@@ -191,8 +192,8 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!form.patient_id && !isProvisional) e.patient = "Selecione um paciente";
-    if (isProvisional && !form.provisional_name) e.provisional_name = "Informe o nome provisório";
-    if (isProvisional && !form.phone) e.phone = "Informe o celular do paciente provisório";
+    if (isProvisional && !form.provisional_name.trim()) e.provisional_name = "Preencha o nome do paciente provisório";
+    if (isProvisional && !form.birth_date) e.birth_date = "Preencha a data de nascimento";
     if (!form.scheduled_date) e.date = "Informe a data";
     if (!form.scheduled_time) e.time = "Informe o horário";
     if (!form.appointment_type) e.type = "Selecione o tipo";
@@ -222,10 +223,11 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
     if (!validate()) return;
 
     const scheduledAt = `${form.scheduled_date}T${form.scheduled_time}:00`;
-    const title = form.title || `${appointmentTypes.find(t => t.value === form.appointment_type)?.label || "Consulta"} - ${selectedPatient?.full_name || form.provisional_name}`;
+    const patientName = selectedPatient?.full_name || form.provisional_name;
+    const title = form.title || `${appointmentTypes.find(t => t.value === form.appointment_type)?.label || "Consulta"} - ${patientName}`;
 
     const payload: any = {
-      patient_id: form.patient_id || undefined,
+      patient_id: form.patient_id || null,
       professional_id: profile?.id || null,
       title: title + (isEncaixe ? " (Encaixe)" : ""),
       description: form.procedure_notes || null,
@@ -245,14 +247,22 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
       room: form.room || null,
       specialty: form.specialty || selectedAgenda?.specialty || null,
       phone: form.phone || selectedPatient?.phone || null,
+      provisional_name: isProvisional ? form.provisional_name : null,
+      provisional_birth_date: isProvisional && form.birth_date ? form.birth_date : null,
+      provisional_gender: isProvisional && form.gender ? form.gender : null,
+      provisional_phone: isProvisional && form.phone ? form.phone : null,
     };
 
     if (editAppointment) {
       await updateAppointment.mutateAsync({ id: editAppointment.id, ...payload });
     } else {
-      if (!payload.patient_id) delete payload.patient_id;
       await createAppointment.mutateAsync(payload);
     }
+
+    const toastMsg = isProvisional
+      ? "Agendamento salvo como paciente provisório."
+      : editAppointment ? "Agendamento atualizado!" : "Agendamento criado!";
+    toast.success(toastMsg);
     onOpenChange(false);
   };
 
@@ -364,13 +374,13 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
                     {errors.provisional_name && <p className="text-xs text-destructive">{errors.provisional_name}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Celular *</Label>
-                    <Input value={form.phone} onChange={e => setField("phone", e.target.value)} placeholder="(11) 99999-9999" />
-                    {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                    <Label className="text-xs">Data de Nascimento *</Label>
+                    <Input type="date" value={form.birth_date} onChange={e => setField("birth_date", e.target.value)} />
+                    {errors.birth_date && <p className="text-xs text-destructive">{errors.birth_date}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Nascimento</Label>
-                    <Input type="date" value={form.birth_date} onChange={e => setField("birth_date", e.target.value)} />
+                    <Label className="text-xs">Celular</Label>
+                    <Input value={form.phone} onChange={e => setField("phone", e.target.value)} placeholder="(11) 99999-9999" />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Sexo</Label>

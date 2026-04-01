@@ -5,7 +5,7 @@ import { getUserFriendlyError } from "@/lib/errorHandler";
 
 export interface Appointment {
   id: string;
-  patient_id: string;
+  patient_id: string | null;
   professional_id: string | null;
   title: string;
   description: string | null;
@@ -17,8 +17,12 @@ export interface Appointment {
   notes: string | null;
   created_at: string;
   updated_at: string;
-  patients?: { full_name: string };
-  profiles?: { full_name: string };
+  provisional_name?: string | null;
+  provisional_birth_date?: string | null;
+  provisional_gender?: string | null;
+  provisional_phone?: string | null;
+  patients?: { full_name: string } | null;
+  profiles?: { full_name: string } | null;
 }
 
 export function useAppointments(filters?: { date?: string; patientId?: string; professionalId?: string }) {
