@@ -356,19 +356,21 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
           </DialogHeader>
         </div>
 
-        {/* Warnings bar */}
-        {computedWarnings.length > 0 && !isEncaixe && (
-          <div className="space-y-1">
-            {computedWarnings.map((w, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                <span>{w}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {/* Warnings bar */}
+          {computedWarnings.length > 0 && !isEncaixe && (
+            <div className="space-y-1 mb-4">
+              {computedWarnings.map((w, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  <span>{w}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form id="appointment-form" onSubmit={handleSubmit} className="space-y-5">
           {/* ── SECTION: Paciente ── */}
           <div>
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Paciente</h4>
