@@ -420,6 +420,27 @@ export default function AgendaOperational() {
             {(a as any).is_return && <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">Retorno</Badge>}
             {(a as any).is_new_patient && <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">Paciente Novo</Badge>}
           </div>
+
+          {/* Audit trail */}
+          {selectedApptLogs && selectedApptLogs.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <span className="text-xs text-muted-foreground font-semibold block mb-2">Histórico</span>
+                <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                  {selectedApptLogs.map(log => (
+                    <div key={log.id} className="text-[10px] flex items-start gap-2 text-muted-foreground">
+                      <Clock className="h-3 w-3 mt-0.5 shrink-0" />
+                      <div>
+                        <span className="font-medium text-foreground">{log.action === "status_change" ? `${statusConfig[log.old_status || ""]?.label || log.old_status} → ${statusConfig[log.new_status || ""]?.label || log.new_status}` : log.action === "check-in" ? "Check-in realizado" : log.action === "deleted" ? "Excluído" : log.action}</span>
+                        <span className="block">{new Date(log.created_at).toLocaleString("pt-BR")}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Actions */}
