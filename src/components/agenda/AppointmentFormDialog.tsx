@@ -373,13 +373,13 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
                     {errors.provisional_name && <p className="text-xs text-destructive">{errors.provisional_name}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Celular *</Label>
-                    <Input value={form.phone} onChange={e => setField("phone", e.target.value)} placeholder="(11) 99999-9999" />
-                    {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                    <Label className="text-xs">Data de Nascimento *</Label>
+                    <Input type="date" value={form.birth_date} onChange={e => setField("birth_date", e.target.value)} />
+                    {errors.birth_date && <p className="text-xs text-destructive">{errors.birth_date}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Nascimento</Label>
-                    <Input type="date" value={form.birth_date} onChange={e => setField("birth_date", e.target.value)} />
+                    <Label className="text-xs">Celular</Label>
+                    <Input value={form.phone} onChange={e => setField("phone", e.target.value)} placeholder="(11) 99999-9999" />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Sexo</Label>

@@ -17,14 +17,23 @@ import { format, parseISO, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-/* Status that reflect into the waiting room */
-const WAITING_ROOM_STATUSES = ["chegou", "confirmado", "em_espera", "em_andamento"];
+/* HOMOLOGAÇÃO: temporariamente todos os status refletem na sala de espera */
+const WAITING_ROOM_STATUSES = [
+  "agendado", "confirmado", "chegou", "em_espera", "em_andamento",
+  "concluido", "cancelado", "nao_compareceu", "reagendado", "encaixe"
+];
 
 const waitingStatusConfig: Record<string, { label: string; color: string; dot: string }> = {
+  agendado: { label: "Agendado", color: "bg-primary/10 text-primary border-primary/20", dot: "bg-primary" },
   chegou: { label: "Chegou", color: "bg-teal-100 text-teal-700 border-teal-200", dot: "bg-teal-500" },
   confirmado: { label: "Confirmado", color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
   em_espera: { label: "Aguardando", color: "bg-yellow-100 text-yellow-700 border-yellow-200", dot: "bg-yellow-500" },
   em_andamento: { label: "Em Atendimento", color: "bg-amber-100 text-amber-700 border-amber-200", dot: "bg-amber-500" },
+  concluido: { label: "Concluído", color: "bg-muted text-muted-foreground border-muted", dot: "bg-muted-foreground" },
+  cancelado: { label: "Cancelado", color: "bg-destructive/10 text-destructive border-destructive/20", dot: "bg-destructive" },
+  nao_compareceu: { label: "Não Compareceu", color: "bg-destructive/10 text-destructive border-destructive/20", dot: "bg-destructive" },
+  reagendado: { label: "Reagendado", color: "bg-blue-100 text-blue-700 border-blue-200", dot: "bg-blue-500" },
+  encaixe: { label: "Encaixe", color: "bg-violet-100 text-violet-700 border-violet-200", dot: "bg-violet-500" },
 };
 
 export default function SalaEspera() {

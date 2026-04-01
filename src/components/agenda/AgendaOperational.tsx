@@ -184,7 +184,25 @@ export default function AgendaOperational() {
     openNewAppointment(dateStr, time, agenda?.id);
   };
 
-  const hours = Array.from({ length: 14 }, (_, i) => i + 7);
+  // Dynamic hour range based on displayed agendas' periods
+  const hours = useMemo(() => {
+    const dayOfWeek = selectedDate.getDay();
+    let minHour = 7, maxHour = 20;
+    if (periods.length > 0 && displayedAgendas.length > 0) {
+      let foundAny = false;
+      displayedAgendas.forEach(ag => {
+        const agPeriods = periods.filter(p => p.agenda_id === ag.id && p.day_of_week === dayOfWeek);
+        agPeriods.forEach(p => {
+          const sh = parseInt(p.start_time.split(":")[0], 10);
+          const eh = parseInt(p.end_time.split(":")[0], 10);
+          if (!foundAny) { minHour = sh; maxHour = eh; foundAny = true; }
+          else { minHour = Math.min(minHour, sh); maxHour = Math.max(maxHour, eh); }
+        });
+      });
+    }
+    const length = Math.max(maxHour - minHour, 1);
+    return Array.from({ length }, (_, i) => i + minHour);
+  }, [selectedDate, periods, displayedAgendas]);
 
   const stats = useMemo(() => {
     if (!filteredAppointments) return { total: 0, confirmados: 0, aguardando: 0, emEspera: 0, chegou: 0 };
