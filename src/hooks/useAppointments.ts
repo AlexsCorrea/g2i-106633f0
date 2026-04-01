@@ -43,9 +43,10 @@ export function useAppointments(filters?: { date?: string; patientId?: string; p
       }
 
       if (filters?.date) {
-        const startOfDay = `${filters.date}T00:00:00`;
-        const endOfDay = `${filters.date}T23:59:59`;
-        query = query.gte("scheduled_at", startOfDay).lte("scheduled_at", endOfDay);
+        // Build timezone-aware boundaries so Postgres compares correctly
+        const dayStart = new Date(`${filters.date}T00:00:00`);
+        const dayEnd = new Date(`${filters.date}T23:59:59`);
+        query = query.gte("scheduled_at", dayStart.toISOString()).lte("scheduled_at", dayEnd.toISOString());
       }
 
       const { data, error } = await query;

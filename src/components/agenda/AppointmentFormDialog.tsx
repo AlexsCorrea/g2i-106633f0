@@ -222,7 +222,15 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
     ev.preventDefault();
     if (!validate()) return;
 
-    const scheduledAt = `${form.scheduled_date}T${form.scheduled_time}:00`;
+    // Build a Date object from local date+time to get correct timezone offset
+    const localDate = new Date(`${form.scheduled_date}T${form.scheduled_time}:00`);
+    const tzOffset = -localDate.getTimezoneOffset();
+    const sign = tzOffset >= 0 ? "+" : "-";
+    const absOffset = Math.abs(tzOffset);
+    const tzHours = String(Math.floor(absOffset / 60)).padStart(2, "0");
+    const tzMins = String(absOffset % 60).padStart(2, "0");
+    const scheduledAt = `${form.scheduled_date}T${form.scheduled_time}:00${sign}${tzHours}:${tzMins}`;
+
     const patientName = selectedPatient?.full_name || form.provisional_name;
     const title = form.title || `${appointmentTypes.find(t => t.value === form.appointment_type)?.label || "Consulta"} - ${patientName}`;
 

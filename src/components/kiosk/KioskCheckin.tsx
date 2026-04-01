@@ -76,7 +76,10 @@ export function KioskCheckin({ onBack, onResult }: Props) {
     setLoading(true);
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const todayStart = new Date(`${today}T00:00:00`).toISOString();
+      const todayEnd = new Date(`${today}T23:59:59`).toISOString();
       const foundAppointments: FoundAppointment[] = [];
 
       // === PATH 1: Search registered patients by CPF (masked or unmasked) ===
@@ -108,8 +111,8 @@ export function KioskCheckin({ onBack, onResult }: Props) {
           .from("appointments")
           .select("*, profiles(full_name)")
           .eq("patient_id", matchedPatient.id)
-          .gte("scheduled_at", `${today}T00:00:00`)
-          .lte("scheduled_at", `${today}T23:59:59`)
+          .gte("scheduled_at", todayStart)
+          .lte("scheduled_at", todayEnd)
           .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`);
         if (aErr) throw aErr;
         console.log("[check-in] Appointments for patient:", { patientId: matchedPatient.id, count: appts?.length, statuses: appts?.map((a: any) => a.status) });
@@ -135,8 +138,8 @@ export function KioskCheckin({ onBack, onResult }: Props) {
         .select("*, profiles(full_name)")
         .is("patient_id", null)
         .eq("provisional_birth_date", birthDate)
-        .gte("scheduled_at", `${today}T00:00:00`)
-        .lte("scheduled_at", `${today}T23:59:59`)
+        .gte("scheduled_at", todayStart)
+        .lte("scheduled_at", todayEnd)
         .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`);
       if (provErr) throw provErr;
 

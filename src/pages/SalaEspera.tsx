@@ -13,7 +13,7 @@ import {
   Phone, Megaphone, ArrowLeft, Heart, RotateCcw, Ban, ChevronRight,
   AlertCircle, Shield, Timer, Loader2
 } from "lucide-react";
-import { format, parseISO, differenceInMinutes } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +81,7 @@ export default function SalaEspera() {
   };
 
   const getWaitTime = (a: Appointment) => {
-    const scheduled = parseISO(a.scheduled_at);
+    const scheduled = new Date(a.scheduled_at);
     const now = new Date();
     const mins = differenceInMinutes(now, scheduled);
     if (mins < 0) return null;
@@ -203,7 +203,7 @@ export default function SalaEspera() {
                       return (
                         <tr key={a.id} className={cn("hover:bg-muted/20 transition-colors", a.status === "em_andamento" && "bg-amber-50/30")}>
                           <td className="px-4 py-3">
-                            <span className="font-mono font-semibold text-xs">{format(parseISO(a.scheduled_at), "HH:mm")}</span>
+                            <span className="font-mono font-semibold text-xs">{format(new Date(a.scheduled_at), "HH:mm")}</span>
                           </td>
                           <td className="px-4 py-3">
                             <div>
