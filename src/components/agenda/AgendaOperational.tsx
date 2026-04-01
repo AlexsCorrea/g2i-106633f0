@@ -29,6 +29,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { isHourAvailable, isTimeAvailable } from "@/lib/agendaAvailability";
 import { toast } from "sonner";
+import { formatAgendaDateTime as formatAgendaDateTimeValue, formatAgendaTime as formatAgendaTimeValue, parseAgendaDateTime as parseAgendaDateTimeValue, toAgendaLocalISOString } from "@/lib/agendaDateTime";
 import AppointmentFormDialog from "./AppointmentFormDialog";
 import MassTransferDialog from "./MassTransferDialog";
 import DragConfirmDialog from "./DragConfirmDialog";
@@ -58,17 +59,15 @@ const statusConfig: Record<string, { label: string; color: string; dot: string }
 const allStatuses = Object.keys(statusConfig);
 
 function parseLocalTime(ts: string): Date {
-  return new Date(ts);
+  return parseAgendaDateTimeValue(ts);
 }
 
 function formatTime(ts: string): string {
-  const d = parseLocalTime(ts);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return formatAgendaTimeValue(ts);
 }
 
 function formatDatetime(ts: string): string {
-  const d = parseLocalTime(ts);
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()} às ${formatTime(ts)}`;
+  return formatAgendaDateTimeValue(ts);
 }
 
 export default function AgendaOperational() {
@@ -300,13 +299,7 @@ export default function AgendaOperational() {
     const isTransfer = srcAgendaId !== agenda.id;
     const srcAgenda = agendas?.find(a => a.id === srcAgendaId);
     const srcTime = formatTime(dragAppt.scheduled_at);
-    const [h, m] = time.split(":").map(Number);
-    const newDate = new Date(selectedDate);
-    newDate.setHours(h, m, 0, 0);
-    const year = newDate.getFullYear();
-    const month = String(newDate.getMonth() + 1).padStart(2, "0");
-    const day = String(newDate.getDate()).padStart(2, "0");
-    const localIso = `${year}-${month}-${day}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+    const localIso = toAgendaLocalISOString(dateStr, time);
 
     setDragConfirmData({
       patientName: dragAppt.patients?.full_name || (dragAppt as any).provisional_name || dragAppt.title,
