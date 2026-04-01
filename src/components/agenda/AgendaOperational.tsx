@@ -1034,7 +1034,22 @@ export default function AgendaOperational() {
             </div>
           )}
         </DialogContent>
-      </Dialog>
+
+      {/* Drag Confirm Dialog */}
+      <DragConfirmDialog
+        open={dragConfirmOpen}
+        onOpenChange={setDragConfirmOpen}
+        onConfirm={confirmDrag}
+        data={dragConfirmData}
+      />
+
+      {/* Mass Transfer Dialog */}
+      <MassTransferDialog
+        open={showMassTransfer}
+        onOpenChange={setShowMassTransfer}
+        defaultDate={dateStr}
+        agendas={activeAgendas}
+      />
     </div>
   );
 }
