@@ -110,17 +110,47 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
     reminder: false,
   });
 
+  // FULL RESET on every open (new appointment or new encaixe)
   useEffect(() => {
-    if (open && !editAppointment) {
-      setForm(f => ({
-        ...f,
-        scheduled_date: defaultDate || f.scheduled_date,
-        scheduled_time: defaultTime || f.scheduled_time,
-        agenda_id: defaultAgendaId || f.agenda_id,
-        is_fit_in: isEncaixe,
-      }));
-    }
-  }, [defaultDate, defaultTime, defaultAgendaId, isEncaixe, open, editAppointment]);
+    if (!open) return;
+    if (editAppointment) return; // editing is handled by the next useEffect
+
+    const cleanForm = {
+      patient_id: "",
+      provisional_name: "",
+      phone: "",
+      birth_date: "",
+      title: "",
+      appointment_type: "consulta" as const,
+      agenda_id: defaultAgendaId || "",
+      insurance: "particular",
+      origin_channel: "presencial",
+      priority: "normal",
+      specialty: "",
+      room: "",
+      scheduled_date: defaultDate || "",
+      scheduled_time: defaultTime || "08:00",
+      duration_minutes: 30,
+      location: "",
+      notes: "",
+      is_return: false,
+      is_new_patient: false,
+      is_fit_in: isEncaixe,
+      is_pcd: false,
+      gender: "",
+      responsible: "",
+      procedures: "",
+      procedure_notes: "",
+      admin_notes: "",
+      special_needs: "",
+      reminder: false,
+    };
+    setForm(cleanForm);
+    setPatientSearch("");
+    setIsProvisional(false);
+    setErrors({});
+    setWarnings([]);
+  }, [open]); // intentionally only depends on `open` to reset on every modal open
 
   useEffect(() => {
     if (editAppointment) {
