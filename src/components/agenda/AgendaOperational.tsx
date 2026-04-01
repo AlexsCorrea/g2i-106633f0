@@ -1034,6 +1034,7 @@ export default function AgendaOperational() {
             </div>
           )}
         </DialogContent>
+      </Dialog>
 
       {/* Drag Confirm Dialog */}
       <DragConfirmDialog
