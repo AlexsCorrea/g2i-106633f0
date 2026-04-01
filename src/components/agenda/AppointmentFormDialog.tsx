@@ -618,15 +618,23 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
             </div>
           </div>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-2 border-t">
+        </form>
+        </div>
+
+        {/* Fixed footer */}
+        <div className="shrink-0 border-t bg-muted/20 px-6 py-3 flex items-center justify-between">
+          <div className="text-[10px] text-muted-foreground">
+            {isEncaixe && "⚠ Encaixe: justificativa obrigatória"}
+          </div>
+          <div className="flex items-center gap-3">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={createAppointment.isPending || updateAppointment.isPending}>
+            <Button type="submit" form="appointment-form" disabled={createAppointment.isPending || updateAppointment.isPending}
+              className={cn(isEncaixe && "bg-violet-600 hover:bg-violet-700")}>
               {(createAppointment.isPending || updateAppointment.isPending) && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {editAppointment ? "Salvar" : isEncaixe ? "Salvar Encaixe" : "Agendar"}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
