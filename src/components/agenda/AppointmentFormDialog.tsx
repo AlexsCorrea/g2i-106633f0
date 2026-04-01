@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { usePatients } from "@/hooks/usePatients";
-import { useScheduleAgendas } from "@/hooks/useScheduleAgendas";
+import { useScheduleAgendas, useSchedulePeriods } from "@/hooks/useScheduleAgendas";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreateAppointment, useUpdateAppointment, type Appointment } from "@/hooks/useAppointments";
+import { isTimeAvailable, isInsuranceAllowed } from "@/lib/agendaAvailability";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Search, UserPlus, AlertCircle } from "lucide-react";
+import { Loader2, Search, UserPlus, AlertCircle, AlertTriangle, Lock, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const appointmentTypes = [
@@ -41,7 +42,7 @@ const priorities = [
   { value: "retorno_prioritario", label: "Retorno Prioritário" },
 ];
 
-const insurances = [
+const insurancesList = [
   { value: "particular", label: "Particular" },
   { value: "sus", label: "SUS" },
   { value: "unimed", label: "Unimed" },
@@ -57,20 +58,25 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   defaultDate?: string;
   defaultTime?: string;
+  defaultAgendaId?: string;
   isEncaixe?: boolean;
   editAppointment?: Appointment | null;
 }
 
-export default function AppointmentFormDialog({ open, onOpenChange, defaultDate, defaultTime, isEncaixe = false, editAppointment }: Props) {
+export default function AppointmentFormDialog({ open, onOpenChange, defaultDate, defaultTime, defaultAgendaId, isEncaixe = false, editAppointment }: Props) {
   const { profile } = useAuth();
   const { data: patients } = usePatients();
   const { data: agendas } = useScheduleAgendas();
+  const { data: allPeriods } = useSchedulePeriods();
   const createAppointment = useCreateAppointment();
   const updateAppointment = useUpdateAppointment();
+
+  const periods = allPeriods || [];
 
   const [patientSearch, setPatientSearch] = useState("");
   const [isProvisional, setIsProvisional] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     patient_id: "",
@@ -79,7 +85,7 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
     birth_date: "",
     title: "",
     appointment_type: "consulta",
-    agenda_id: "",
+    agenda_id: defaultAgendaId || "",
     insurance: "particular",
     origin_channel: "presencial",
     priority: "normal",
@@ -104,13 +110,19 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
   });
 
   useEffect(() => {
-    if (defaultDate) setForm(f => ({ ...f, scheduled_date: defaultDate }));
-    if (defaultTime) setForm(f => ({ ...f, scheduled_time: defaultTime }));
-  }, [defaultDate, defaultTime]);
+    if (open && !editAppointment) {
+      setForm(f => ({
+        ...f,
+        scheduled_date: defaultDate || f.scheduled_date,
+        scheduled_time: defaultTime || f.scheduled_time,
+        agenda_id: defaultAgendaId || f.agenda_id,
+        is_fit_in: isEncaixe,
+      }));
+    }
+  }, [defaultDate, defaultTime, defaultAgendaId, isEncaixe, open, editAppointment]);
 
   useEffect(() => {
     if (editAppointment) {
-      // Parse as local time to avoid timezone offset
       const d = new Date(editAppointment.scheduled_at);
       setForm(f => ({
         ...f,
@@ -147,24 +159,68 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
   const selectedPatient = patients?.find(p => p.id === form.patient_id);
   const selectedAgenda = agendas?.find(a => a.id === form.agenda_id);
 
+  // Real-time warnings computation
+  const computedWarnings = useMemo(() => {
+    const w: string[] = [];
+    if (!form.agenda_id || !form.scheduled_date || !form.scheduled_time) return w;
+    if (isEncaixe || form.is_fit_in) return w; // Encaixe bypasses
+
+    const dateObj = new Date(form.scheduled_date + "T12:00:00");
+    const dayOfWeek = dateObj.getDay();
+
+    const timeAvailable = isTimeAvailable(periods, form.agenda_id, dayOfWeek, form.scheduled_time);
+    if (!timeAvailable) {
+      w.push("Horário fora do período configurado para esta agenda.");
+    }
+
+    if (selectedAgenda && !isInsuranceAllowed(selectedAgenda, form.insurance)) {
+      w.push(`Convênio "${insurancesList.find(i => i.value === form.insurance)?.label}" não habilitado para esta agenda.`);
+    }
+
+    return w;
+  }, [form.agenda_id, form.scheduled_date, form.scheduled_time, form.insurance, isEncaixe, form.is_fit_in, periods, selectedAgenda]);
+
+  // Filtered insurances based on agenda control
+  const availableInsurances = useMemo(() => {
+    if (!selectedAgenda?.insurance_control || !selectedAgenda.allowed_insurances?.length) {
+      return insurancesList;
+    }
+    return insurancesList.filter(i => selectedAgenda.allowed_insurances!.includes(i.value));
+  }, [selectedAgenda]);
+
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!form.patient_id && !isProvisional) e.patient = "Selecione um paciente";
     if (isProvisional && !form.provisional_name) e.provisional_name = "Informe o nome provisório";
+    if (isProvisional && !form.phone) e.phone = "Informe o celular do paciente provisório";
     if (!form.scheduled_date) e.date = "Informe a data";
     if (!form.scheduled_time) e.time = "Informe o horário";
     if (!form.appointment_type) e.type = "Selecione o tipo";
     if (!form.insurance) e.insurance = "Selecione o convênio";
     if (isEncaixe && !form.notes) e.notes = "Justificativa obrigatória para encaixe";
+
+    // Period validation (only for non-encaixe)
+    if (!isEncaixe && !form.is_fit_in && form.agenda_id && form.scheduled_date && form.scheduled_time) {
+      const dateObj = new Date(form.scheduled_date + "T12:00:00");
+      const dayOfWeek = dateObj.getDay();
+      if (!isTimeAvailable(periods, form.agenda_id, dayOfWeek, form.scheduled_time)) {
+        e.time = "Horário fora do período configurado. Use Encaixe para agendar fora do horário.";
+      }
+    }
+
+    // Insurance validation
+    if (selectedAgenda && !isInsuranceAllowed(selectedAgenda, form.insurance)) {
+      e.insurance = "Convênio não habilitado para esta agenda.";
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (ev: React.FormEvent) => {
+    ev.preventDefault();
     if (!validate()) return;
 
-    // Build timestamp WITHOUT timezone conversion — store as local time
     const scheduledAt = `${form.scheduled_date}T${form.scheduled_time}:00`;
     const title = form.title || `${appointmentTypes.find(t => t.value === form.appointment_type)?.label || "Consulta"} - ${selectedPatient?.full_name || form.provisional_name}`;
 
@@ -235,6 +291,18 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
           </DialogTitle>
         </DialogHeader>
 
+        {/* Warnings bar */}
+        {computedWarnings.length > 0 && !isEncaixe && (
+          <div className="space-y-1">
+            {computedWarnings.map((w, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                <span>{w}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* ── SECTION: Paciente ── */}
           <div>
@@ -284,7 +352,9 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
             {isProvisional && (
               <div className="space-y-3 p-3 border border-dashed border-amber-300 rounded-lg bg-amber-50/30 dark:bg-amber-900/10">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold text-amber-700 dark:text-amber-400">Paciente Provisório</Label>
+                  <Label className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                    <AlertTriangle className="h-3 w-3" />Paciente Provisório — Cadastro pendente
+                  </Label>
                   <Button type="button" variant="ghost" size="sm" onClick={() => { setIsProvisional(false); setField("provisional_name", ""); }}>Cancelar</Button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -296,6 +366,7 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
                   <div className="space-y-1.5">
                     <Label className="text-xs">Celular *</Label>
                     <Input value={form.phone} onChange={e => setField("phone", e.target.value)} placeholder="(11) 99999-9999" />
+                    {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Nascimento</Label>
@@ -392,12 +463,21 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
                   if (ag) {
                     setField("specialty", ag.specialty || "");
                     setField("duration_minutes", ag.default_duration || 30);
+                    // Reset insurance if not allowed on new agenda
+                    if (ag.insurance_control && ag.allowed_insurances?.length && !ag.allowed_insurances.includes(form.insurance)) {
+                      setField("insurance", ag.allowed_insurances[0] || "particular");
+                    }
                   }
                 }}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     {agendas?.filter(a => a.status === "ativa").map(a => (
-                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                      <SelectItem key={a.id} value={a.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: (a as any).color || "#6b7280" }} />
+                          {a.name}
+                        </div>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -406,11 +486,22 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
 
             <div className="grid grid-cols-2 gap-3 mt-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Convênio *</Label>
+                <Label className="text-xs flex items-center gap-1.5">
+                  Convênio *
+                  {selectedAgenda?.insurance_control && (
+                    <Badge variant="outline" className="text-[8px] px-1 py-0 bg-blue-50 text-blue-600 border-blue-200">Restrito</Badge>
+                  )}
+                </Label>
                 <Select value={form.insurance} onValueChange={v => setField("insurance", v)}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className={cn("h-9 text-xs", errors.insurance && "border-destructive")}><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {insurances.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+                    {availableInsurances.map(i => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+                    {selectedAgenda?.insurance_control && availableInsurances.length < insurancesList.length && (
+                      <div className="px-2 py-1.5 text-[10px] text-muted-foreground border-t">
+                        <ShieldAlert className="h-3 w-3 inline mr-1" />
+                        Agenda com convênios restritos
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
                 {errors.insurance && <p className="text-xs text-destructive">{errors.insurance}</p>}

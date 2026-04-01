@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppointments, useUpdateAppointment, useDeleteAppointment } from "@/hooks/useAppointments";
-import { useScheduleAgendas, type ScheduleAgenda } from "@/hooks/useScheduleAgendas";
+import { useScheduleAgendas, useSchedulePeriods, type ScheduleAgenda } from "@/hooks/useScheduleAgendas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,11 +19,13 @@ import {
   Plus, CalendarIcon, Clock, User, Loader2, List,
   LayoutGrid, ChevronLeft, ChevronRight, Trash2, Search,
   FileText, CheckCircle, UserCheck, Edit, Phone, X,
-  Ban, RotateCcw, PlayCircle, DoorOpen, Eye, Filter
+  Ban, RotateCcw, PlayCircle, DoorOpen, Eye, Filter, AlertTriangle, Lock
 } from "lucide-react";
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { isHourAvailable } from "@/lib/agendaAvailability";
+import { toast } from "sonner";
 import AppointmentFormDialog from "./AppointmentFormDialog";
 
 const appointmentTypes = [
@@ -50,10 +52,7 @@ const statusConfig: Record<string, { label: string; color: string; dot: string }
 
 const allStatuses = Object.keys(statusConfig);
 
-/* ── Helper: parse timestamp as local time ── */
 function parseLocalTime(ts: string): Date {
-  // If the timestamp has timezone info (Z or +offset), parse natively
-  // But we want to DISPLAY in local time, so use Date constructor which does that
   return new Date(ts);
 }
 
@@ -83,6 +82,9 @@ export default function AgendaOperational() {
   const [selectedAppt, setSelectedAppt] = useState<any>(null);
   const [checkinAppt, setCheckinAppt] = useState<any>(null);
   const [checkinNotes, setCheckinNotes] = useState("");
+  const [formDefaultDate, setFormDefaultDate] = useState<string>("");
+  const [formDefaultTime, setFormDefaultTime] = useState<string>("08:00");
+  const [formDefaultAgenda, setFormDefaultAgenda] = useState<string>("");
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
@@ -92,8 +94,11 @@ export default function AgendaOperational() {
   const { data: dayAppointments, isLoading } = useAppointments({ date: viewMode === "week" ? undefined : dateStr });
   const { data: weekAppointments } = useAppointments(viewMode === "week" ? {} : undefined);
   const { data: agendas } = useScheduleAgendas();
+  const { data: allPeriods } = useSchedulePeriods();
   const updateAppointment = useUpdateAppointment();
   const deleteAppointment = useDeleteAppointment();
+
+  const periods = allPeriods || [];
 
   const activeAgendas = useMemo(() => agendas?.filter(a => a.status === "ativa") || [], [agendas]);
   const displayedAgendas = useMemo(() => {
@@ -156,6 +161,29 @@ export default function AgendaOperational() {
     );
   };
 
+  const openNewAppointment = (date: string, time: string, agendaId?: string, asEncaixe = false) => {
+    setFormDefaultDate(date);
+    setFormDefaultTime(time);
+    setFormDefaultAgenda(agendaId || "");
+    setIsEncaixe(asEncaixe);
+    setEditingAppointment(null);
+    setShowForm(true);
+  };
+
+  const handleSlotClick = (hour: number, agenda: ScheduleAgenda | null) => {
+    const dayOfWeek = selectedDate.getDay();
+    const time = `${String(hour).padStart(2, "0")}:00`;
+
+    if (agenda) {
+      const available = isHourAvailable(periods, agenda.id, dayOfWeek, hour);
+      if (!available) {
+        toast.error("Horário indisponível. Use 'Encaixe' para agendar fora do período.");
+        return;
+      }
+    }
+    openNewAppointment(dateStr, time, agenda?.id);
+  };
+
   const hours = Array.from({ length: 14 }, (_, i) => i + 7);
 
   const stats = useMemo(() => {
@@ -180,6 +208,7 @@ export default function AgendaOperational() {
     const sc = statusConfig[appointment.status] || statusConfig.agendado;
     const isSelected = selectedAppt?.id === appointment.id;
     const agColor = getAgendaColor((appointment as any).agenda_id);
+    const isProvisional = !appointment.patient_id;
 
     return (
       <div
@@ -206,6 +235,9 @@ export default function AgendaOperational() {
               )}
               {(appointment as any).is_return && (
                 <Badge variant="outline" className="text-[8px] px-1 py-0 bg-blue-50 text-blue-600 border-blue-200 shrink-0">Ret</Badge>
+              )}
+              {isProvisional && (
+                <Badge variant="outline" className="text-[8px] px-1 py-0 bg-amber-50 text-amber-600 border-amber-200 shrink-0">Cadastro pendente</Badge>
               )}
             </div>
             {!compact && (
@@ -261,6 +293,7 @@ export default function AgendaOperational() {
 
     const a = selectedAppt;
     const sc = statusConfig[a.status] || statusConfig.agendado;
+    const isProvisional = !a.patient_id;
 
     return (
       <div className="h-full flex flex-col">
@@ -268,6 +301,7 @@ export default function AgendaOperational() {
           <div className="flex items-center gap-2">
             <div className={cn("h-3 w-3 rounded-full", sc.dot)} />
             <Badge variant="outline" className={cn("text-xs", sc.color)}>{sc.label}</Badge>
+            {isProvisional && <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">Cadastro pendente</Badge>}
           </div>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedAppt(null)}>
             <X className="h-4 w-4" />
@@ -277,6 +311,12 @@ export default function AgendaOperational() {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>
             <h3 className="font-semibold text-base">{a.patients?.full_name || a.title}</h3>
+            {isProvisional && (
+              <div className="flex items-center gap-1.5 mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+                <AlertTriangle className="h-3 w-3" />
+                Paciente provisório — cadastro precisa ser finalizado
+              </div>
+            )}
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
               <Clock className="h-3 w-3" />
               <span>{formatDatetime(a.scheduled_at)}</span>
@@ -357,6 +397,7 @@ export default function AgendaOperational() {
   const renderMultiAgendaDay = () => {
     const cols = displayedAgendas.length > 0 ? displayedAgendas : [null];
     const isMulti = cols.length > 1 && cols[0] !== null;
+    const dayOfWeek = selectedDate.getDay();
 
     return (
       <Card>
@@ -383,21 +424,33 @@ export default function AgendaOperational() {
                     {String(hour).padStart(2, "0")}:00
                   </div>
                   {cols.map((ag, ci) => {
+                    const available = ag ? isHourAvailable(periods, ag.id, dayOfWeek, hour) : true;
                     const colAppts = filteredAppointments.filter(a => {
                       const d = parseLocalTime(a.scheduled_at);
                       if (d.getHours() !== hour) return false;
                       if (ag && (a as any).agenda_id !== ag.id) return false;
                       return true;
                     });
+
                     return (
-                      <div key={ag?.id || ci} className={cn("flex-1 min-w-[200px] p-1 space-y-1", isMulti && "border-r")}>
+                      <div key={ag?.id || ci} className={cn(
+                        "flex-1 min-w-[200px] p-1 space-y-1",
+                        isMulti && "border-r",
+                        !available && "bg-muted/40"
+                      )}>
                         {colAppts.map(a => renderAppointmentCard(a, isMulti))}
-                        {!colAppts.length && (
+                        {!colAppts.length && available && (
                           <button
                             className="w-full h-full min-h-[36px] rounded border border-dashed border-muted-foreground/10 hover:bg-muted/20 transition-colors flex items-center justify-center"
-                            onClick={() => { setIsEncaixe(false); setEditingAppointment(null); setShowForm(true); }}>
+                            onClick={() => handleSlotClick(hour, ag)}>
                             <Plus className="h-3 w-3 text-muted-foreground/20" />
                           </button>
+                        )}
+                        {!colAppts.length && !available && (
+                          <div className="w-full h-full min-h-[36px] rounded flex items-center justify-center gap-1 text-muted-foreground/30">
+                            <Lock className="h-3 w-3" />
+                            <span className="text-[9px]">Fechado</span>
+                          </div>
                         )}
                       </div>
                     );
@@ -532,10 +585,10 @@ export default function AgendaOperational() {
 
             {/* Actions */}
             <div className="ml-auto flex gap-2">
-              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => { setIsEncaixe(true); setEditingAppointment(null); setShowForm(true); }}>
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => openNewAppointment(dateStr, "08:00", "", true)}>
                 <UserCheck className="h-3.5 w-3.5" />Encaixe
               </Button>
-              <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => { setIsEncaixe(false); setEditingAppointment(null); setShowForm(true); }}>
+              <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => openNewAppointment(dateStr, "08:00")}>
                 <Plus className="h-3.5 w-3.5" />Agendar
               </Button>
             </div>
@@ -579,7 +632,7 @@ export default function AgendaOperational() {
                 <Card className="p-8 text-center">
                   <CalendarIcon className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
                   <p className="text-muted-foreground">Nenhum agendamento</p>
-                  <Button variant="link" onClick={() => { setIsEncaixe(false); setEditingAppointment(null); setShowForm(true); }}>Criar agendamento</Button>
+                  <Button variant="link" onClick={() => openNewAppointment(dateStr, "08:00")}>Criar agendamento</Button>
                 </Card>
               ) : (
                 filteredAppointments.map(a => renderAppointmentCard(a))
@@ -659,8 +712,9 @@ export default function AgendaOperational() {
       <AppointmentFormDialog
         open={showForm}
         onOpenChange={open => { setShowForm(open); if (!open) setEditingAppointment(null); }}
-        defaultDate={dateStr}
-        defaultTime="08:00"
+        defaultDate={formDefaultDate || dateStr}
+        defaultTime={formDefaultTime}
+        defaultAgendaId={formDefaultAgenda}
         isEncaixe={isEncaixe}
         editAppointment={editingAppointment}
       />
@@ -674,16 +728,15 @@ export default function AgendaOperational() {
               <div className="p-3 bg-muted/50 rounded-lg text-sm space-y-1">
                 <div className="flex justify-between"><span className="text-muted-foreground">Paciente:</span><span className="font-medium text-right">{checkinAppt.patients?.full_name}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Horário:</span><span className="font-medium">{formatTime(checkinAppt.scheduled_at)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Tipo:</span><span className="font-medium capitalize">{checkinAppt.appointment_type}</span></div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Observação de Chegada</Label>
-                <Textarea value={checkinNotes} onChange={e => setCheckinNotes(e.target.value)} placeholder="Ex: Paciente chegou acompanhado..." rows={2} />
+                <Label className="text-xs">Observações da chegada</Label>
+                <Textarea value={checkinNotes} onChange={e => setCheckinNotes(e.target.value)} rows={2} className="text-xs" placeholder="Observações opcionais..." />
               </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <Button variant="outline" onClick={() => setCheckinAppt(null)}>Cancelar</Button>
-                <Button onClick={handleCheckin} className="bg-teal-600 hover:bg-teal-700 text-white gap-1.5">
-                  <UserCheck className="h-4 w-4" />Registrar Chegada
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setCheckinAppt(null)}>Cancelar</Button>
+                <Button size="sm" className="gap-1.5 bg-teal-600 hover:bg-teal-700 text-white" onClick={handleCheckin}>
+                  <UserCheck className="h-4 w-4" />Confirmar Chegada
                 </Button>
               </div>
             </div>
