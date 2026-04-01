@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, Search, UserPlus, AlertCircle, AlertTriangle, Lock, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getAgendaDateTimeParts, toAgendaLocalISOString } from "@/lib/agendaDateTime";
 
 const appointmentTypes = [
   { value: "consulta", label: "Consulta" },
@@ -154,14 +155,14 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
 
   useEffect(() => {
     if (editAppointment) {
-      const d = new Date(editAppointment.scheduled_at);
+      const { date, time } = getAgendaDateTimeParts(editAppointment.scheduled_at);
       setForm(f => ({
         ...f,
         patient_id: editAppointment.patient_id,
         title: editAppointment.title,
         appointment_type: editAppointment.appointment_type,
-        scheduled_date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
-        scheduled_time: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
+        scheduled_date: date,
+        scheduled_time: time,
         duration_minutes: editAppointment.duration_minutes ?? 30,
         location: editAppointment.location || "",
         notes: editAppointment.notes || "",
@@ -252,14 +253,7 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
     ev.preventDefault();
     if (!validate()) return;
 
-    // Build a Date object from local date+time to get correct timezone offset
-    const localDate = new Date(`${form.scheduled_date}T${form.scheduled_time}:00`);
-    const tzOffset = -localDate.getTimezoneOffset();
-    const sign = tzOffset >= 0 ? "+" : "-";
-    const absOffset = Math.abs(tzOffset);
-    const tzHours = String(Math.floor(absOffset / 60)).padStart(2, "0");
-    const tzMins = String(absOffset % 60).padStart(2, "0");
-    const scheduledAt = `${form.scheduled_date}T${form.scheduled_time}:00${sign}${tzHours}:${tzMins}`;
+    const scheduledAt = toAgendaLocalISOString(form.scheduled_date, form.scheduled_time);
 
     const patientName = selectedPatient?.full_name || form.provisional_name;
     const title = form.title || `${appointmentTypes.find(t => t.value === form.appointment_type)?.label || "Consulta"} - ${patientName}`;

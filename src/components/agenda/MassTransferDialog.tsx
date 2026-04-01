@@ -16,6 +16,7 @@ import { AlertTriangle, ArrowRight, CheckCircle, XCircle, Users, Loader2 } from 
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { parseAgendaDateTime, toAgendaLocalISOString } from "@/lib/agendaDateTime";
 
 interface Props {
   open: boolean;
@@ -69,7 +70,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
       if (a.agenda_id !== sourceAgendaId) return false;
       if (a.status === "cancelado" || a.status === "concluido" || a.status === "nao_compareceu") return false;
       if (periodFilter !== "all") {
-        const d = new Date(a.scheduled_at);
+        const d = parseAgendaDateTime(a.scheduled_at);
         const h = d.getHours();
         if (periodFilter === "manha" && h >= 12) return false;
         if (periodFilter === "tarde" && (h < 12 || h >= 18)) return false;
@@ -90,7 +91,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
       a.agenda_id === targetAgendaId && a.status !== "cancelado" && a.status !== "nao_compareceu"
     );
     const occupiedTimes = new Set(targetExisting.map((a: any) => {
-      const d = new Date(a.scheduled_at);
+      const d = parseAgendaDateTime(a.scheduled_at);
       return `${d.getHours()}:${d.getMinutes()}`;
     }));
 
@@ -98,7 +99,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
     const usedTimes = new Set<string>();
 
     return selected.map(appt => {
-      const d = new Date(appt.scheduled_at);
+      const d = parseAgendaDateTime(appt.scheduled_at);
       const origTime = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
       const name = (appt as any).patients?.full_name || (appt as any).provisional_name || appt.title;
 
@@ -151,8 +152,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
       try {
         const appt = sourceAppointments.find(a => a.id === item.appointmentId);
         if (!appt || !item.newTime) continue;
-        const [h, m] = item.newTime.split(":").map(Number);
-        const localIso = `${transferDate}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+        const localIso = toAgendaLocalISOString(transferDate, item.newTime);
 
         await updateAppointment.mutateAsync({
           id: item.appointmentId,
@@ -186,7 +186,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
     setResults(finalResults);
     setStep("result");
     setExecuting(false);
-    toast.success(`${successItems.length} agendamento(s) transferido(s)`);
+      toast.success(`${finalResults.filter(r => r.status === "success").length} agendamento(s) transferido(s)`);
   };
 
   const reset = () => {
@@ -277,7 +277,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
                   </div>
                   <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
                     {sourceAppointments.map(appt => {
-                      const d = new Date(appt.scheduled_at);
+                      const d = parseAgendaDateTime(appt.scheduled_at);
                       const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
                       return (
                         <label key={appt.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/30 cursor-pointer">

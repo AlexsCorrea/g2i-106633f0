@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/lib/errorHandler";
+import { getAgendaDayBounds } from "@/lib/agendaDateTime";
 
 export interface Appointment {
   id: string;
@@ -43,10 +44,8 @@ export function useAppointments(filters?: { date?: string; patientId?: string; p
       }
 
       if (filters?.date) {
-        // Build timezone-aware boundaries so Postgres compares correctly
-        const dayStart = new Date(`${filters.date}T00:00:00`);
-        const dayEnd = new Date(`${filters.date}T23:59:59`);
-        query = query.gte("scheduled_at", dayStart.toISOString()).lte("scheduled_at", dayEnd.toISOString());
+        const { start, end } = getAgendaDayBounds(filters.date);
+        query = query.gte("scheduled_at", start).lte("scheduled_at", end);
       }
 
       const { data, error } = await query;

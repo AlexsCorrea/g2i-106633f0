@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Printer, CalendarIcon, Heart } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { formatAgendaTime } from "@/lib/agendaDateTime";
 
 const statusLabels: Record<string, string> = {
   agendado: "Agendado", confirmado: "Confirmado", em_andamento: "Em Andamento",
@@ -107,7 +108,7 @@ export default function AgendaPrint() {
             <tbody>
               {appointments?.length ? appointments.map(a => (
                 <tr key={a.id} className="border-b hover:bg-muted/20">
-                  <td className="p-2 font-medium">{format(new Date(a.scheduled_at), "HH:mm")}</td>
+                  <td className="p-2 font-medium">{formatAgendaTime(a.scheduled_at)}</td>
                   <td className="p-2">{a.patients?.full_name || "—"}</td>
                   <td className="p-2 capitalize">{a.appointment_type}</td>
                   <td className="p-2">{a.profiles?.full_name || "—"}</td>

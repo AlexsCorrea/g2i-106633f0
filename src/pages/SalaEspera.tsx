@@ -16,6 +16,7 @@ import {
 import { format, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { formatAgendaTime, parseAgendaDateTime } from "@/lib/agendaDateTime";
 
 /* HOMOLOGAÇÃO: temporariamente todos os status refletem na sala de espera */
 const WAITING_ROOM_STATUSES = [
@@ -66,7 +67,7 @@ export default function SalaEspera() {
         const aOrder = statusOrder[a.status] ?? 10;
         const bOrder = statusOrder[b.status] ?? 10;
         if (aOrder !== bOrder) return aOrder - bOrder;
-        return new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
+        return parseAgendaDateTime(a.scheduled_at).getTime() - parseAgendaDateTime(b.scheduled_at).getTime();
       });
   }, [appointments, filterAgenda, filterStatus, filterSearch]);
 
@@ -81,7 +82,7 @@ export default function SalaEspera() {
   };
 
   const getWaitTime = (a: Appointment) => {
-    const scheduled = new Date(a.scheduled_at);
+    const scheduled = parseAgendaDateTime(a.scheduled_at);
     const now = new Date();
     const mins = differenceInMinutes(now, scheduled);
     if (mins < 0) return null;
@@ -203,7 +204,7 @@ export default function SalaEspera() {
                       return (
                         <tr key={a.id} className={cn("hover:bg-muted/20 transition-colors", a.status === "em_andamento" && "bg-amber-50/30")}>
                           <td className="px-4 py-3">
-                            <span className="font-mono font-semibold text-xs">{format(new Date(a.scheduled_at), "HH:mm")}</span>
+                            <span className="font-mono font-semibold text-xs">{formatAgendaTime(a.scheduled_at)}</span>
                           </td>
                           <td className="px-4 py-3">
                             <div>
