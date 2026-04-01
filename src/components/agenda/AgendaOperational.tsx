@@ -657,16 +657,21 @@ export default function AgendaOperational() {
                 return (
                   <div key={hour} className="flex">
                     {/* Time ruler */}
-                    <div className="w-14 shrink-0 border-r bg-muted/40 flex items-start justify-center py-2">
-                      <span className="text-xs font-semibold text-foreground/70 tabular-nums">
+                    <div className="w-14 shrink-0 border-r bg-muted/40 flex items-start justify-center pt-1.5">
+                      <span className="text-[11px] font-bold text-foreground/80 tabular-nums tracking-tight">
                         {String(hour).padStart(2, "0")}:00
                       </span>
                     </div>
                     {cols.map((ag, ci) => {
                       const agInterval = ag?.default_interval || 30;
-                      const agSubSlots = Array.from({ length: Math.max(Math.floor(60 / agInterval), 1) }, (_, i) => i * agInterval);
+                      const slotsPerHour = Math.max(Math.floor(60 / agInterval), 1);
+                      const agSubSlots = Array.from({ length: slotsPerHour }, (_, i) => i * agInterval);
                       const blockReason = ag ? isSlotBlocked(ag.id, selectedDate, hour) : null;
                       const periodOpen = ag ? isTimeAvailable(periods, ag.id, dayOfWeek, `${String(hour).padStart(2, "0")}:00`) : true;
+
+                      // Proportional height: base is ~2.5px per minute, min 28px per slot
+                      const pxPerMin = 2.5;
+                      const slotHeightPx = Math.max(Math.round(agInterval * pxPerMin), 28);
 
                       return (
                         <div key={ag?.id || ci} className={cn(
@@ -691,30 +696,30 @@ export default function AgendaOperational() {
                               return true;
                             });
 
-                            const slotHeight = agSubSlots.length >= 4 ? "min-h-[30px]" : agSubSlots.length >= 2 ? "min-h-[36px]" : "min-h-[52px]";
-
                             return (
                               <div
                                 key={slotKey}
                                 className={cn(
                                   "px-1 py-0.5 transition-colors relative",
-                                  slotHeight,
-                                  si < agSubSlots.length - 1 && "border-b border-dashed border-border/20",
-                                  si === 0 && "border-t border-border/40",
+                                  si < agSubSlots.length - 1 && "border-b border-dashed border-border/30",
+                                  si === 0 && "border-t border-border/50",
                                   blockReason && "bg-destructive/5",
                                   !available && !blockReason && "bg-muted/30",
                                   isDragOver && available && !blockReason && "bg-primary/10 ring-1 ring-inset ring-primary/30",
                                   isDragOver && (!available || blockReason) && "bg-destructive/10",
                                 )}
+                                style={{ minHeight: `${slotHeightPx}px` }}
                                 onDragOver={available && !blockReason ? (e) => handleDragOver(e, slotKey) : undefined}
                                 onDragLeave={handleDragLeave}
                                 onDrop={available && !blockReason ? (e) => handleDrop(e, slotTime, ag) : undefined}
                               >
-                                {/* Sub-slot time label */}
+                                {/* Sub-slot time label — always visible when no appointment */}
                                 {agSubSlots.length > 1 && !slotAppts.length && available && !blockReason && (
                                   <span className={cn(
-                                    "absolute left-1.5 top-0.5 text-[9px] font-mono select-none pointer-events-none",
-                                    si === 0 ? "text-muted-foreground/60 font-medium" : "text-muted-foreground/35"
+                                    "absolute left-1.5 top-0.5 font-mono select-none pointer-events-none tabular-nums",
+                                    si === 0
+                                      ? "text-[10px] text-foreground/50 font-semibold"
+                                      : "text-[10px] text-foreground/40 font-medium"
                                   )}>
                                     {slotTime}
                                   </span>
