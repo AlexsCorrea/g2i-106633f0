@@ -95,10 +95,37 @@ export default function AgendaOperational() {
   const { data: weekAppointments } = useAppointments(viewMode === "week" ? {} : undefined);
   const { data: agendas } = useScheduleAgendas();
   const { data: allPeriods } = useSchedulePeriods();
+  const { data: allBlocks } = useScheduleBlocks();
+  const { data: allHolidays } = useScheduleHolidays();
   const updateAppointment = useUpdateAppointment();
   const deleteAppointment = useDeleteAppointment();
 
   const periods = allPeriods || [];
+  const blocks = allBlocks || [];
+  const holidays = allHolidays || [];
+
+  // Check if a slot is blocked
+  const isSlotBlocked = (agendaId: string, date: Date, hour: number): string | null => {
+    const dateStr2 = format(date, "yyyy-MM-dd");
+    // Check holidays
+    const holiday = holidays.find(h => h.holiday_date === dateStr2 && h.auto_block &&
+      (!h.affected_agendas?.length || h.affected_agendas.includes(agendaId)));
+    if (holiday) return `Feriado: ${holiday.name}`;
+    // Check blocks
+    const block = blocks.find(b => {
+      if (b.agenda_id !== agendaId) return false;
+      if (dateStr2 < b.start_date || dateStr2 > b.end_date) return false;
+      if (b.block_type === "total") return true;
+      if (b.start_time && b.end_time) {
+        const bsh = parseInt(b.start_time.split(":")[0], 10);
+        const beh = parseInt(b.end_time.split(":")[0], 10);
+        return hour >= bsh && hour < beh;
+      }
+      return true;
+    });
+    if (block) return `Bloqueado: ${block.reason}`;
+    return null;
+  };
 
   const activeAgendas = useMemo(() => agendas?.filter(a => a.status === "ativa") || [], [agendas]);
   const displayedAgendas = useMemo(() => {
