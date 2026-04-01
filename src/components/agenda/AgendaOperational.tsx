@@ -485,6 +485,7 @@ export default function AgendaOperational() {
                   </div>
                   {cols.map((ag, ci) => {
                     const available = ag ? isHourAvailable(periods, ag.id, dayOfWeek, hour) : true;
+                    const blockReason = ag ? isSlotBlocked(ag.id, selectedDate, hour) : null;
                     const colAppts = filteredAppointments.filter(a => {
                       const d = parseLocalTime(a.scheduled_at);
                       if (d.getHours() !== hour) return false;
@@ -496,17 +497,24 @@ export default function AgendaOperational() {
                       <div key={ag?.id || ci} className={cn(
                         "flex-1 min-w-[200px] p-1 space-y-1",
                         isMulti && "border-r",
-                        !available && "bg-muted/40"
+                        blockReason && "bg-destructive/5",
+                        !available && !blockReason && "bg-muted/40"
                       )}>
                         {colAppts.map(a => renderAppointmentCard(a, isMulti))}
-                        {!colAppts.length && available && (
+                        {!colAppts.length && blockReason && (
+                          <div className="w-full h-full min-h-[36px] rounded flex items-center justify-center gap-1 text-destructive/40" title={blockReason}>
+                            <Ban className="h-3 w-3" />
+                            <span className="text-[9px] truncate max-w-[120px]">{blockReason}</span>
+                          </div>
+                        )}
+                        {!colAppts.length && !blockReason && available && (
                           <button
                             className="w-full h-full min-h-[36px] rounded border border-dashed border-muted-foreground/10 hover:bg-muted/20 transition-colors flex items-center justify-center"
                             onClick={() => handleSlotClick(hour, ag)}>
                             <Plus className="h-3 w-3 text-muted-foreground/20" />
                           </button>
                         )}
-                        {!colAppts.length && !available && (
+                        {!colAppts.length && !blockReason && !available && (
                           <div className="w-full h-full min-h-[36px] rounded flex items-center justify-center gap-1 text-muted-foreground/30">
                             <Lock className="h-3 w-3" />
                             <span className="text-[9px]">Fechado</span>
