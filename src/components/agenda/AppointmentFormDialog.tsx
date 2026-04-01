@@ -331,13 +331,30 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {isEncaixe && <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-200">Encaixe</Badge>}
-            {editAppointment ? "Editar Agendamento" : "Novo Agendamento"}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[92vh] p-0 overflow-hidden flex flex-col shadow-2xl border-border/60">
+        {/* Fixed header */}
+        <div className={cn(
+          "px-6 py-4 border-b shrink-0",
+          isEncaixe ? "bg-violet-50/60 dark:bg-violet-950/20" : "bg-muted/30"
+        )}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-lg">
+              {isEncaixe ? (
+                <>
+                  <div className="h-8 w-8 rounded-lg bg-violet-500/15 flex items-center justify-center">
+                    <ShieldAlert className="h-4 w-4 text-violet-600" />
+                  </div>
+                  <span>Novo Encaixe</span>
+                  <Badge variant="outline" className="bg-violet-100 text-violet-700 border-violet-300 text-[10px]">Exceção controlada</Badge>
+                </>
+              ) : (
+                <>
+                  {editAppointment ? "Editar Agendamento" : "Novo Agendamento"}
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+        </div>
 
         {/* Warnings bar */}
         {computedWarnings.length > 0 && !isEncaixe && (
