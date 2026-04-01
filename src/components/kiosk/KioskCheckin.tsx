@@ -76,7 +76,10 @@ export function KioskCheckin({ onBack, onResult }: Props) {
     setLoading(true);
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const todayStart = new Date(`${today}T00:00:00`).toISOString();
+      const todayEnd = new Date(`${today}T23:59:59`).toISOString();
       const foundAppointments: FoundAppointment[] = [];
 
       // === PATH 1: Search registered patients by CPF (masked or unmasked) ===
