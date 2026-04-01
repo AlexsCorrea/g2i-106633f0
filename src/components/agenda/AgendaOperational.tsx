@@ -97,6 +97,7 @@ export default function AgendaOperational() {
   const [dragAppt, setDragAppt] = useState<any>(null);
   const [dragOverSlot, setDragOverSlot] = useState<string | null>(null);
   const [dragConfirmOpen, setDragConfirmOpen] = useState(false);
+  const [dragSaving, setDragSaving] = useState(false);
   const [dragConfirmData, setDragConfirmData] = useState<{
     patientName: string; sourceAgenda: string; targetAgenda: string;
     sourceTime: string; targetTime: string; isTransfer: boolean;
@@ -326,28 +327,35 @@ export default function AgendaOperational() {
     if (!dragConfirmData) return;
     const { appointmentId, targetAgendaId: tAgId, newScheduledAt, isTransfer, sourceTime, targetTime, sourceAgenda, targetAgenda } = dragConfirmData;
     const appt = appointments.find(a => a.id === appointmentId);
-    await updateAppointment.mutateAsync({
-      id: appointmentId,
-      agenda_id: tAgId,
-      scheduled_at: newScheduledAt,
-    } as any);
-    createLog.mutate({
-      appointment_id: appointmentId,
-      action: isTransfer ? "transfer" : "reschedule",
-      old_status: appt?.status || null,
-      new_status: appt?.status || null,
-      changed_by: profile?.id,
-      details: {
-        type: isTransfer ? "transfer" : "reschedule",
-        source_agenda: sourceAgenda,
-        target_agenda: targetAgenda,
-        original_time: sourceTime,
-        new_time: targetTime,
-      } as any,
-    });
-    setDragConfirmOpen(false);
-    setDragConfirmData(null);
-    toast.success(isTransfer ? "Agendamento transferido!" : "Agendamento remarcado!");
+    setDragSaving(true);
+    try {
+      await updateAppointment.mutateAsync({
+        id: appointmentId,
+        agenda_id: tAgId,
+        scheduled_at: newScheduledAt,
+      } as any);
+      createLog.mutate({
+        appointment_id: appointmentId,
+        action: isTransfer ? "transfer" : "reschedule",
+        old_status: appt?.status || null,
+        new_status: appt?.status || null,
+        changed_by: profile?.id,
+        details: {
+          type: isTransfer ? "transfer" : "reschedule",
+          source_agenda: sourceAgenda,
+          target_agenda: targetAgenda,
+          original_time: sourceTime,
+          new_time: targetTime,
+        } as any,
+      });
+      toast.success(isTransfer ? "Agendamento transferido!" : "Agendamento remarcado!");
+    } catch (err) {
+      toast.error("Erro ao mover agendamento. O card foi mantido na posição original.");
+    } finally {
+      setDragSaving(false);
+      setDragConfirmOpen(false);
+      setDragConfirmData(null);
+    }
   };
 
   // Dynamic hour range based on displayed agendas' periods
@@ -617,6 +625,11 @@ export default function AgendaOperational() {
                   const initials = prof?.full_name
                     ? prof.full_name.split(" ").filter(Boolean).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()
                     : ag!.name.split(" ").filter(Boolean).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
+                  // Get open periods for this day
+                  const agPeriods = periods.filter(p => p.agenda_id === ag!.id && p.day_of_week === dayOfWeek);
+                  const periodLabel = agPeriods.length > 0
+                    ? agPeriods.map(p => `${p.start_time.slice(0,5)}–${p.end_time.slice(0,5)}`).join(" | ")
+                    : "Sem período";
                   return (
                     <div key={ag!.id} className="flex-1 min-w-[200px] px-3 py-2.5 border-r" style={{ borderTopWidth: "3px", borderTopColor: (ag as any)?.color || "hsl(var(--muted-foreground))" }}>
                       <div className="flex items-center gap-2 justify-center">
@@ -633,6 +646,10 @@ export default function AgendaOperational() {
                         <div className="text-left min-w-0">
                           <p className="text-xs font-semibold truncate">{prof?.full_name || ag!.name}</p>
                           <p className="text-[10px] text-muted-foreground truncate">{ag!.specialty || prof?.specialty || ag!.unit || ""}</p>
+                          <p className={cn(
+                            "text-[9px] font-mono truncate mt-0.5",
+                            agPeriods.length > 0 ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-destructive/60"
+                          )}>{periodLabel}</p>
                         </div>
                       </div>
                     </div>
@@ -644,27 +661,27 @@ export default function AgendaOperational() {
             {/* Time rows with sub-slots */}
             <div className="divide-y">
               {hours.map(hour => {
-                // Determine finest interval for this hour across all displayed agendas
-                const intervals = cols.map(ag => ag?.default_interval || 60);
-                const finest = Math.min(...intervals.filter(i => i > 0), 60);
-                const subSlotCount = Math.max(Math.floor(60 / finest), 1);
-                const subSlots = Array.from({ length: subSlotCount }, (_, i) => i * finest);
-
                 return (
                   <div key={hour} className="flex">
-                    <div className="w-14 shrink-0 border-r bg-muted/30 flex flex-col">
-                      <div className="py-2 px-2 text-xs font-medium text-muted-foreground text-center">
+                    {/* Time ruler */}
+                    <div className="w-14 shrink-0 border-r bg-muted/40 flex items-start justify-center py-2">
+                      <span className="text-xs font-semibold text-foreground/70 tabular-nums">
                         {String(hour).padStart(2, "0")}:00
-                      </div>
+                      </span>
                     </div>
                     {cols.map((ag, ci) => {
                       const agInterval = ag?.default_interval || 30;
                       const agSubSlots = Array.from({ length: Math.max(Math.floor(60 / agInterval), 1) }, (_, i) => i * agInterval);
                       const blockReason = ag ? isSlotBlocked(ag.id, selectedDate, hour) : null;
+                      const periodOpen = ag ? isTimeAvailable(periods, ag.id, dayOfWeek, `${String(hour).padStart(2, "0")}:00`) : true;
 
                       return (
-                        <div key={ag?.id || ci} className={cn("flex-1 min-w-[200px] flex flex-col", isMulti && "border-r")}>
-                          {agSubSlots.map(minOffset => {
+                        <div key={ag?.id || ci} className={cn(
+                          "flex-1 min-w-[200px] flex flex-col",
+                          isMulti && "border-r",
+                          !periodOpen && !blockReason && "bg-muted/50",
+                        )}>
+                          {agSubSlots.map((minOffset, si) => {
                             const slotTime = `${String(hour).padStart(2, "0")}:${String(minOffset).padStart(2, "0")}`;
                             const slotKey = `${ag?.id || ci}-${slotTime}`;
                             const available = ag ? isTimeAvailable(periods, ag.id, dayOfWeek, slotTime) : true;
@@ -674,7 +691,6 @@ export default function AgendaOperational() {
                             const slotAppts = filteredAppointments.filter(a => {
                               const d = parseLocalTime(a.scheduled_at);
                               if (d.getHours() !== hour) return false;
-                              // Map to nearest interval
                               const apptMin = d.getMinutes();
                               const snapped = Math.floor(apptMin / agInterval) * agInterval;
                               if (snapped !== minOffset) return false;
@@ -682,16 +698,18 @@ export default function AgendaOperational() {
                               return true;
                             });
 
-                            const minHeight = agSubSlots.length > 2 ? "min-h-[28px]" : agSubSlots.length > 1 ? "min-h-[32px]" : "min-h-[48px]";
+                            const slotHeight = agSubSlots.length >= 4 ? "min-h-[30px]" : agSubSlots.length >= 2 ? "min-h-[36px]" : "min-h-[52px]";
 
                             return (
                               <div
                                 key={slotKey}
                                 className={cn(
-                                  "p-0.5 border-b border-dashed border-border/30 last:border-b-0 transition-colors",
-                                  minHeight,
+                                  "px-1 py-0.5 transition-colors relative",
+                                  slotHeight,
+                                  si < agSubSlots.length - 1 && "border-b border-dashed border-border/20",
+                                  si === 0 && "border-t border-border/40",
                                   blockReason && "bg-destructive/5",
-                                  !available && !blockReason && "bg-muted/40",
+                                  !available && !blockReason && "bg-muted/30",
                                   isDragOver && available && !blockReason && "bg-primary/10 ring-1 ring-inset ring-primary/30",
                                   isDragOver && (!available || blockReason) && "bg-destructive/10",
                                 )}
@@ -699,9 +717,14 @@ export default function AgendaOperational() {
                                 onDragLeave={handleDragLeave}
                                 onDrop={available && !blockReason ? (e) => handleDrop(e, slotTime, ag) : undefined}
                               >
-                                {/* Sub-slot time label for intervals < 60 */}
-                                {agSubSlots.length > 1 && minOffset > 0 && !slotAppts.length && !blockReason && available && (
-                                  <span className="text-[8px] text-muted-foreground/40 pl-1 select-none">{slotTime}</span>
+                                {/* Sub-slot time label */}
+                                {agSubSlots.length > 1 && !slotAppts.length && available && !blockReason && (
+                                  <span className={cn(
+                                    "absolute left-1.5 top-0.5 text-[9px] font-mono select-none pointer-events-none",
+                                    si === 0 ? "text-muted-foreground/60 font-medium" : "text-muted-foreground/35"
+                                  )}>
+                                    {slotTime}
+                                  </span>
                                 )}
 
                                 {slotAppts.map(a => (
@@ -709,13 +732,14 @@ export default function AgendaOperational() {
                                     key={a.id}
                                     draggable
                                     onDragStart={(e) => handleDragStart(e, a)}
+                                    onDragEnd={() => setDragAppt(null)}
                                     className="cursor-grab active:cursor-grabbing"
                                   >
                                     {renderAppointmentCard(a, isMulti)}
                                   </div>
                                 ))}
 
-                                {!slotAppts.length && blockReason && minOffset === 0 && (
+                                {!slotAppts.length && blockReason && si === 0 && (
                                   <div className="w-full h-full rounded flex items-center justify-center gap-1 text-destructive/40" title={blockReason}>
                                     <Ban className="h-3 w-3" />
                                     <span className="text-[9px] truncate max-w-[120px]">{blockReason}</span>
@@ -724,14 +748,14 @@ export default function AgendaOperational() {
 
                                 {!slotAppts.length && !blockReason && available && (
                                   <button
-                                    className="w-full h-full rounded border border-dashed border-transparent hover:border-muted-foreground/15 hover:bg-muted/20 transition-all flex items-center justify-center group/slot"
+                                    className="w-full h-full rounded border border-dashed border-transparent hover:border-primary/20 hover:bg-primary/5 transition-all flex items-center justify-center group/slot"
                                     onClick={() => handleSlotClick(slotTime, ag)}
                                   >
-                                    <Plus className="h-3 w-3 text-muted-foreground/0 group-hover/slot:text-muted-foreground/30 transition-opacity" />
+                                    <Plus className="h-3 w-3 text-muted-foreground/0 group-hover/slot:text-primary/40 transition-opacity" />
                                   </button>
                                 )}
 
-                                {!slotAppts.length && !blockReason && !available && minOffset === 0 && (
+                                {!slotAppts.length && !blockReason && !available && si === 0 && (
                                   <div className="w-full h-full rounded flex items-center justify-center gap-1 text-muted-foreground/30">
                                     <Lock className="h-3 w-3" />
                                     <span className="text-[9px]">Fechado</span>
@@ -1039,8 +1063,9 @@ export default function AgendaOperational() {
       {/* Drag Confirm Dialog */}
       <DragConfirmDialog
         open={dragConfirmOpen}
-        onOpenChange={setDragConfirmOpen}
+        onOpenChange={(v) => { if (!v && !dragSaving) { setDragConfirmOpen(false); setDragConfirmData(null); } }}
         onConfirm={confirmDrag}
+        loading={dragSaving}
         data={dragConfirmData}
       />
 

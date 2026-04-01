@@ -1,10 +1,10 @@
 import { useState, useMemo } from "react";
 import { useAppointments, useUpdateAppointment } from "@/hooks/useAppointments";
-import { useScheduleAgendas, useSchedulePeriods, type ScheduleAgenda } from "@/hooks/useScheduleAgendas";
+import { useSchedulePeriods, type ScheduleAgenda } from "@/hooks/useScheduleAgendas";
 import { useCreateAppointmentLog } from "@/hooks/useAppointmentLogs";
 import { useAuth } from "@/contexts/AuthContext";
 import { isTimeAvailable } from "@/lib/agendaAvailability";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,10 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertTriangle, ArrowRight, CheckCircle, XCircle, Clock, Users, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle, XCircle, Users, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -81,17 +79,14 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
     });
   }, [dayAppointments, sourceAgendaId, periodFilter]);
 
-  const targetAgenda = agendas.find(a => a.id === targetAgendaId);
-
   const simulateTransfer = useMemo((): TransferResult[] => {
     if (!targetAgendaId || selectedIds.length === 0) return [];
     const targetAg = agendas.find(a => a.id === targetAgendaId);
     if (!targetAg) return [];
     const interval = targetAg.default_interval || 30;
     const dayOfWeek = new Date(transferDate + "T12:00:00").getDay();
-    
-    // Get existing appointments in target agenda for this day
-    const targetExisting = (dayAppointments || []).filter((a: any) => 
+
+    const targetExisting = (dayAppointments || []).filter((a: any) =>
       a.agenda_id === targetAgendaId && a.status !== "cancelado" && a.status !== "nao_compareceu"
     );
     const occupiedTimes = new Set(targetExisting.map((a: any) => {
@@ -101,7 +96,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
 
     const selected = sourceAppointments.filter(a => selectedIds.includes(a.id));
     const usedTimes = new Set<string>();
-    
+
     return selected.map(appt => {
       const d = new Date(appt.scheduled_at);
       const origTime = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -110,14 +105,13 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
       if (rule === "same_time") {
         const timeKey = `${d.getHours()}:${d.getMinutes()}`;
         const available = isTimeAvailable(periods, targetAgendaId, dayOfWeek, origTime);
-        if (!available) return { appointmentId: appt.id, patientName: name, originalTime: origTime, newTime: null, status: "blocked" as const, reason: "Horário fora do período da agenda destino" };
-        if (occupiedTimes.has(timeKey) || usedTimes.has(timeKey)) return { appointmentId: appt.id, patientName: name, originalTime: origTime, newTime: null, status: "conflict" as const, reason: "Horário já ocupado na agenda destino" };
+        if (!available) return { appointmentId: appt.id, patientName: name, originalTime: origTime, newTime: null, status: "blocked" as const, reason: "Fora do período" };
+        if (occupiedTimes.has(timeKey) || usedTimes.has(timeKey)) return { appointmentId: appt.id, patientName: name, originalTime: origTime, newTime: null, status: "conflict" as const, reason: "Horário ocupado" };
         usedTimes.add(timeKey);
         return { appointmentId: appt.id, patientName: name, originalTime: origTime, newTime: origTime, status: "success" as const };
       }
 
       if (rule === "next_available") {
-        // Find next available slot starting from original time
         for (let h = d.getHours(); h < 22; h++) {
           for (let m = (h === d.getHours() ? d.getMinutes() : 0); m < 60; m += interval) {
             const slotTime = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
@@ -128,7 +122,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
             return { appointmentId: appt.id, patientName: name, originalTime: origTime, newTime: slotTime, status: "success" as const };
           }
         }
-        return { appointmentId: appt.id, patientName: name, originalTime: origTime, newTime: null, status: "no_slot" as const, reason: "Sem horário livre disponível" };
+        return { appointmentId: appt.id, patientName: name, originalTime: origTime, newTime: null, status: "no_slot" as const, reason: "Sem vaga" };
       }
 
       // as_fit_in
@@ -149,23 +143,16 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
     if (!justificationReason) { toast.error("Informe o motivo da transferência."); return; }
     const successItems = simulateTransfer.filter(r => r.status === "success");
     if (!successItems.length) { toast.error("Nenhum paciente pode ser transferido."); return; }
-    
+
     setExecuting(true);
     const finalResults: TransferResult[] = [...simulateTransfer];
-    
+
     for (const item of successItems) {
       try {
         const appt = sourceAppointments.find(a => a.id === item.appointmentId);
         if (!appt || !item.newTime) continue;
         const [h, m] = item.newTime.split(":").map(Number);
-        const newDate = new Date(transferDate + "T00:00:00");
-        newDate.setHours(h, m, 0, 0);
-        const year = newDate.getFullYear();
-        const month = String(newDate.getMonth() + 1).padStart(2, "0");
-        const day = String(newDate.getDate()).padStart(2, "0");
-        const hours = String(newDate.getHours()).padStart(2, "0");
-        const mins = String(newDate.getMinutes()).padStart(2, "0");
-        const localIso = `${year}-${month}-${day}T${hours}:${mins}:00`;
+        const localIso = `${transferDate}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
 
         await updateAppointment.mutateAsync({
           id: item.appointmentId,
@@ -224,45 +211,52 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col z-[120]">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
             Transferência em Massa
           </DialogTitle>
+          <DialogDescription className="text-xs">
+            Redistribua agendamentos de uma agenda para outra.
+          </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-6 py-4">
+        <div className="flex-1 overflow-y-auto space-y-5 py-2">
           {step === "select" && (
-            <div className="space-y-5">
+            <>
               {/* Source / Target */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Agenda Origem</Label>
                   <Select value={sourceAgendaId} onValueChange={v => { setSourceAgendaId(v); setSelectedIds([]); }}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>{agendas.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                    <SelectTrigger><SelectValue placeholder="Selecione a agenda de origem..." /></SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      {agendas.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                    </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Agenda Destino</Label>
                   <Select value={targetAgendaId} onValueChange={setTargetAgendaId}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>{agendas.filter(a => a.id !== sourceAgendaId).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                    <SelectTrigger><SelectValue placeholder="Selecione a agenda de destino..." /></SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      {agendas.filter(a => a.id !== sourceAgendaId).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                    </SelectContent>
                   </Select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Data</Label>
-                  <input type="date" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm mt-1" value={transferDate} onChange={e => setTransferDate(e.target.value)} />
+                  <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={transferDate} onChange={e => setTransferDate(e.target.value)} />
                 </div>
-                <div>
+                <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Período</Label>
                   <Select value={periodFilter} onValueChange={setPeriodFilter}>
-                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="z-[200]">
                       <SelectItem value="all">Dia inteiro</SelectItem>
                       <SelectItem value="manha">Manhã</SelectItem>
                       <SelectItem value="tarde">Tarde</SelectItem>
@@ -276,7 +270,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
               {sourceAgendaId && sourceAppointments.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <Label className="text-xs font-semibold">{sourceAppointments.length} agendamento(s) encontrado(s)</Label>
+                    <Label className="text-xs font-semibold">{sourceAppointments.length} agendamento(s)</Label>
                     <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={toggleAll}>
                       {selectedIds.length === sourceAppointments.length ? "Desmarcar todos" : "Selecionar todos"}
                     </Button>
@@ -286,9 +280,9 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
                       const d = new Date(appt.scheduled_at);
                       const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
                       return (
-                        <label key={appt.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/30 cursor-pointer">
+                        <label key={appt.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/30 cursor-pointer">
                           <Checkbox checked={selectedIds.includes(appt.id)} onCheckedChange={() => toggleSelect(appt.id)} />
-                          <span className="text-xs font-mono w-12 shrink-0">{time}</span>
+                          <span className="text-xs font-mono w-12 shrink-0 font-semibold">{time}</span>
                           <span className="text-xs flex-1 truncate">{(appt as any).patients?.full_name || (appt as any).provisional_name || appt.title}</span>
                           <Badge variant="outline" className="text-[9px]">{(appt as any).insurance || "particular"}</Badge>
                         </label>
@@ -298,8 +292,10 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
                 </div>
               )}
               {sourceAgendaId && sourceAppointments.length === 0 && (
-                <div className="text-center py-6 text-sm text-muted-foreground">Nenhum agendamento ativo encontrado nesta data/período.</div>
+                <div className="text-center py-8 text-sm text-muted-foreground border rounded-lg">Nenhum agendamento ativo nesta data/período.</div>
               )}
+
+              <Separator />
 
               {/* Transfer rule */}
               <div>
@@ -310,7 +306,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
                     { value: "next_available" as const, label: "Próximo livre", desc: "Buscar próximo disponível" },
                     { value: "as_fit_in" as const, label: "Como encaixe", desc: "Transferir como encaixe" },
                   ].map(r => (
-                    <button key={r.value} className={cn("border rounded-lg p-3 text-left transition-all", rule === r.value ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:bg-muted/30")} onClick={() => setRule(r.value)}>
+                    <button key={r.value} type="button" className={cn("border rounded-lg p-3 text-left transition-all", rule === r.value ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "hover:bg-muted/30")} onClick={() => setRule(r.value)}>
                       <span className="text-xs font-semibold block">{r.label}</span>
                       <span className="text-[10px] text-muted-foreground">{r.desc}</span>
                     </button>
@@ -319,15 +315,17 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
               </div>
 
               {/* Justification */}
-              <div>
+              <div className="space-y-2">
                 <Label className="text-xs font-semibold">Motivo *</Label>
                 <Select value={justificationReason} onValueChange={setJustificationReason}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione o motivo..." /></SelectTrigger>
-                  <SelectContent>{reasons.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                  <SelectTrigger><SelectValue placeholder="Selecione o motivo..." /></SelectTrigger>
+                  <SelectContent className="z-[200]">
+                    {reasons.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  </SelectContent>
                 </Select>
-                <Textarea placeholder="Observação complementar..." className="mt-2 text-xs" rows={2} value={justification} onChange={e => setJustification(e.target.value)} />
+                <Textarea placeholder="Observação complementar (opcional)..." className="text-xs" rows={2} value={justification} onChange={e => setJustification(e.target.value)} />
               </div>
-            </div>
+            </>
           )}
 
           {step === "preview" && (
@@ -340,7 +338,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
 
               <div className="flex gap-3">
                 <div className="flex items-center gap-1.5 text-xs"><CheckCircle className="h-3.5 w-3.5 text-emerald-600" /><span>{successCount} transferível</span></div>
-                {failCount > 0 && <div className="flex items-center gap-1.5 text-xs"><XCircle className="h-3.5 w-3.5 text-destructive" /><span>{failCount} não transferível</span></div>}
+                {failCount > 0 && <div className="flex items-center gap-1.5 text-xs"><XCircle className="h-3.5 w-3.5 text-destructive" /><span>{failCount} com problema</span></div>}
               </div>
 
               <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
@@ -355,11 +353,11 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
                 ))}
               </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                 <div className="text-xs">
-                  <p className="font-semibold text-amber-800">Motivo: {justificationReason}</p>
-                  {justification && <p className="text-amber-700 mt-0.5">{justification}</p>}
+                  <p className="font-semibold text-amber-800 dark:text-amber-300">Motivo: {justificationReason}</p>
+                  {justification && <p className="text-amber-700 dark:text-amber-400 mt-0.5">{justification}</p>}
                 </div>
               </div>
             </div>
@@ -385,14 +383,16 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
               </div>
             </div>
           )}
-        </ScrollArea>
+        </div>
 
-        <div className="border-t px-6 py-4 flex justify-between shrink-0">
+        <Separator />
+
+        <div className="flex justify-between shrink-0 pt-2">
           {step === "select" && (
             <>
               <Button variant="outline" onClick={() => handleClose(false)}>Cancelar</Button>
               <Button onClick={() => setStep("preview")} disabled={!sourceAgendaId || !targetAgendaId || selectedIds.length === 0 || !justificationReason}>
-                Simular Transferência ({selectedIds.length})
+                Simular ({selectedIds.length})
               </Button>
             </>
           )}
@@ -401,7 +401,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
               <Button variant="outline" onClick={() => setStep("select")}>Voltar</Button>
               <Button onClick={executeTransfer} disabled={executing || successCount === 0} className="gap-2">
                 {executing && <Loader2 className="h-4 w-4 animate-spin" />}
-                Confirmar Transferência ({successCount})
+                Confirmar ({successCount})
               </Button>
             </>
           )}
