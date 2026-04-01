@@ -370,7 +370,7 @@ export default function AgendaOperational() {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>
-            <h3 className="font-semibold text-base">{a.patients?.full_name || a.title}</h3>
+            <h3 className="font-semibold text-base">{a.patients?.full_name || (a as any).provisional_name || a.title}</h3>
             {isProvisional && (
               <div className="flex items-center gap-1.5 mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
                 <AlertTriangle className="h-3 w-3" />
