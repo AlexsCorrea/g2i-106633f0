@@ -277,7 +277,7 @@ export default function MassTransferDialog({ open, onOpenChange, defaultDate, ag
                   </div>
                   <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
                     {sourceAppointments.map(appt => {
-                      const d = new Date(appt.scheduled_at);
+                      const d = parseAgendaDateTime(appt.scheduled_at);
                       const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
                       return (
                         <label key={appt.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/30 cursor-pointer">
