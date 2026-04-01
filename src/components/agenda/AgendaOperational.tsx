@@ -221,26 +221,26 @@ export default function AgendaOperational() {
     setShowForm(true);
   };
 
-  const handleSlotClick = (hour: number, agenda: ScheduleAgenda | null) => {
+  const handleSlotClick = (time: string, agenda: ScheduleAgenda | null) => {
     const dayOfWeek = selectedDate.getDay();
-    const time = `${String(hour).padStart(2, "0")}:00`;
+    const hour = parseInt(time.split(":")[0], 10);
 
     if (agenda) {
-      // Check blocks first
       const blockReason = isSlotBlocked(agenda.id, selectedDate, hour);
       if (blockReason) {
         toast.error(blockReason);
         return;
       }
-      const available = isHourAvailable(periods, agenda.id, dayOfWeek, hour);
+      const available = isTimeAvailable(periods, agenda.id, dayOfWeek, time);
       if (!available) {
         toast.error("Esta agenda não possui período aberto neste horário.");
         return;
       }
-      // Check conflicts
+      // Check conflicts at this exact time
       const existingAppts = filteredAppointments.filter(a => {
         const d = parseLocalTime(a.scheduled_at);
-        return d.getHours() === hour && (a as any).agenda_id === agenda.id;
+        const apptTime = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        return apptTime === time && (a as any).agenda_id === agenda.id;
       });
       if (existingAppts.length > 0 && !agenda.allows_overlap) {
         toast.error("Já existe um agendamento neste horário. Use 'Encaixe' para sobrepor.");
@@ -248,6 +248,106 @@ export default function AgendaOperational() {
       }
     }
     openNewAppointment(dateStr, time, agenda?.id);
+  };
+
+  // Drag handlers
+  const handleDragStart = useCallback((e: React.DragEvent, appointment: any) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", appointment.id);
+    setDragAppt(appointment);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, slotKey: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverSlot(slotKey);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverSlot(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, time: string, agenda: ScheduleAgenda | null) => {
+    e.preventDefault();
+    setDragOverSlot(null);
+    if (!dragAppt || !agenda) return;
+
+    const dayOfWeek = selectedDate.getDay();
+    const hour = parseInt(time.split(":")[0], 10);
+
+    // Validate destination
+    const blockReason = isSlotBlocked(agenda.id, selectedDate, hour);
+    if (blockReason) { toast.error(blockReason); setDragAppt(null); return; }
+
+    const available = isTimeAvailable(periods, agenda.id, dayOfWeek, time);
+    if (!available) { toast.error("Horário fora do período da agenda destino."); setDragAppt(null); return; }
+
+    // Check conflicts
+    const existingAppts = filteredAppointments.filter(a => {
+      if (a.id === dragAppt.id) return false;
+      const d = parseLocalTime(a.scheduled_at);
+      const apptTime = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      return apptTime === time && (a as any).agenda_id === agenda.id;
+    });
+    if (existingAppts.length > 0 && !agenda.allows_overlap) {
+      toast.error("Já existe um agendamento neste horário. Use 'Encaixe' para sobrepor.");
+      setDragAppt(null);
+      return;
+    }
+
+    const srcAgendaId = (dragAppt as any).agenda_id;
+    const isTransfer = srcAgendaId !== agenda.id;
+    const srcAgenda = agendas?.find(a => a.id === srcAgendaId);
+    const srcTime = formatTime(dragAppt.scheduled_at);
+    const [h, m] = time.split(":").map(Number);
+    const newDate = new Date(selectedDate);
+    newDate.setHours(h, m, 0, 0);
+    const year = newDate.getFullYear();
+    const month = String(newDate.getMonth() + 1).padStart(2, "0");
+    const day = String(newDate.getDate()).padStart(2, "0");
+    const localIso = `${year}-${month}-${day}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+
+    setDragConfirmData({
+      patientName: dragAppt.patients?.full_name || (dragAppt as any).provisional_name || dragAppt.title,
+      sourceAgenda: srcAgenda?.name || "—",
+      targetAgenda: agenda.name,
+      sourceTime: srcTime,
+      targetTime: time,
+      isTransfer,
+      appointmentId: dragAppt.id,
+      targetAgendaId: agenda.id,
+      newScheduledAt: localIso,
+    });
+    setDragConfirmOpen(true);
+    setDragAppt(null);
+  }, [dragAppt, selectedDate, periods, filteredAppointments, agendas]);
+
+  const confirmDrag = async () => {
+    if (!dragConfirmData) return;
+    const { appointmentId, targetAgendaId: tAgId, newScheduledAt, isTransfer, sourceTime, targetTime, sourceAgenda, targetAgenda } = dragConfirmData;
+    const appt = appointments.find(a => a.id === appointmentId);
+    await updateAppointment.mutateAsync({
+      id: appointmentId,
+      agenda_id: tAgId,
+      scheduled_at: newScheduledAt,
+    } as any);
+    createLog.mutate({
+      appointment_id: appointmentId,
+      action: isTransfer ? "transfer" : "reschedule",
+      old_status: appt?.status || null,
+      new_status: appt?.status || null,
+      changed_by: profile?.id,
+      details: {
+        type: isTransfer ? "transfer" : "reschedule",
+        source_agenda: sourceAgenda,
+        target_agenda: targetAgenda,
+        original_time: sourceTime,
+        new_time: targetTime,
+      } as any,
+    });
+    setDragConfirmOpen(false);
+    setDragConfirmData(null);
+    toast.success(isTransfer ? "Agendamento transferido!" : "Agendamento remarcado!");
   };
 
   // Dynamic hour range based on displayed agendas' periods
