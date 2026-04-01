@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppointments, useUpdateAppointment, useDeleteAppointment } from "@/hooks/useAppointments";
-import { useScheduleAgendas } from "@/hooks/useScheduleAgendas";
+import { useScheduleAgendas, type ScheduleAgenda } from "@/hooks/useScheduleAgendas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,14 +13,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Plus, CalendarIcon, Clock, User, MapPin, Loader2, List,
+  Plus, CalendarIcon, Clock, User, Loader2, List,
   LayoutGrid, ChevronLeft, ChevronRight, Trash2, Search,
-  FileText, CheckCircle, UserCheck, Edit, Phone, X, MoreHorizontal,
-  ArrowRight, Eye, Megaphone, Ban, RotateCcw, PlayCircle, DoorOpen,
-  AlertCircle, Shield
+  FileText, CheckCircle, UserCheck, Edit, Phone, X,
+  Ban, RotateCcw, PlayCircle, DoorOpen, Eye, Filter
 } from "lucide-react";
-import { format, parseISO, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
+import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import AppointmentFormDialog from "./AppointmentFormDialog";
@@ -49,16 +50,34 @@ const statusConfig: Record<string, { label: string; color: string; dot: string }
 
 const allStatuses = Object.keys(statusConfig);
 
+/* ── Helper: parse timestamp as local time ── */
+function parseLocalTime(ts: string): Date {
+  // If the timestamp has timezone info (Z or +offset), parse natively
+  // But we want to DISPLAY in local time, so use Date constructor which does that
+  return new Date(ts);
+}
+
+function formatTime(ts: string): string {
+  const d = parseLocalTime(ts);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatDatetime(ts: string): string {
+  const d = parseLocalTime(ts);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()} às ${formatTime(ts)}`;
+}
+
 export default function AgendaOperational() {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [viewMode, setViewMode] = useState<"list" | "day" | "week">("list");
+  const [viewMode, setViewMode] = useState<"list" | "day" | "week">("day");
   const [showForm, setShowForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
-  const [filterAgenda, setFilterAgenda] = useState("all");
+  const [selectedAgendaIds, setSelectedAgendaIds] = useState<string[]>([]);
   const [filterSearch, setFilterSearch] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [agendaFilterOpen, setAgendaFilterOpen] = useState(false);
   const [isEncaixe, setIsEncaixe] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
   const [selectedAppt, setSelectedAppt] = useState<any>(null);
@@ -76,25 +95,37 @@ export default function AgendaOperational() {
   const updateAppointment = useUpdateAppointment();
   const deleteAppointment = useDeleteAppointment();
 
-  const appointments = viewMode === "week"
-    ? weekAppointments?.filter(a => {
-        const d = parseISO(a.scheduled_at);
-        return d >= weekStart && d <= weekEnd;
-      })
-    : dayAppointments;
+  const activeAgendas = useMemo(() => agendas?.filter(a => a.status === "ativa") || [], [agendas]);
+  const displayedAgendas = useMemo(() => {
+    if (selectedAgendaIds.length === 0) return activeAgendas;
+    return activeAgendas.filter(a => selectedAgendaIds.includes(a.id));
+  }, [activeAgendas, selectedAgendaIds]);
 
-  const filteredAppointments = appointments?.filter((a) => {
-    if (filterStatus !== "all" && a.status !== filterStatus) return false;
-    if (filterType !== "all" && a.appointment_type !== filterType) return false;
-    if (filterAgenda !== "all" && (a as any).agenda_id !== filterAgenda) return false;
-    if (filterSearch) {
-      const search = filterSearch.toLowerCase();
-      const matchName = a.patients?.full_name?.toLowerCase().includes(search);
-      const matchTitle = a.title?.toLowerCase().includes(search);
-      if (!matchName && !matchTitle) return false;
-    }
-    return true;
-  });
+  const appointments = useMemo(() => {
+    const raw = viewMode === "week"
+      ? weekAppointments?.filter(a => {
+          const d = parseLocalTime(a.scheduled_at);
+          return d >= weekStart && d <= weekEnd;
+        })
+      : dayAppointments;
+    return raw || [];
+  }, [viewMode, dayAppointments, weekAppointments, weekStart, weekEnd]);
+
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter((a) => {
+      if (filterStatus !== "all" && a.status !== filterStatus) return false;
+      if (filterType !== "all" && a.appointment_type !== filterType) return false;
+      if (selectedAgendaIds.length > 0 && !(a as any).agenda_id) return false;
+      if (selectedAgendaIds.length > 0 && !selectedAgendaIds.includes((a as any).agenda_id)) return false;
+      if (filterSearch) {
+        const search = filterSearch.toLowerCase();
+        const matchName = a.patients?.full_name?.toLowerCase().includes(search);
+        const matchTitle = a.title?.toLowerCase().includes(search);
+        if (!matchName && !matchTitle) return false;
+      }
+      return true;
+    });
+  }, [appointments, filterStatus, filterType, selectedAgendaIds, filterSearch]);
 
   const handleCheckin = async () => {
     if (!checkinAppt) return;
@@ -119,6 +150,12 @@ export default function AgendaOperational() {
     if (selectedAppt?.id === id) setSelectedAppt(null);
   };
 
+  const toggleAgenda = (id: string) => {
+    setSelectedAgendaIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   const hours = Array.from({ length: 14 }, (_, i) => i + 7);
 
   const stats = useMemo(() => {
@@ -128,87 +165,83 @@ export default function AgendaOperational() {
       confirmados: filteredAppointments.filter(a => a.status === "confirmado" || a.status === "concluido").length,
       aguardando: filteredAppointments.filter(a => a.status === "agendado").length,
       emEspera: filteredAppointments.filter(a => a.status === "em_espera" || a.status === "em_andamento").length,
-      chegou: filteredAppointments.filter(a => a.status === "chegou" as any).length,
+      chegou: filteredAppointments.filter(a => (a.status as string) === "chegou").length,
     };
   }, [filteredAppointments]);
 
-  /* ── Appointment card for list/day views ── */
+  const getAgendaColor = (agendaId?: string | null): string => {
+    if (!agendaId) return "#6b7280";
+    const ag = agendas?.find(a => a.id === agendaId);
+    return (ag as any)?.color || "#6b7280";
+  };
+
+  /* ── Appointment card ── */
   const renderAppointmentCard = (appointment: any, compact = false) => {
     const sc = statusConfig[appointment.status] || statusConfig.agendado;
     const isSelected = selectedAppt?.id === appointment.id;
+    const agColor = getAgendaColor((appointment as any).agenda_id);
 
     return (
       <div
         key={appointment.id}
         className={cn(
           "rounded-lg border transition-all cursor-pointer group",
-          compact ? "p-2" : "px-4 py-3",
+          compact ? "p-1.5" : "px-3 py-2",
           isSelected ? "ring-2 ring-primary/40 shadow-md border-primary/30" : "hover:shadow-sm hover:border-border/80",
         )}
+        style={{ borderLeftWidth: "3px", borderLeftColor: agColor }}
         onClick={() => setSelectedAppt(appointment)}
       >
-        <div className="flex items-center gap-3">
-          {/* Status dot */}
-          <div className={cn("h-2.5 w-2.5 rounded-full shrink-0", sc.dot)} />
-
-          {/* Time */}
-          <span className="font-mono font-semibold text-sm tabular-nums w-12 shrink-0">
-            {format(parseISO(appointment.scheduled_at), "HH:mm")}
+        <div className="flex items-center gap-2">
+          <span className="font-mono font-semibold text-xs tabular-nums w-11 shrink-0">
+            {formatTime(appointment.scheduled_at)}
           </span>
-
-          {/* Main info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className={cn("font-medium truncate", compact ? "text-xs" : "text-sm")}>
+            <div className="flex items-center gap-1.5">
+              <span className={cn("font-medium truncate", compact ? "text-[11px]" : "text-xs")}>
                 {appointment.patients?.full_name || appointment.title}
               </span>
               {(appointment as any).is_fit_in && (
-                <Badge variant="outline" className="text-[9px] px-1 py-0 bg-violet-50 text-violet-600 border-violet-200 shrink-0">Encaixe</Badge>
+                <Badge variant="outline" className="text-[8px] px-1 py-0 bg-violet-50 text-violet-600 border-violet-200 shrink-0">Enc</Badge>
               )}
               {(appointment as any).is_return && (
-                <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-50 text-blue-600 border-blue-200 shrink-0">Ret.</Badge>
-              )}
-              {(appointment as any).is_new_patient && (
-                <Badge variant="outline" className="text-[9px] px-1 py-0 bg-emerald-50 text-emerald-600 border-emerald-200 shrink-0">Novo</Badge>
+                <Badge variant="outline" className="text-[8px] px-1 py-0 bg-blue-50 text-blue-600 border-blue-200 shrink-0">Ret</Badge>
               )}
             </div>
             {!compact && (
-              <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-0.5">
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
                 <span>{appointmentTypes.find(t => t.value === appointment.appointment_type)?.label}</span>
                 {(appointment as any).insurance && <span>· {(appointment as any).insurance}</span>}
-                {appointment.location && <span>· {appointment.location}</span>}
                 <span>· {appointment.duration_minutes}min</span>
               </div>
             )}
           </div>
+          <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 shrink-0", sc.color)}>{sc.label}</Badge>
 
-          {/* Status badge */}
-          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 shrink-0", sc.color)}>{sc.label}</Badge>
-
-          {/* Inline quick actions — visible on hover */}
+          {/* Hover quick actions */}
           {!compact && (
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              {(appointment.status === "agendado") && (
-                <Button variant="ghost" size="icon" className="h-7 w-7" title="Confirmar"
+              {appointment.status === "agendado" && (
+                <Button variant="ghost" size="icon" className="h-6 w-6" title="Confirmar"
                   onClick={(e) => { e.stopPropagation(); quickAction(appointment.id, "confirmado"); }}>
-                  <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                  <CheckCircle className="h-3 w-3 text-emerald-600" />
                 </Button>
               )}
               {(appointment.status === "agendado" || appointment.status === "confirmado") && (
-                <Button variant="ghost" size="icon" className="h-7 w-7" title="Check-in"
+                <Button variant="ghost" size="icon" className="h-6 w-6" title="Check-in"
                   onClick={(e) => { e.stopPropagation(); setCheckinAppt(appointment); }}>
-                  <UserCheck className="h-3.5 w-3.5 text-teal-600" />
+                  <UserCheck className="h-3 w-3 text-teal-600" />
                 </Button>
               )}
               {(appointment.status === "chegou" || appointment.status === "em_espera") && (
-                <Button variant="ghost" size="icon" className="h-7 w-7" title="Iniciar Atendimento"
+                <Button variant="ghost" size="icon" className="h-6 w-6" title="Atender"
                   onClick={(e) => { e.stopPropagation(); quickAction(appointment.id, "em_andamento"); }}>
-                  <PlayCircle className="h-3.5 w-3.5 text-amber-600" />
+                  <PlayCircle className="h-3 w-3 text-amber-600" />
                 </Button>
               )}
-              <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar"
+              <Button variant="ghost" size="icon" className="h-6 w-6" title="Editar"
                 onClick={(e) => { e.stopPropagation(); setEditingAppointment(appointment); setIsEncaixe(false); setShowForm(true); }}>
-                <Edit className="h-3.5 w-3.5" />
+                <Edit className="h-3 w-3" />
               </Button>
             </div>
           )}
@@ -217,12 +250,12 @@ export default function AgendaOperational() {
     );
   };
 
-  /* ── Detail panel (right side) ── */
+  /* ── Detail panel ── */
   const renderDetailPanel = () => {
     if (!selectedAppt) return (
       <div className="flex flex-col items-center justify-center h-full text-center p-6">
         <Eye className="h-10 w-10 text-muted-foreground/30 mb-3" />
-        <p className="text-sm text-muted-foreground">Clique em um agendamento para ver os detalhes</p>
+        <p className="text-sm text-muted-foreground">Clique em um agendamento</p>
       </div>
     );
 
@@ -231,7 +264,6 @@ export default function AgendaOperational() {
 
     return (
       <div className="h-full flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <div className="flex items-center gap-2">
             <div className={cn("h-3 w-3 rounded-full", sc.dot)} />
@@ -242,65 +274,37 @@ export default function AgendaOperational() {
           </Button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Patient */}
           <div>
             <h3 className="font-semibold text-base">{a.patients?.full_name || a.title}</h3>
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
               <Clock className="h-3 w-3" />
-              <span>{format(parseISO(a.scheduled_at), "dd/MM/yyyy 'às' HH:mm")}</span>
+              <span>{formatDatetime(a.scheduled_at)}</span>
               <span>· {a.duration_minutes}min</span>
             </div>
           </div>
 
           <Separator />
 
-          {/* Info grid */}
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <div>
-              <span className="text-muted-foreground block">Tipo</span>
-              <span className="font-medium">{appointmentTypes.find(t => t.value === a.appointment_type)?.label}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block">Convênio</span>
-              <span className="font-medium capitalize">{(a as any).insurance || "—"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block">Sala</span>
-              <span className="font-medium">{(a as any).room || a.location || "—"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block">Prioridade</span>
-              <span className="font-medium capitalize">{(a as any).priority || "normal"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block">Canal</span>
-              <span className="font-medium capitalize">{(a as any).origin_channel || "—"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block">Profissional</span>
-              <span className="font-medium">{a.profiles?.full_name || "—"}</span>
-            </div>
+            <div><span className="text-muted-foreground block">Tipo</span><span className="font-medium">{appointmentTypes.find(t => t.value === a.appointment_type)?.label}</span></div>
+            <div><span className="text-muted-foreground block">Convênio</span><span className="font-medium capitalize">{(a as any).insurance || "—"}</span></div>
+            <div><span className="text-muted-foreground block">Sala</span><span className="font-medium">{(a as any).room || a.location || "—"}</span></div>
+            <div><span className="text-muted-foreground block">Prioridade</span><span className="font-medium capitalize">{(a as any).priority || "normal"}</span></div>
+            <div><span className="text-muted-foreground block">Canal</span><span className="font-medium capitalize">{(a as any).origin_channel || "—"}</span></div>
+            <div><span className="text-muted-foreground block">Profissional</span><span className="font-medium">{a.profiles?.full_name || "—"}</span></div>
             {(a as any).phone && (
-              <div className="col-span-2">
-                <span className="text-muted-foreground block">Telefone</span>
-                <span className="font-medium flex items-center gap-1"><Phone className="h-3 w-3" />{(a as any).phone}</span>
-              </div>
+              <div className="col-span-2"><span className="text-muted-foreground block">Telefone</span><span className="font-medium flex items-center gap-1"><Phone className="h-3 w-3" />{(a as any).phone}</span></div>
             )}
           </div>
 
           {a.notes && (
             <>
               <Separator />
-              <div>
-                <span className="text-xs text-muted-foreground block mb-1">Observações</span>
-                <p className="text-xs whitespace-pre-wrap bg-muted/30 rounded-md p-2">{a.notes}</p>
-              </div>
+              <div><span className="text-xs text-muted-foreground block mb-1">Observações</span><p className="text-xs whitespace-pre-wrap bg-muted/30 rounded-md p-2">{a.notes}</p></div>
             </>
           )}
 
-          {/* Flags */}
           <div className="flex flex-wrap gap-1.5">
             {(a as any).is_fit_in && <Badge variant="outline" className="text-[10px] bg-violet-50 text-violet-700 border-violet-200">Encaixe</Badge>}
             {(a as any).is_return && <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">Retorno</Badge>}
@@ -308,67 +312,102 @@ export default function AgendaOperational() {
           </div>
         </div>
 
-        {/* Action buttons */}
+        {/* Actions */}
         <div className="border-t p-3 space-y-2">
-          {/* Primary actions row */}
           <div className="grid grid-cols-2 gap-2">
             {a.status === "agendado" && (
               <Button size="sm" variant="outline" className="gap-1.5 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                onClick={() => quickAction(a.id, "confirmado")}>
-                <CheckCircle className="h-3.5 w-3.5" />Confirmar
-              </Button>
+                onClick={() => quickAction(a.id, "confirmado")}><CheckCircle className="h-3.5 w-3.5" />Confirmar</Button>
             )}
             {(a.status === "agendado" || a.status === "confirmado") && (
               <Button size="sm" variant="outline" className="gap-1.5 text-xs border-teal-200 text-teal-700 hover:bg-teal-50"
-                onClick={() => setCheckinAppt(a)}>
-                <UserCheck className="h-3.5 w-3.5" />Check-in
-              </Button>
+                onClick={() => setCheckinAppt(a)}><UserCheck className="h-3.5 w-3.5" />Check-in</Button>
             )}
             {(a.status === "chegou" || a.status === "em_espera") && (
               <>
                 <Button size="sm" variant="outline" className="gap-1.5 text-xs border-amber-200 text-amber-700 hover:bg-amber-50"
-                  onClick={() => quickAction(a.id, "em_andamento")}>
-                  <PlayCircle className="h-3.5 w-3.5" />Atender
-                </Button>
+                  onClick={() => quickAction(a.id, "em_andamento")}><PlayCircle className="h-3.5 w-3.5" />Atender</Button>
                 <Button size="sm" variant="outline" className="gap-1.5 text-xs"
-                  onClick={() => quickAction(a.id, "em_espera")}>
-                  <DoorOpen className="h-3.5 w-3.5" />Sala Espera
-                </Button>
+                  onClick={() => quickAction(a.id, "em_espera")}><DoorOpen className="h-3.5 w-3.5" />Sala Espera</Button>
               </>
             )}
             {a.status === "em_andamento" && (
               <Button size="sm" variant="outline" className="gap-1.5 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                onClick={() => quickAction(a.id, "concluido")}>
-                <CheckCircle className="h-3.5 w-3.5" />Concluir
-              </Button>
+                onClick={() => quickAction(a.id, "concluido")}><CheckCircle className="h-3.5 w-3.5" />Concluir</Button>
             )}
           </div>
-
-          {/* Secondary actions */}
           <div className="flex flex-wrap gap-1.5">
             <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] gap-1"
-              onClick={() => { setEditingAppointment(a); setIsEncaixe(false); setShowForm(true); }}>
-              <Edit className="h-3 w-3" />Editar
-            </Button>
+              onClick={() => { setEditingAppointment(a); setIsEncaixe(false); setShowForm(true); }}><Edit className="h-3 w-3" />Editar</Button>
             <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] gap-1"
-              onClick={() => navigate(`/prontuario/${a.patient_id}`)}>
-              <FileText className="h-3 w-3" />Prontuário
-            </Button>
+              onClick={() => navigate(`/prontuario/${a.patient_id}`)}><FileText className="h-3 w-3" />Prontuário</Button>
             <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] gap-1"
-              onClick={() => quickAction(a.id, "reagendado")}>
-              <RotateCcw className="h-3 w-3" />Reagendar
-            </Button>
+              onClick={() => quickAction(a.id, "reagendado")}><RotateCcw className="h-3 w-3" />Reagendar</Button>
             <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] gap-1"
-              onClick={() => quickAction(a.id, "nao_compareceu")}>
-              <Ban className="h-3 w-3" />Faltou
-            </Button>
+              onClick={() => quickAction(a.id, "nao_compareceu")}><Ban className="h-3 w-3" />Faltou</Button>
             <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] gap-1 text-destructive hover:text-destructive"
-              onClick={() => handleDelete(a.id)}>
-              <Trash2 className="h-3 w-3" />Excluir
-            </Button>
+              onClick={() => handleDelete(a.id)}><Trash2 className="h-3 w-3" />Excluir</Button>
           </div>
         </div>
       </div>
+    );
+  };
+
+  /* ── Multi-agenda day columns ── */
+  const renderMultiAgendaDay = () => {
+    const cols = displayedAgendas.length > 0 ? displayedAgendas : [null];
+    const isMulti = cols.length > 1 && cols[0] !== null;
+
+    return (
+      <Card>
+        <CardContent className="p-0 overflow-x-auto">
+          <div style={{ minWidth: isMulti ? `${cols.length * 220 + 56}px` : undefined }}>
+            {/* Column headers */}
+            {isMulti && (
+              <div className="flex border-b sticky top-0 bg-card z-10">
+                <div className="w-14 shrink-0 border-r bg-muted/30" />
+                {cols.map((ag) => (
+                  <div key={ag!.id} className="flex-1 min-w-[200px] px-3 py-2 border-r text-center" style={{ borderTopWidth: "3px", borderTopColor: (ag as any)?.color || "#6b7280" }}>
+                    <p className="text-xs font-semibold truncate">{ag!.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{ag!.specialty || ag!.unit || ""}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Time rows */}
+            <div className="divide-y">
+              {hours.map(hour => (
+                <div key={hour} className="flex min-h-[52px]">
+                  <div className="w-14 shrink-0 py-2 px-2 text-xs font-medium text-muted-foreground border-r bg-muted/30 text-center">
+                    {String(hour).padStart(2, "0")}:00
+                  </div>
+                  {cols.map((ag, ci) => {
+                    const colAppts = filteredAppointments.filter(a => {
+                      const d = parseLocalTime(a.scheduled_at);
+                      if (d.getHours() !== hour) return false;
+                      if (ag && (a as any).agenda_id !== ag.id) return false;
+                      return true;
+                    });
+                    return (
+                      <div key={ag?.id || ci} className={cn("flex-1 min-w-[200px] p-1 space-y-1", isMulti && "border-r")}>
+                        {colAppts.map(a => renderAppointmentCard(a, isMulti))}
+                        {!colAppts.length && (
+                          <button
+                            className="w-full h-full min-h-[36px] rounded border border-dashed border-muted-foreground/10 hover:bg-muted/20 transition-colors flex items-center justify-center"
+                            onClick={() => { setIsEncaixe(false); setEditingAppointment(null); setShowForm(true); }}>
+                            <Plus className="h-3 w-3 text-muted-foreground/20" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     );
   };
 
@@ -429,19 +468,43 @@ export default function AgendaOperational() {
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input placeholder="Buscar paciente..." className="h-8 w-[180px] pl-8 text-xs" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
+              <Input placeholder="Buscar paciente..." className="h-8 w-[170px] pl-8 text-xs" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
             </div>
 
-            {/* Agenda filter */}
-            {agendas && agendas.length > 0 && (
-              <Select value={filterAgenda} onValueChange={setFilterAgenda}>
-                <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue placeholder="Agenda" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas Agendas</SelectItem>
-                  {agendas.map(ag => <SelectItem key={ag.id} value={ag.id}>{ag.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            )}
+            {/* Multi-agenda filter */}
+            <Popover open={agendaFilterOpen} onOpenChange={setAgendaFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("h-8 gap-1.5 text-xs", selectedAgendaIds.length > 0 && "border-primary text-primary")}>
+                  <Filter className="h-3.5 w-3.5" />
+                  Agendas {selectedAgendaIds.length > 0 && `(${selectedAgendaIds.length})`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-0 z-[60]" align="start">
+                <div className="p-3 border-b">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">Selecionar Agendas</Label>
+                    {selectedAgendaIds.length > 0 && (
+                      <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={() => setSelectedAgendaIds([])}>Limpar</Button>
+                    )}
+                  </div>
+                </div>
+                <ScrollArea className="max-h-64">
+                  <div className="p-2 space-y-1">
+                    {activeAgendas.map(ag => (
+                      <label key={ag.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-xs">
+                        <Checkbox
+                          checked={selectedAgendaIds.includes(ag.id)}
+                          onCheckedChange={() => toggleAgenda(ag.id)}
+                        />
+                        <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: (ag as any).color || "#6b7280" }} />
+                        <span className="truncate flex-1">{ag.name}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">{ag.unit || ""}</span>
+                      </label>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
 
             {/* Status */}
             <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -449,15 +512,6 @@ export default function AgendaOperational() {
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 {allStatuses.map(s => <SelectItem key={s} value={s}>{statusConfig[s]?.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-
-            {/* Type */}
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="h-8 w-[120px] text-xs"><SelectValue placeholder="Tipo" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {appointmentTypes.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
               </SelectContent>
             </Select>
 
@@ -489,6 +543,20 @@ export default function AgendaOperational() {
         </CardContent>
       </Card>
 
+      {/* Selected agendas chips */}
+      {selectedAgendaIds.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {displayedAgendas.map(ag => (
+            <Badge key={ag.id} variant="outline" className="gap-1.5 pr-1 cursor-pointer hover:bg-muted/50"
+              onClick={() => toggleAgenda(ag.id)}>
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: (ag as any).color || "#6b7280" }} />
+              <span className="text-xs">{ag.name}</span>
+              <X className="h-3 w-3 ml-1 text-muted-foreground" />
+            </Badge>
+          ))}
+        </div>
+      )}
+
       {/* Legend */}
       <div className="flex flex-wrap gap-3">
         {Object.entries(statusConfig).map(([key, { label, dot }]) => (
@@ -500,9 +568,8 @@ export default function AgendaOperational() {
         ))}
       </div>
 
-      {/* Main content: List + Detail panel */}
+      {/* Main content */}
       <div className="flex gap-4">
-        {/* Left: appointments */}
         <div className={cn("flex-1 min-w-0", selectedAppt && viewMode !== "week" && "max-w-[calc(100%-340px)]")}>
           {isLoading ? (
             <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -511,7 +578,7 @@ export default function AgendaOperational() {
               {!filteredAppointments?.length ? (
                 <Card className="p-8 text-center">
                   <CalendarIcon className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                  <p className="text-muted-foreground">Nenhum agendamento para esta data</p>
+                  <p className="text-muted-foreground">Nenhum agendamento</p>
                   <Button variant="link" onClick={() => { setIsEncaixe(false); setEditingAppointment(null); setShowForm(true); }}>Criar agendamento</Button>
                 </Card>
               ) : (
@@ -519,33 +586,7 @@ export default function AgendaOperational() {
               )}
             </div>
           ) : viewMode === "day" ? (
-            <Card>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {hours.map(hour => {
-                    const hourAppts = filteredAppointments?.filter(a => parseISO(a.scheduled_at).getHours() === hour);
-                    return (
-                      <div key={hour} className="flex min-h-[52px]">
-                        <div className="w-14 flex-shrink-0 py-2 px-2 text-xs font-medium text-muted-foreground border-r bg-muted/30 text-center">
-                          {String(hour).padStart(2, "0")}:00
-                        </div>
-                        <div className="flex-1 p-1 space-y-1">
-                          {hourAppts?.map(a => renderAppointmentCard(a, true))}
-                          {!hourAppts?.length && (
-                            <button
-                              className="w-full h-full min-h-[36px] rounded border border-dashed border-muted-foreground/15 hover:bg-muted/20 transition-colors flex items-center justify-center"
-                              onClick={() => { setIsEncaixe(false); setEditingAppointment(null); setShowForm(true); }}
-                            >
-                              <Plus className="h-3 w-3 text-muted-foreground/30" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+            renderMultiAgendaDay()
           ) : (
             /* Week view */
             <Card>
@@ -567,18 +608,20 @@ export default function AgendaOperational() {
                       </div>
                       {weekDays.map(day => {
                         const dayAppts = filteredAppointments?.filter(a => {
-                          const d = parseISO(a.scheduled_at);
+                          const d = parseLocalTime(a.scheduled_at);
                           return isSameDay(d, day) && d.getHours() === hour;
                         });
                         return (
                           <div key={day.toISOString()} className={cn("p-0.5 border-r", isSameDay(day, new Date()) && "bg-primary/5")}>
                             {dayAppts?.map(a => {
                               const sc = statusConfig[a.status] || statusConfig.agendado;
+                              const agColor = getAgendaColor((a as any).agenda_id);
                               return (
                                 <div key={a.id} className={cn("text-[9px] p-1 rounded border mb-0.5 truncate cursor-pointer hover:shadow", sc.color)}
+                                  style={{ borderLeftWidth: "2px", borderLeftColor: agColor }}
                                   onClick={() => setSelectedAppt(a)}
                                   title={`${a.title} - ${a.patients?.full_name}`}>
-                                  <span className="font-semibold">{format(parseISO(a.scheduled_at), "HH:mm")}</span> {a.patients?.full_name || a.title}
+                                  <span className="font-semibold">{formatTime(a.scheduled_at)}</span> {a.patients?.full_name || a.title}
                                 </div>
                               );
                             })}
@@ -593,7 +636,7 @@ export default function AgendaOperational() {
           )}
         </div>
 
-        {/* Right: Detail panel */}
+        {/* Detail panel */}
         {selectedAppt && viewMode !== "week" && (
           <Card className="w-[320px] shrink-0 sticky top-20 self-start max-h-[calc(100vh-120px)] overflow-hidden flex flex-col">
             {renderDetailPanel()}
@@ -601,7 +644,7 @@ export default function AgendaOperational() {
         )}
       </div>
 
-      {/* Detail dialog for week view */}
+      {/* Week view detail dialog */}
       {selectedAppt && viewMode === "week" && (
         <Dialog open={!!selectedAppt} onOpenChange={(open) => { if (!open) setSelectedAppt(null); }}>
           <DialogContent className="max-w-md p-0 overflow-hidden">
@@ -630,7 +673,7 @@ export default function AgendaOperational() {
             <div className="space-y-4">
               <div className="p-3 bg-muted/50 rounded-lg text-sm space-y-1">
                 <div className="flex justify-between"><span className="text-muted-foreground">Paciente:</span><span className="font-medium text-right">{checkinAppt.patients?.full_name}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Horário:</span><span className="font-medium">{format(parseISO(checkinAppt.scheduled_at), "HH:mm")}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Horário:</span><span className="font-medium">{formatTime(checkinAppt.scheduled_at)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Tipo:</span><span className="font-medium capitalize">{checkinAppt.appointment_type}</span></div>
               </div>
               <div className="space-y-1.5">
