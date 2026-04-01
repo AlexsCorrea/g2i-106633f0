@@ -1,4 +1,4 @@
-import { AlertOctagon, Pill, Apple, Syringe, Bug } from "lucide-react";
+import { AlertOctagon, Pill, Apple, Syringe, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Allergy {
