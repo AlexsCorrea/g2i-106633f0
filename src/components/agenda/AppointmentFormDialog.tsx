@@ -110,17 +110,47 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
     reminder: false,
   });
 
+  // FULL RESET on every open (new appointment or new encaixe)
   useEffect(() => {
-    if (open && !editAppointment) {
-      setForm(f => ({
-        ...f,
-        scheduled_date: defaultDate || f.scheduled_date,
-        scheduled_time: defaultTime || f.scheduled_time,
-        agenda_id: defaultAgendaId || f.agenda_id,
-        is_fit_in: isEncaixe,
-      }));
-    }
-  }, [defaultDate, defaultTime, defaultAgendaId, isEncaixe, open, editAppointment]);
+    if (!open) return;
+    if (editAppointment) return; // editing is handled by the next useEffect
+
+    const cleanForm = {
+      patient_id: "",
+      provisional_name: "",
+      phone: "",
+      birth_date: "",
+      title: "",
+      appointment_type: "consulta" as const,
+      agenda_id: defaultAgendaId || "",
+      insurance: "particular",
+      origin_channel: "presencial",
+      priority: "normal",
+      specialty: "",
+      room: "",
+      scheduled_date: defaultDate || "",
+      scheduled_time: defaultTime || "08:00",
+      duration_minutes: 30,
+      location: "",
+      notes: "",
+      is_return: false,
+      is_new_patient: false,
+      is_fit_in: isEncaixe,
+      is_pcd: false,
+      gender: "",
+      responsible: "",
+      procedures: "",
+      procedure_notes: "",
+      admin_notes: "",
+      special_needs: "",
+      reminder: false,
+    };
+    setForm(cleanForm);
+    setPatientSearch("");
+    setIsProvisional(false);
+    setErrors({});
+    setWarnings([]);
+  }, [open]); // intentionally only depends on `open` to reset on every modal open
 
   useEffect(() => {
     if (editAppointment) {
@@ -301,27 +331,46 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {isEncaixe && <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-200">Encaixe</Badge>}
-            {editAppointment ? "Editar Agendamento" : "Novo Agendamento"}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[92vh] p-0 overflow-hidden flex flex-col shadow-2xl border-border/60">
+        {/* Fixed header */}
+        <div className={cn(
+          "px-6 py-4 border-b shrink-0",
+          isEncaixe ? "bg-violet-50/60 dark:bg-violet-950/20" : "bg-muted/30"
+        )}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-lg">
+              {isEncaixe ? (
+                <>
+                  <div className="h-8 w-8 rounded-lg bg-violet-500/15 flex items-center justify-center">
+                    <ShieldAlert className="h-4 w-4 text-violet-600" />
+                  </div>
+                  <span>Novo Encaixe</span>
+                  <Badge variant="outline" className="bg-violet-100 text-violet-700 border-violet-300 text-[10px]">Exceção controlada</Badge>
+                </>
+              ) : (
+                <>
+                  {editAppointment ? "Editar Agendamento" : "Novo Agendamento"}
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+        </div>
 
-        {/* Warnings bar */}
-        {computedWarnings.length > 0 && !isEncaixe && (
-          <div className="space-y-1">
-            {computedWarnings.map((w, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                <span>{w}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {/* Warnings bar */}
+          {computedWarnings.length > 0 && !isEncaixe && (
+            <div className="space-y-1 mb-4">
+              {computedWarnings.map((w, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  <span>{w}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form id="appointment-form" onSubmit={handleSubmit} className="space-y-5">
           {/* ── SECTION: Paciente ── */}
           <div>
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Paciente</h4>
@@ -569,15 +618,23 @@ export default function AppointmentFormDialog({ open, onOpenChange, defaultDate,
             </div>
           </div>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-2 border-t">
+        </form>
+        </div>
+
+        {/* Fixed footer */}
+        <div className="shrink-0 border-t bg-muted/20 px-6 py-3 flex items-center justify-between">
+          <div className="text-[10px] text-muted-foreground">
+            {isEncaixe && "⚠ Encaixe: justificativa obrigatória"}
+          </div>
+          <div className="flex items-center gap-3">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={createAppointment.isPending || updateAppointment.isPending}>
+            <Button type="submit" form="appointment-form" disabled={createAppointment.isPending || updateAppointment.isPending}
+              className={cn(isEncaixe && "bg-violet-600 hover:bg-violet-700")}>
               {(createAppointment.isPending || updateAppointment.isPending) && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {editAppointment ? "Salvar" : isEncaixe ? "Salvar Encaixe" : "Agendar"}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
