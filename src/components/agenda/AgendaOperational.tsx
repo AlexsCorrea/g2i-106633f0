@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppointments, useUpdateAppointment, useDeleteAppointment } from "@/hooks/useAppointments";
 import { useScheduleAgendas, useSchedulePeriods, useScheduleBlocks, useScheduleHolidays, type ScheduleAgenda } from "@/hooks/useScheduleAgendas";
+import { useAppointmentLogs, useCreateAppointmentLog } from "@/hooks/useAppointmentLogs";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
