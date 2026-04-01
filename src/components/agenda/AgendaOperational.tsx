@@ -625,6 +625,11 @@ export default function AgendaOperational() {
                   const initials = prof?.full_name
                     ? prof.full_name.split(" ").filter(Boolean).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()
                     : ag!.name.split(" ").filter(Boolean).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
+                  // Get open periods for this day
+                  const agPeriods = periods.filter(p => p.agenda_id === ag!.id && p.day_of_week === dayOfWeek);
+                  const periodLabel = agPeriods.length > 0
+                    ? agPeriods.map(p => `${p.start_time.slice(0,5)}–${p.end_time.slice(0,5)}`).join(" | ")
+                    : "Sem período";
                   return (
                     <div key={ag!.id} className="flex-1 min-w-[200px] px-3 py-2.5 border-r" style={{ borderTopWidth: "3px", borderTopColor: (ag as any)?.color || "hsl(var(--muted-foreground))" }}>
                       <div className="flex items-center gap-2 justify-center">
@@ -641,6 +646,10 @@ export default function AgendaOperational() {
                         <div className="text-left min-w-0">
                           <p className="text-xs font-semibold truncate">{prof?.full_name || ag!.name}</p>
                           <p className="text-[10px] text-muted-foreground truncate">{ag!.specialty || prof?.specialty || ag!.unit || ""}</p>
+                          <p className={cn(
+                            "text-[9px] font-mono truncate mt-0.5",
+                            agPeriods.length > 0 ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-destructive/60"
+                          )}>{periodLabel}</p>
                         </div>
                       </div>
                     </div>
