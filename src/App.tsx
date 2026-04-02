@@ -16,6 +16,7 @@ import Agenda from "./pages/Agenda";
 import AgendaAdmin from "./pages/AgendaAdmin";
 import AgendaCentroCirurgico from "./pages/AgendaCentroCirurgico";
 import AgendaPrint from "./pages/AgendaPrint";
+import AgendaReports from "./pages/AgendaReports";
 import Autoagendamento from "./pages/Autoagendamento";
 import Dashboards from "./pages/Dashboards";
 import Kiosk from "./pages/Kiosk";
