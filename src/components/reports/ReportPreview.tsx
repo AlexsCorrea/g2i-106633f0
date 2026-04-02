@@ -35,20 +35,19 @@ export default function ReportPreview({ template, filters, rows, companyName = "
   }, [filters]);
 
   return (
-    <div className="bg-white text-black print:bg-white" id="report-preview">
-      {/* Page wrapper */}
+    <div className="bg-background text-foreground print:bg-white print:text-black" id="report-preview">
       <div className="max-w-[1100px] mx-auto p-8 print:p-4 print:max-w-full">
         {/* Header */}
         {template.showHeader && (
-          <div className="mb-6 pb-4 border-b-2 border-black/10">
+          <div className="mb-6 pb-4 border-b-2 border-border">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-lg font-bold text-black">{template.name}</h1>
-                <p className="text-xs text-gray-500 mt-0.5">{template.description}</p>
+                <h1 className="text-lg font-bold text-foreground">{template.name}</h1>
+                <p className="text-xs text-muted-foreground mt-0.5">{template.description}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-semibold text-black">{companyName}</p>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-sm font-semibold text-foreground">{companyName}</p>
+                <p className="text-[10px] text-muted-foreground">
                   Gerado em: {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </p>
               </div>
@@ -58,7 +57,7 @@ export default function ReportPreview({ template, filters, rows, companyName = "
 
         {/* Filter summary */}
         {template.showFilters && filterSummary.length > 0 && (
-          <div className="mb-4 text-[10px] text-gray-600 flex flex-wrap gap-x-4 gap-y-1 bg-gray-50 rounded px-3 py-2 border border-gray-100">
+          <div className="mb-4 text-[10px] text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 bg-muted/30 rounded px-3 py-2 border border-border">
             {filterSummary.map((f, i) => (
               <span key={i}>{f}</span>
             ))}
@@ -69,19 +68,19 @@ export default function ReportPreview({ template, filters, rows, companyName = "
         {Array.from(grouped.entries()).map(([groupKey, groupRows]) => (
           <div key={groupKey} className={cn(template.pageBreakOnGroup && groupKey !== "__all__" && "break-before-page")}>
             {groupKey !== "__all__" && (
-              <div className="bg-gray-100 px-3 py-1.5 font-semibold text-xs text-gray-700 rounded mt-4 mb-2 border border-gray-200">
+              <div className="bg-muted/50 px-3 py-1.5 font-semibold text-xs text-muted-foreground rounded mt-4 mb-2 border border-border">
                 {template.groupBy ? template.fields.find(f => f.key === template.groupBy)?.label || template.groupBy : ""}: {groupKey}
               </div>
             )}
 
             <table className="w-full text-xs border-collapse mb-4">
               <thead>
-                <tr className="border-b-2 border-gray-300">
+                <tr className="border-b-2 border-border">
                   {visibleFields.map(f => (
                     <th
                       key={f.key}
                       className={cn(
-                        "py-2 px-2 font-bold text-gray-700 uppercase tracking-wider text-[10px]",
+                        "py-2 px-2 font-bold text-muted-foreground uppercase tracking-wider text-[10px]",
                         f.align === "center" && "text-center",
                         f.align === "right" && "text-right",
                         !f.align && "text-left"
@@ -95,12 +94,12 @@ export default function ReportPreview({ template, filters, rows, companyName = "
               </thead>
               <tbody>
                 {groupRows.length > 0 ? groupRows.map((row, idx) => (
-                  <tr key={row.id || idx} className={cn("border-b border-gray-100", idx % 2 === 0 ? "bg-white" : "bg-gray-50/50")}>
+                  <tr key={row.id || idx} className={cn("border-b border-border/50", idx % 2 === 0 ? "bg-background" : "bg-muted/20")}>
                     {visibleFields.map(f => (
                       <td
                         key={f.key}
                         className={cn(
-                          "py-1.5 px-2 text-gray-800",
+                          "py-1.5 px-2 text-foreground",
                           f.align === "center" && "text-center",
                           f.align === "right" && "text-right",
                           f.key === "scheduled_time" && "font-mono font-semibold",
@@ -113,7 +112,7 @@ export default function ReportPreview({ template, filters, rows, companyName = "
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={visibleFields.length} className="py-8 text-center text-gray-400">
+                    <td colSpan={visibleFields.length} className="py-8 text-center text-muted-foreground">
                       Nenhum registro encontrado
                     </td>
                   </tr>
@@ -121,7 +120,7 @@ export default function ReportPreview({ template, filters, rows, companyName = "
               </tbody>
             </table>
 
-            <div className="text-[10px] text-gray-500 text-right mb-2">
+            <div className="text-[10px] text-muted-foreground text-right mb-2">
               {groupKey !== "__all__" ? `Subtotal: ${groupRows.length} registro(s)` : ""}
             </div>
           </div>
@@ -129,7 +128,7 @@ export default function ReportPreview({ template, filters, rows, companyName = "
 
         {/* Footer */}
         {template.showFooter && (
-          <div className="mt-6 pt-3 border-t border-gray-200 flex items-center justify-between text-[10px] text-gray-500">
+          <div className="mt-6 pt-3 border-t border-border flex items-center justify-between text-[10px] text-muted-foreground">
             <span>Total: {rows.length} registro(s)</span>
             {template.showPageNumbers && <span>Página 1</span>}
           </div>

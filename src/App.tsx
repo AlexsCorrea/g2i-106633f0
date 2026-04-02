@@ -118,6 +118,7 @@ function App() {
                 {/* Agenda extras */}
                 <Route path="/agenda/centro-cirurgico" element={<ProtectedRoute><AgendaCentroCirurgico /></ProtectedRoute>} />
                 <Route path="/agenda/imprimir" element={<ProtectedRoute><AgendaPrint /></ProtectedRoute>} />
+                <Route path="/agenda/relatorios" element={<ProtectedRoute><AgendaReports /></ProtectedRoute>} />
 
                 {/* Pacientes extras */}
                 <Route path="/pacientes/retornos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
