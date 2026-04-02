@@ -16,6 +16,7 @@ import Agenda from "./pages/Agenda";
 import AgendaAdmin from "./pages/AgendaAdmin";
 import AgendaCentroCirurgico from "./pages/AgendaCentroCirurgico";
 import AgendaPrint from "./pages/AgendaPrint";
+import AgendaReports from "./pages/AgendaReports";
 import Autoagendamento from "./pages/Autoagendamento";
 import Dashboards from "./pages/Dashboards";
 import Kiosk from "./pages/Kiosk";
@@ -117,6 +118,7 @@ function App() {
                 {/* Agenda extras */}
                 <Route path="/agenda/centro-cirurgico" element={<ProtectedRoute><AgendaCentroCirurgico /></ProtectedRoute>} />
                 <Route path="/agenda/imprimir" element={<ProtectedRoute><AgendaPrint /></ProtectedRoute>} />
+                <Route path="/agenda/relatorios" element={<ProtectedRoute><AgendaReports /></ProtectedRoute>} />
 
                 {/* Pacientes extras */}
                 <Route path="/pacientes/retornos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
