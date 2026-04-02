@@ -6,6 +6,7 @@ export interface ReportField {
   visible: boolean;
   width?: string;
   align?: "left" | "center" | "right";
+  highlight?: boolean;
   format?: (value: any, row: any) => string;
 }
 
@@ -28,23 +29,35 @@ export interface ReportTemplate {
   pageSize?: "a4" | "letter";
   margins?: "normal" | "narrow" | "wide";
   density?: "compact" | "normal" | "comfortable";
-  pageBreakOnGroup?: boolean;
+  borderStyle?: "none" | "light" | "full";
+  lineSpacing?: "tight" | "normal" | "relaxed";
 
   // Data & Columns
   fields: ReportField[];
   groupBy?: string;
+  pageBreakOnGroup?: boolean;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  showTotals?: boolean;
+  showSubtotals?: boolean;
 
   // Header
   showHeader: boolean;
-  headerStyle?: "simple" | "detailed" | "off";
   showFilters: boolean;
+  showPeriod?: boolean;
+  showEmissionDate?: boolean;
+  showInstitution?: boolean;
 
-  // Footer & Usage
+  // Footer
   showFooter: boolean;
   showPageNumbers: boolean;
   footerText?: string;
   showUser?: boolean;
-  
+  footerShowDate?: boolean;
+  footerPaginationFormat?: "page_of_total" | "page_only";
+  footerInstitutionalNote?: string;
+  footerShowSignatureLine?: boolean;
+
   // Usage flags
   enablePrint?: boolean;
   enablePdf?: boolean;
@@ -72,6 +85,15 @@ export interface ReportData {
   generatedAt: string;
   totalRows: number;
 }
+
+// ── Sample rows for editor live preview ──────────────────────────────────────
+export const SAMPLE_REPORT_ROWS: Record<string, any>[] = [
+  { id: "s1", scheduled_time: "08:00", patient_name: "Ana Lima Santos", patient_phone: "(11) 98765-4321", insurance: "Unimed", appointment_type: "Consulta", professional_name: "Dr. Carlos Oliveira", status: "Confirmado", patient_birth_date: "15/03/1985", patient_age: "39a", patient_cpf: "123.456.789-00", procedure_name: "Consulta Clínica Geral", specialty: "Clínica Geral", attendance_id: "AT-001", notes: "", origin_channel: "online", is_return: "Não", is_fit_in: "Não", location: "Consultório 1" },
+  { id: "s2", scheduled_time: "08:30", patient_name: "Roberto Ferreira", patient_phone: "(11) 91234-5678", insurance: "Particular", appointment_type: "Retorno", professional_name: "Dr. Carlos Oliveira", status: "Agendado", patient_birth_date: "22/07/1970", patient_age: "53a", patient_cpf: "987.654.321-00", procedure_name: "Retorno Cardiologia", specialty: "Cardiologia", attendance_id: "AT-002", notes: "Trazer exames", origin_channel: "telefone", is_return: "Sim", is_fit_in: "Não", location: "Consultório 1" },
+  { id: "s3", scheduled_time: "09:00", patient_name: "Mariana Costa Pereira", patient_phone: "(11) 95555-6666", insurance: "Bradesco Saúde", appointment_type: "Exame", professional_name: "Dra. Patrícia Sousa", status: "Chegou", patient_birth_date: "10/01/1990", patient_age: "34a", patient_cpf: "456.789.123-00", procedure_name: "ECG + Holter", specialty: "Cardiologia", attendance_id: "AT-003", notes: "", origin_channel: "app", is_return: "Não", is_fit_in: "Não", location: "Sala de Exames" },
+  { id: "s4", scheduled_time: "09:30", patient_name: "João Pedro Silva", patient_phone: "(11) 97777-8888", insurance: "SulAmérica", appointment_type: "Procedimento", professional_name: "Dr. Marcos Andrade", status: "Em andamento", patient_birth_date: "05/11/1965", patient_age: "58a", patient_cpf: "789.123.456-00", procedure_name: "Colonoscopia", specialty: "Gastroenterologia", attendance_id: "AT-004", notes: "Jejum 8h", origin_channel: "presencial", is_return: "Não", is_fit_in: "Sim", location: "Sala Cirúrgica 2" },
+  { id: "s5", scheduled_time: "10:00", patient_name: "Beatriz Alves Rodrigues", patient_phone: "(11) 99999-1111", insurance: "Amil", appointment_type: "Consulta", professional_name: "Dra. Patrícia Sousa", status: "Agendado", patient_birth_date: "28/06/2000", patient_age: "24a", patient_cpf: "321.654.987-00", procedure_name: "Consulta Pediatria", specialty: "Pediatria", attendance_id: "AT-005", notes: "", origin_channel: "online", is_return: "Não", is_fit_in: "Não", location: "Consultório 3" },
+];
 
 // ── Default agenda report fields ──
 export const AGENDA_FIELDS: ReportField[] = [

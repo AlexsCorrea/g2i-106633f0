@@ -1,8 +1,9 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useScheduleAgendas } from "@/hooks/useScheduleAgendas";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft, Printer, FileText, Download, Eye, Settings2, Filter, Loader2, LayoutTemplate
 } from "lucide-react";
@@ -24,10 +24,12 @@ import ReportTemplateManager from "@/components/reports/ReportTemplateManager";
 import type { ReportTemplate, ReportFilters } from "@/lib/reportEngine";
 import { getAllTemplates, transformAppointmentToRow, STATUS_LABELS } from "@/lib/reportEngine";
 
+
 const STATUS_OPTIONS = Object.entries(STATUS_LABELS);
 
 export default function AgendaReports() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const { data: agendas } = useScheduleAgendas();
 
   // Filters
@@ -43,7 +45,6 @@ export default function AgendaReports() {
   const templates = useMemo(() => getAllTemplates("agenda"), []);
   const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate>(templates[0]);
   const [showTemplateManager, setShowTemplateManager] = useState(false);
-  const [activeTab, setActiveTab] = useState("preview");
 
   // Fetch data
   const filters: ReportFilters = {
@@ -84,10 +85,8 @@ export default function AgendaReports() {
   const rows = useMemo(() => {
     if (!rawAppointments) return [];
     let transformed = rawAppointments.map(transformAppointmentToRow);
-
-    // Period filter (client-side)
     if (selectedPeriod !== "all") {
-      transformed = transformed.filter(r => {
+      transformed = transformed.filter((r) => {
         const hour = parseInt(r.scheduled_time?.split(":")[0] || "0", 10);
         if (selectedPeriod === "manha") return hour < 12;
         if (selectedPeriod === "tarde") return hour >= 12 && hour < 18;
@@ -95,31 +94,116 @@ export default function AgendaReports() {
         return true;
       });
     }
-
     return transformed;
   }, [rawAppointments, selectedPeriod]);
 
   function toggleStatus(status: string) {
-    setSelectedStatuses(prev =>
-      prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+    setSelectedStatuses((prev) =>
+      prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
     );
   }
 
-  function handlePrint() {
-    window.print();
-  }
+  const previewRef = useRef<HTMLDivElement>(null);
 
-  async function handleExportPDF() {
-    // Use browser print as PDF
-    window.print();
-  }
+  const selectedAgendaName = useMemo(() => {
+    if (selectedAgendaId === "all") return undefined;
+    return agendas?.find((a) => a.id === selectedAgendaId)?.name;
+  }, [selectedAgendaId, agendas]);
 
-  const printRef = useRef<HTMLDivElement>(null);
+  const generatedByName = profile?.full_name ?? undefined;
+
+  // ── Print in a clean window ──────────────────────────────
+  const handlePrint = useCallback(() => {
+    const reportHtml = previewRef.current?.innerHTML;
+    if (!reportHtml) return;
+
+    const isLandscape = selectedTemplate.orientation === "landscape";
+    const marginMap: Record<string, string> = { narrow: "10mm", normal: "15mm", wide: "20mm" };
+    const margin = marginMap[selectedTemplate.margins ?? "normal"];
+
+    const win = window.open("", "_blank", "width=1100,height=800");
+    if (!win) {
+      alert("Permita pop-ups para imprimir o relatório.");
+      return;
+    }
+
+    win.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>${selectedTemplate.title || selectedTemplate.name}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 9pt;
+      color: #1a1a2e;
+      background: white;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @page {
+      size: ${isLandscape ? "A4 landscape" : "A4 portrait"};
+      margin: ${margin};
+    }
+    @media print {
+      body { margin: 0; padding: 0; }
+    }
+    /* ── Report styles injected ── */
+    .report-document { background: white; padding: 0; }
+    .report-page {
+      width: ${isLandscape ? "257mm" : "180mm"};
+      margin: 0 auto;
+      padding: ${margin};
+    }
+    .report-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .report-table th {
+      background: #1e3a5f;
+      color: white;
+      text-align: left;
+      font-weight: 600;
+      font-size: 8pt;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 7px 8px;
+      border: 1px solid #1e3a5f;
+    }
+    .report-table td {
+      padding: ${{ compact: "4px", normal: "7px", comfortable: "10px" }[selectedTemplate.density ?? "normal"]} 8px;
+      font-size: ${{ compact: "8pt", normal: "9pt", comfortable: "9.5pt" }[selectedTemplate.density ?? "normal"]};
+      border-bottom: 1px solid #e5e7eb;
+      border-left: 1px solid #f3f4f6;
+      border-right: 1px solid #f3f4f6;
+      vertical-align: top;
+      word-break: break-word;
+    }
+    .report-table tr:nth-child(even) td { background: #f8fafc; }
+    .report-table tr:last-child td { border-bottom: 2px solid #d1d5db; }
+    .report-no-data td { text-align: center; color: #9ca3af; font-style: italic; padding: 24px 8px !important; }
+    .break-before-page { page-break-before: always; break-before: page; }
+    .break-inside-avoid { page-break-inside: avoid; break-inside: avoid; }
+  </style>
+</head>
+<body>
+  ${reportHtml}
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() { window.print(); }, 400);
+    });
+  <\/script>
+</body>
+</html>`);
+    win.document.close();
+  }, [selectedTemplate, previewRef]);
+
+  const handleExportPDF = handlePrint; // Browser Print → Save as PDF
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header - hidden on print */}
-      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50 print:hidden">
+      {/* Header */}
+      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-[1400px] mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate("/agenda")}>
@@ -147,10 +231,10 @@ export default function AgendaReports() {
         </div>
       </header>
 
-      <div className="max-w-[1400px] mx-auto px-6 py-4 print:hidden">
+      <div className="max-w-[1400px] mx-auto px-6 py-4">
         <div className="flex gap-6">
           {/* Filters sidebar */}
-          <div className="w-[280px] shrink-0 space-y-4">
+          <div className="w-[272px] shrink-0 space-y-4">
             <Card>
               <CardHeader className="py-3 px-4">
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -161,11 +245,11 @@ export default function AgendaReports() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <Label className="text-[10px] uppercase text-muted-foreground">De</Label>
-                    <Input type="date" className="h-8 text-xs mt-1" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                    <Input type="date" className="h-8 text-xs mt-1" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                   </div>
                   <div>
                     <Label className="text-[10px] uppercase text-muted-foreground">Até</Label>
-                    <Input type="date" className="h-8 text-xs mt-1" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                    <Input type="date" className="h-8 text-xs mt-1" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                   </div>
                 </div>
 
@@ -175,7 +259,7 @@ export default function AgendaReports() {
                     <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as agendas</SelectItem>
-                      {agendas?.map(a => (
+                      {agendas?.map((a) => (
                         <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -241,7 +325,7 @@ export default function AgendaReports() {
               </CardHeader>
               <CardContent className="px-4 pb-4">
                 <div className="space-y-1.5">
-                  {templates.map(t => (
+                  {templates.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => setSelectedTemplate(t)}
@@ -268,28 +352,27 @@ export default function AgendaReports() {
                 <Badge variant="secondary" className="text-xs">{rows.length} registro(s)</Badge>
                 {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
               </div>
+              <Badge
+                variant="outline"
+                className="text-[10px] text-muted-foreground gap-1"
+              >
+                <Eye className="h-3 w-3" />
+                Prévia — clique em Imprimir para versão final
+              </Badge>
             </div>
 
-            <Card className="overflow-hidden">
-              <div ref={printRef}>
-                <ReportPreview
-                  template={selectedTemplate}
-                  filters={filters}
-                  rows={rows}
-                />
-              </div>
-            </Card>
+            <div className="rounded-lg overflow-hidden border shadow-sm">
+              <ReportPreview
+                ref={previewRef}
+                template={selectedTemplate}
+                filters={filters}
+                rows={rows}
+                agendaName={selectedAgendaName}
+                generatedByName={generatedByName}
+              />
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Print-only content */}
-      <div className="hidden print:block">
-        <ReportPreview
-          template={selectedTemplate}
-          filters={filters}
-          rows={rows}
-        />
       </div>
 
       {/* Template Manager Dialog */}
@@ -298,7 +381,7 @@ export default function AgendaReports() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <LayoutTemplate className="h-5 w-5" />
-              Gerenciador de Modelos
+              Construtor de Modelos de Relatório
             </DialogTitle>
             <DialogDescription className="sr-only">Gerencie seus modelos de relatório</DialogDescription>
           </DialogHeader>
