@@ -11,20 +11,45 @@ export interface ReportField {
 
 export interface ReportTemplate {
   id: string;
-  name: string;
+  name: string; // Internal name for the model
+  title?: string; // Display title for the report (Identity)
+  subtitle?: string; // (Identity)
+  showLogo?: boolean; // (Identity)
+  unitName?: string; // (Identity)
+  
   description: string;
   module: "agenda" | "atendimento" | "prontuario" | "financeiro" | "faturamento" | "estoque" | "sala_espera";
   isSystem: boolean;
   isDefault: boolean;
   active: boolean;
+  
+  // Layout
+  orientation: "portrait" | "landscape";
+  pageSize?: "a4" | "letter";
+  margins?: "normal" | "narrow" | "wide";
+  density?: "compact" | "normal" | "comfortable";
+  pageBreakOnGroup?: boolean;
+
+  // Data & Columns
   fields: ReportField[];
   groupBy?: string;
-  pageBreakOnGroup?: boolean;
+
+  // Header
   showHeader: boolean;
-  showFooter: boolean;
+  headerStyle?: "simple" | "detailed" | "off";
   showFilters: boolean;
+
+  // Footer & Usage
+  showFooter: boolean;
   showPageNumbers: boolean;
-  orientation: "portrait" | "landscape";
+  footerText?: string;
+  showUser?: boolean;
+  
+  // Usage flags
+  enablePrint?: boolean;
+  enablePdf?: boolean;
+  isShared?: boolean;
+
   createdAt?: string;
   updatedAt?: string;
 }
