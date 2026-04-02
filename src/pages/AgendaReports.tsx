@@ -113,87 +113,51 @@ export default function AgendaReports() {
   const generatedByName = profile?.full_name ?? undefined;
 
   // ── Print in a clean window ──────────────────────────────
+  // The ReportPreview component embeds its own <style> with rp-* classes,
+  // so we just clone the innerHTML into a clean window without duplicating CSS.
   const handlePrint = useCallback(() => {
-    const reportHtml = previewRef.current?.innerHTML;
-    if (!reportHtml) return;
+    const node = previewRef.current;
+    if (!node) return;
 
     const isLandscape = selectedTemplate.orientation === "landscape";
-    const marginMap: Record<string, string> = { narrow: "10mm", normal: "15mm", wide: "20mm" };
-    const margin = marginMap[selectedTemplate.margins ?? "normal"];
+    const margin = { narrow: "10mm", normal: "15mm", wide: "20mm" }[selectedTemplate.margins ?? "normal"];
+    const title = selectedTemplate.title || selectedTemplate.name;
 
-    const win = window.open("", "_blank", "width=1100,height=800");
-    if (!win) {
-      alert("Permita pop-ups para imprimir o relatório.");
-      return;
-    }
+    const win = window.open("", "_blank", "width=1200,height=900");
+    if (!win) { alert("Permita pop-ups para imprimir o relatório."); return; }
 
     win.document.write(`<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>${selectedTemplate.title || selectedTemplate.name}</title>
+  <title>${title}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       font-family: 'Inter', Arial, sans-serif;
-      font-size: 9pt;
-      color: #1a1a2e;
       background: white;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     @page {
-      size: ${isLandscape ? "A4 landscape" : "A4 portrait"};
+      size: A4 ${isLandscape ? "landscape" : "portrait"};
       margin: ${margin};
     }
-    @media print {
-      body { margin: 0; padding: 0; }
-    }
-    /* ── Report styles injected ── */
-    .report-document { background: white; padding: 0; }
-    .report-page {
-      width: ${isLandscape ? "257mm" : "180mm"};
-      margin: 0 auto;
-      padding: ${margin};
-    }
-    .report-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    .report-table th {
-      background: #1e3a5f;
-      color: white;
-      text-align: left;
-      font-weight: 600;
-      font-size: 8pt;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      padding: 7px 8px;
-      border: 1px solid #1e3a5f;
-    }
-    .report-table td {
-      padding: ${{ compact: "4px", normal: "7px", comfortable: "10px" }[selectedTemplate.density ?? "normal"]} 8px;
-      font-size: ${{ compact: "8pt", normal: "9pt", comfortable: "9.5pt" }[selectedTemplate.density ?? "normal"]};
-      border-bottom: 1px solid #e5e7eb;
-      border-left: 1px solid #f3f4f6;
-      border-right: 1px solid #f3f4f6;
-      vertical-align: top;
-      word-break: break-word;
-    }
-    .report-table tr:nth-child(even) td { background: #f8fafc; }
-    .report-table tr:last-child td { border-bottom: 2px solid #d1d5db; }
-    .report-no-data td { text-align: center; color: #9ca3af; font-style: italic; padding: 24px 8px !important; }
-    .break-before-page { page-break-before: always; break-before: page; }
-    .break-inside-avoid { page-break-inside: avoid; break-inside: avoid; }
+    /* Override screen-mode rp-doc padding/bg */
+    .rp-doc  { padding: 0 !important; background: white !important; }
+    .rp-page { box-shadow: none !important; border-radius: 0 !important; margin: 0 auto !important; }
+    tbody tr { page-break-inside: avoid; break-inside: avoid; }
+    thead    { display: table-header-group; }
   </style>
 </head>
-<body>
-  ${reportHtml}
-  <script>
-    window.addEventListener('load', function() {
-      setTimeout(function() { window.print(); }, 400);
-    });
-  <\/script>
-</body>
+<body>${node.innerHTML}</body>
+<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() { window.print(); }, 600);
+  });
+<\/script>
 </html>`);
     win.document.close();
   }, [selectedTemplate, previewRef]);
