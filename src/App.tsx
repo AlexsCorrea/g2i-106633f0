@@ -87,6 +87,7 @@ function App() {
 
                 <Route path="/gerenciamento/financeiro" element={<ProtectedRoute><Financeiro /></ProtectedRoute>} />
                 <Route path="/gerenciamento/faturamento" element={<ProtectedRoute><Faturamento /></ProtectedRoute>} />
+                <Route path="/gerenciamento/faturamento/protocolo" element={<ProtectedRoute><ProtocoloDocumentos /></ProtectedRoute>} />
                 <Route path="/gerenciamento/produtividade" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
                 <Route path="/gerenciamento/caixa" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
                 <Route path="/gerenciamento/estoque/farmacia" element={<ProtectedRoute><Estoque stockType="farmacia" /></ProtectedRoute>} />
