@@ -1990,6 +1990,454 @@ export type Database = {
           },
         ]
       }
+      doc_protocol_document_types: {
+        Row: {
+          active: boolean
+          category: string | null
+          code: string | null
+          color: string | null
+          created_at: string
+          display_order: number
+          id: string
+          integrates_tiss: boolean
+          name: string
+          notes: string | null
+          passes_inloco_audit: boolean
+          requires_acceptance: boolean
+          requires_attachment: boolean
+          requires_label: boolean
+          requires_protocol: boolean
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string | null
+          code?: string | null
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          integrates_tiss?: boolean
+          name: string
+          notes?: string | null
+          passes_inloco_audit?: boolean
+          requires_acceptance?: boolean
+          requires_attachment?: boolean
+          requires_label?: boolean
+          requires_protocol?: boolean
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string | null
+          code?: string | null
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          integrates_tiss?: boolean
+          name?: string
+          notes?: string | null
+          passes_inloco_audit?: boolean
+          requires_acceptance?: boolean
+          requires_attachment?: boolean
+          requires_label?: boolean
+          requires_protocol?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      doc_protocol_items: {
+        Row: {
+          account_number: string | null
+          attendance_date: string | null
+          attendance_id: string | null
+          attendance_type: string | null
+          billing_account_id: string | null
+          competence: string | null
+          created_at: string
+          current_status: string
+          document_type_id: string | null
+          id: string
+          insurance_name: string | null
+          medical_record: string | null
+          notes: string | null
+          patient_id: string | null
+          priority: string | null
+          protocol_id: string
+          sla_deadline: string | null
+          tags: string[] | null
+        }
+        Insert: {
+          account_number?: string | null
+          attendance_date?: string | null
+          attendance_id?: string | null
+          attendance_type?: string | null
+          billing_account_id?: string | null
+          competence?: string | null
+          created_at?: string
+          current_status?: string
+          document_type_id?: string | null
+          id?: string
+          insurance_name?: string | null
+          medical_record?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          priority?: string | null
+          protocol_id: string
+          sla_deadline?: string | null
+          tags?: string[] | null
+        }
+        Update: {
+          account_number?: string | null
+          attendance_date?: string | null
+          attendance_id?: string | null
+          attendance_type?: string | null
+          billing_account_id?: string | null
+          competence?: string | null
+          created_at?: string
+          current_status?: string
+          document_type_id?: string | null
+          id?: string
+          insurance_name?: string | null
+          medical_record?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          priority?: string | null
+          protocol_id?: string
+          sla_deadline?: string | null
+          tags?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_protocol_items_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_protocol_items_billing_account_id_fkey"
+            columns: ["billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_protocol_items_document_type_id_fkey"
+            columns: ["document_type_id"]
+            isOneToOne: false
+            referencedRelation: "doc_protocol_document_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_protocol_items_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_protocol_items_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "doc_protocols"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doc_protocol_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          ip_address: string | null
+          new_value: Json | null
+          old_value: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      doc_protocol_movements: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          id: string
+          item_id: string | null
+          movement_type: string
+          notes: string | null
+          protocol_id: string | null
+          reason_id: string | null
+          sector_destination_id: string | null
+          sector_origin_id: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          movement_type: string
+          notes?: string | null
+          protocol_id?: string | null
+          reason_id?: string | null
+          sector_destination_id?: string | null
+          sector_origin_id?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          movement_type?: string
+          notes?: string | null
+          protocol_id?: string | null
+          reason_id?: string | null
+          sector_destination_id?: string | null
+          sector_origin_id?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_protocol_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "doc_protocol_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_protocol_movements_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "doc_protocols"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_protocol_movements_reason_id_fkey"
+            columns: ["reason_id"]
+            isOneToOne: false
+            referencedRelation: "doc_protocol_reasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_protocol_movements_sector_destination_id_fkey"
+            columns: ["sector_destination_id"]
+            isOneToOne: false
+            referencedRelation: "doc_protocol_sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_protocol_movements_sector_origin_id_fkey"
+            columns: ["sector_origin_id"]
+            isOneToOne: false
+            referencedRelation: "doc_protocol_sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doc_protocol_reasons: {
+        Row: {
+          active: boolean
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+          notes: string | null
+          type: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+          notes?: string | null
+          type?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
+      doc_protocol_sectors: {
+        Row: {
+          active: boolean
+          allowed_doc_types: string[] | null
+          can_return: boolean
+          code: string | null
+          color: string | null
+          created_at: string
+          display_order: number
+          icon: string | null
+          id: string
+          name: string
+          notes: string | null
+          participates_flow: boolean
+          requires_acceptance: boolean
+          responsible_profile_id: string | null
+          sla_hours: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          allowed_doc_types?: string[] | null
+          can_return?: boolean
+          code?: string | null
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          participates_flow?: boolean
+          requires_acceptance?: boolean
+          responsible_profile_id?: string | null
+          sla_hours?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          allowed_doc_types?: string[] | null
+          can_return?: boolean
+          code?: string | null
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          participates_flow?: boolean
+          requires_acceptance?: boolean
+          responsible_profile_id?: string | null
+          sla_hours?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      doc_protocols: {
+        Row: {
+          accepted_at: string | null
+          batch_number: string | null
+          created_at: string
+          emitter_id: string | null
+          external_protocol: string | null
+          id: string
+          notes: string | null
+          priority: string
+          protocol_date: string
+          protocol_number: string
+          protocol_type: string
+          reason_id: string | null
+          receiver_id: string | null
+          sector_destination_id: string | null
+          sector_origin_id: string | null
+          status: string
+          total_items: number
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          batch_number?: string | null
+          created_at?: string
+          emitter_id?: string | null
+          external_protocol?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string
+          protocol_date?: string
+          protocol_number: string
+          protocol_type?: string
+          reason_id?: string | null
+          receiver_id?: string | null
+          sector_destination_id?: string | null
+          sector_origin_id?: string | null
+          status?: string
+          total_items?: number
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          batch_number?: string | null
+          created_at?: string
+          emitter_id?: string | null
+          external_protocol?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string
+          protocol_date?: string
+          protocol_number?: string
+          protocol_type?: string
+          reason_id?: string | null
+          receiver_id?: string | null
+          sector_destination_id?: string | null
+          sector_origin_id?: string | null
+          status?: string
+          total_items?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_protocols_reason_id_fkey"
+            columns: ["reason_id"]
+            isOneToOne: false
+            referencedRelation: "doc_protocol_reasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_protocols_sector_destination_id_fkey"
+            columns: ["sector_destination_id"]
+            isOneToOne: false
+            referencedRelation: "doc_protocol_sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_protocols_sector_origin_id_fkey"
+            columns: ["sector_origin_id"]
+            isOneToOne: false
+            referencedRelation: "doc_protocol_sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evolution_notes: {
         Row: {
           assessment: string | null
