@@ -37,6 +37,7 @@ import Leitos from "./pages/Leitos";
 import Portaria from "./pages/Portaria";
 import Financeiro from "./pages/Financeiro";
 import Faturamento from "./pages/Faturamento";
+import ProtocoloDocumentos from "./pages/ProtocoloDocumentos";
 import Estoque from "./pages/Estoque";
 import Diagnostico from "./pages/Diagnostico";
 import Escalas from "./pages/Escalas";
