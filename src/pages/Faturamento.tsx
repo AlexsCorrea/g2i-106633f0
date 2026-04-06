@@ -47,6 +47,9 @@ export default function Faturamento() {
             <p className="text-sm text-muted-foreground">Conferência e envio de contas</p>
           </div>
         </div>
+        <Button variant="outline" className="gap-1.5" onClick={() => navigate("/gerenciamento/faturamento/protocolo")}>
+          <CreditCard className="h-4 w-4" /> Protocolo e Envio
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
