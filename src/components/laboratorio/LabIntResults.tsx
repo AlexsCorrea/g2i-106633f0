@@ -6,29 +6,55 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useLabExternalResultsWithDetails, useLabExternalResults, useLabPartners } from "@/hooks/useLabIntegration";
+import { useLabExternalResultsWithDetails, useLabExternalResults, useLabPartners, createIntegrationLog } from "@/hooks/useLabIntegration";
 import { CheckCircle2, XCircle, FileDown, Search, Eye, FileText, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function LabIntResults() {
   const { data: results, isLoading } = useLabExternalResultsWithDetails();
   const { update } = useLabExternalResults();
   const { list: partners } = useLabPartners();
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [confFilter, setConfFilter] = useState("all");
   const [partnerFilter, setPartnerFilter] = useState("all");
   const [showDetail, setShowDetail] = useState<any>(null);
 
-  const handleConference = (id: string, action: "conferido" | "rejeitado") => {
-    update.mutate({ id, conference_status: action, conferenced_by: user?.id, conferenced_at: new Date().toISOString() } as any, {
-      onSuccess: () => toast.success(action === "conferido" ? "Resultado conferido" : "Resultado rejeitado"),
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ["lab-external-results-details"] });
+    qc.invalidateQueries({ queryKey: ["lab-integration-dashboard"] });
+    qc.invalidateQueries({ queryKey: ["lab-integration-logs"] });
+  };
+
+  const handleConference = (r: any, action: "conferido" | "rejeitado") => {
+    update.mutate({ id: r.id, conference_status: action, conferenced_by: user?.id, conferenced_at: new Date().toISOString() } as any, {
+      onSuccess: () => {
+        createIntegrationLog({
+          log_level: action === "rejeitado" ? "warn" : "info",
+          log_type: "funcional",
+          action: action === "conferido" ? "resultado_conferido" : "resultado_rejeitado",
+          message: `Resultado ${r.exam_name} (${r.exam_code}) ${action}`,
+          partner_id: r.partner_id, performed_by: user?.id,
+        });
+        invalidateAll();
+        toast.success(action === "conferido" ? "Resultado conferido" : "Resultado rejeitado");
+      },
     });
   };
-  const handleRelease = (id: string) => {
-    update.mutate({ id, conference_status: "liberado", released_by: user?.id, released_at: new Date().toISOString() } as any, {
-      onSuccess: () => toast.success("Resultado liberado"),
+  const handleRelease = (r: any) => {
+    update.mutate({ id: r.id, conference_status: "liberado", released_by: user?.id, released_at: new Date().toISOString() } as any, {
+      onSuccess: () => {
+        createIntegrationLog({
+          log_level: "info", log_type: "funcional", action: "resultado_liberado",
+          message: `Resultado ${r.exam_name} (${r.exam_code}) liberado`,
+          partner_id: r.partner_id, performed_by: user?.id,
+        });
+        invalidateAll();
+        toast.success("Resultado liberado");
+      },
     });
   };
 
@@ -133,12 +159,12 @@ export default function LabIntResults() {
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setShowDetail(r)}><Eye className="h-3.5 w-3.5" /></Button>
                         {r.conference_status === "pendente" && (
                           <>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-600" onClick={() => handleConference(r.id, "conferido")}><CheckCircle2 className="h-4 w-4" /></Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-600" onClick={() => handleConference(r.id, "rejeitado")}><XCircle className="h-4 w-4" /></Button>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-600" onClick={() => handleConference(r, "conferido")}><CheckCircle2 className="h-4 w-4" /></Button>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-600" onClick={() => handleConference(r, "rejeitado")}><XCircle className="h-4 w-4" /></Button>
                           </>
                         )}
                         {r.conference_status === "conferido" && (
-                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-primary" onClick={() => handleRelease(r.id)}>Liberar</Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-primary" onClick={() => handleRelease(r)}>Liberar</Button>
                         )}
                       </div>
                     </TableCell>

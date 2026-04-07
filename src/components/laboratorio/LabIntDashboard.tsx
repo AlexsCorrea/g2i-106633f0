@@ -1,14 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLabIntegrationDashboard, useLabPartners, useLabIntegrationLogs } from "@/hooks/useLabIntegration";
+import { useLabIntegrationDashboard, useLabPartners, useLabEquipment } from "@/hooks/useLabIntegration";
 import { Send, AlertTriangle, Clock, FileDown, RefreshCw, CheckCircle, XCircle, Zap } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--destructive))", "#f59e0b", "#10b981", "#6366f1", "#ec4899"];
 
+const issueTypeLabels: Record<string, string> = {
+  falha_envio: "Falha Envio", exame_sem_mapeamento: "Sem Mapeamento",
+  parceiro_indisponivel: "Parc. Indisponível", retorno_rejeitado: "Retorno Rejeitado",
+  anexo_invalido: "Anexo Inválido", resultado_inconsistente: "Resultado Incons.",
+  recoleta_solicitada: "Recoleta", protocolo_invalido: "Protocolo Inválido",
+  duplicidade: "Duplicidade", falha_parsing: "Falha Parsing",
+};
+
+const confLabels: Record<string, string> = {
+  pendente: "Pendente", conferido: "Conferido", liberado: "Liberado", rejeitado: "Rejeitado",
+};
+
 export default function LabIntDashboard() {
   const { data: stats, isLoading } = useLabIntegrationDashboard();
   const { list: partners } = useLabPartners();
-  const { list: logs } = useLabIntegrationLogs();
+  const { list: equipment } = useLabEquipment();
 
   const cards = [
     { label: "Enviados Hoje", value: stats?.sentToday ?? 0, icon: Send, color: "text-blue-500" },
@@ -21,28 +33,30 @@ export default function LabIntDashboard() {
     { label: "Pendências Críticas", value: stats?.criticalIssues ?? 0, icon: Zap, color: "text-red-600" },
   ];
 
-  // Volume by partner
-  const partnerVolume = partners.data?.map((p: any) => ({
+  // Real volume by partner
+  const partnerVolume = partners.data?.filter((p: any) => p.active).map((p: any) => ({
     name: p.code || p.name?.substring(0, 10),
-    pedidos: Math.floor(Math.random() * 20) + 5,
-    resultados: Math.floor(Math.random() * 15) + 3,
+    pedidos: stats?.ordersByPartner?.[p.id] ?? 0,
+    resultados: stats?.resultsByPartner?.[p.id] ?? 0,
   })) ?? [];
 
-  // Failures by type
-  const failureData = [
-    { name: "Timeout", value: 4 },
-    { name: "Parsing", value: 3 },
-    { name: "Auth", value: 1 },
-    { name: "Rede", value: 2 },
-  ];
+  // Real failures by issue type
+  const failureData = Object.entries(stats?.failuresByType ?? {}).map(([type, count]) => ({
+    name: issueTypeLabels[type] || type.replace(/_/g, " "),
+    value: count as number,
+  })).filter(d => d.value > 0);
 
-  // Results by status
-  const resultStatus = [
-    { name: "Pendente", value: stats?.awaitingConference ?? 0 },
-    { name: "Conferido", value: 3 },
-    { name: "Liberado", value: 5 },
-    { name: "Rejeitado", value: 1 },
-  ];
+  // Real results by conference status
+  const resultStatus = Object.entries(stats?.resultsByStatus ?? {}).map(([status, count]) => ({
+    name: confLabels[status] || status,
+    value: count as number,
+  })).filter(d => d.value > 0);
+
+  // Volume by equipment
+  const equipVolume = equipment.data?.map((eq: any) => ({
+    name: eq.name?.substring(0, 12),
+    fila: stats?.queueByEquipment?.[eq.id] ?? 0,
+  })).filter((e: any) => e.fila > 0) ?? [];
 
   if (isLoading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Carregando dashboard...</div>;
 
@@ -68,44 +82,56 @@ export default function LabIntDashboard() {
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm">Volume por Parceiro</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={partnerVolume}>
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="pedidos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Pedidos" />
-                <Bar dataKey="resultados" fill="#10b981" radius={[4, 4, 0, 0]} name="Resultados" />
-              </BarChart>
-            </ResponsiveContainer>
+            {partnerVolume.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Sem dados de parceiros</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={partnerVolume}>
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="pedidos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Pedidos" />
+                  <Bar dataKey="resultados" fill="#10b981" radius={[4, 4, 0, 0]} name="Resultados" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Falhas por Tipo</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Pendências por Tipo</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={failureData} cx="50%" cy="50%" outerRadius={75} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
-                  {failureData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {failureData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Sem pendências abertas</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={failureData} cx="50%" cy="50%" outerRadius={75} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+                    {failureData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm">Resultados por Status</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={resultStatus} cx="50%" cy="50%" innerRadius={40} outerRadius={75} dataKey="value" label>
-                  {resultStatus.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Legend />
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {resultStatus.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Sem resultados externos</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={resultStatus} cx="50%" cy="50%" innerRadius={40} outerRadius={75} dataKey="value" label>
+                    {resultStatus.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Pie>
+                  <Legend />
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -119,6 +145,8 @@ export default function LabIntDashboard() {
               <div className="flex justify-between"><span className="text-muted-foreground">Aguardando conferência</span><span className="font-medium text-amber-600">{stats?.awaitingConference ?? 0}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Importados hoje</span><span className="font-medium text-green-600">{stats?.importedToday ?? 0}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Parceiros ativos</span><span className="font-medium">{partners.data?.filter((p: any) => p.active).length ?? 0}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Equipamentos</span><span className="font-medium">{equipment.data?.filter((e: any) => e.active).length ?? 0}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Erros nos logs</span><span className="font-medium text-destructive">{stats?.logErrors ?? 0}</span></div>
             </div>
           </CardContent>
         </Card>

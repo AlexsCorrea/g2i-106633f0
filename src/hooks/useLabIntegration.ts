@@ -49,6 +49,24 @@ export const useLabIntegrationQueue = () => useIntTable("lab_integration_queue",
 export const useLabIntegrationLogs = () => useIntTable("lab_integration_logs", "lab-integration-logs");
 export const useLabExternalResults = () => useIntTable("lab_external_results", "lab-external-results");
 export const useLabIntegrationIssues = () => useIntTable("lab_integration_issues", "lab-integration-issues");
+export const useLabEquipment = () => useIntTable("lab_equipment", "lab-equipment", "name");
+
+// Logging helper
+export async function createIntegrationLog(log: {
+  log_level: "info" | "warn" | "error";
+  log_type: "tecnico" | "funcional";
+  action: string;
+  message: string;
+  partner_id?: string | null;
+  equipment_id?: string | null;
+  order_id?: string | null;
+  endpoint?: string | null;
+  http_status?: number | null;
+  response_time_ms?: number | null;
+  performed_by?: string | null;
+}) {
+  await (supabase as any).from("lab_integration_logs").insert(log);
+}
 
 // Dashboard stats
 export function useLabIntegrationDashboard() {
@@ -56,16 +74,46 @@ export function useLabIntegrationDashboard() {
     queryKey: ["lab-integration-dashboard"],
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
-      const [orders, queue, results, issues] = await Promise.all([
-        (supabase as any).from("lab_external_orders").select("id, internal_status, sent_at, created_at"),
-        (supabase as any).from("lab_integration_queue").select("id, status, queue_type, created_at"),
-        (supabase as any).from("lab_external_results").select("id, conference_status, created_at"),
-        (supabase as any).from("lab_integration_issues").select("id, status, severity, created_at"),
+      const [orders, queue, results, issues, logs] = await Promise.all([
+        (supabase as any).from("lab_external_orders").select("id, internal_status, sent_at, created_at, partner_id"),
+        (supabase as any).from("lab_integration_queue").select("id, status, queue_type, created_at, partner_id, equipment_id"),
+        (supabase as any).from("lab_external_results").select("id, conference_status, created_at, partner_id"),
+        (supabase as any).from("lab_integration_issues").select("id, status, severity, issue_type, created_at"),
+        (supabase as any).from("lab_integration_logs").select("id, log_level, log_type, action, partner_id, equipment_id, created_at"),
       ]);
       const o = orders.data || [];
       const q = queue.data || [];
       const r = results.data || [];
       const i = issues.data || [];
+      const l = logs.data || [];
+
+      // Aggregate orders by partner_id
+      const ordersByPartner: Record<string, number> = {};
+      o.forEach((x: any) => { if (x.partner_id) ordersByPartner[x.partner_id] = (ordersByPartner[x.partner_id] || 0) + 1; });
+
+      // Aggregate results by partner_id
+      const resultsByPartner: Record<string, number> = {};
+      r.forEach((x: any) => { if (x.partner_id) resultsByPartner[x.partner_id] = (resultsByPartner[x.partner_id] || 0) + 1; });
+
+      // Aggregate queue by equipment_id
+      const queueByEquipment: Record<string, number> = {};
+      q.forEach((x: any) => { if (x.equipment_id) queueByEquipment[x.equipment_id] = (queueByEquipment[x.equipment_id] || 0) + 1; });
+
+      // Failures by type from issues
+      const failuresByType: Record<string, number> = {};
+      i.filter((x: any) => x.status === "aberta").forEach((x: any) => {
+        failuresByType[x.issue_type] = (failuresByType[x.issue_type] || 0) + 1;
+      });
+
+      // Results by conference_status
+      const resultsByStatus: Record<string, number> = {};
+      r.forEach((x: any) => {
+        resultsByStatus[x.conference_status] = (resultsByStatus[x.conference_status] || 0) + 1;
+      });
+
+      // Errors by log_level
+      const logErrors = l.filter((x: any) => x.log_level === "error").length;
+
       return {
         sentToday: o.filter((x: any) => x.sent_at?.startsWith(today)).length,
         pendingOrders: o.filter((x: any) => ["rascunho", "pronto_para_envio"].includes(x.internal_status)).length,
@@ -77,6 +125,12 @@ export function useLabIntegrationDashboard() {
         criticalIssues: i.filter((x: any) => x.status === "aberta" && x.severity === "alta").length,
         totalQueue: q.length,
         totalOrders: o.length,
+        ordersByPartner,
+        resultsByPartner,
+        queueByEquipment,
+        failuresByType,
+        resultsByStatus,
+        logErrors,
       };
     },
     refetchInterval: 30000,

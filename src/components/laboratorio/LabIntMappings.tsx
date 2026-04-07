@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useLabExamMappingsWithDetails, useLabExamMappings, useLabPartners } from "@/hooks/useLabIntegration";
+import { useLabExamMappingsWithDetails, useLabExamMappings, useLabPartners, useLabEquipment } from "@/hooks/useLabIntegration";
 import { useLabExams } from "@/hooks/useLaboratory";
 import { ArrowLeftRight, Plus, Search, Pencil, AlertTriangle } from "lucide-react";
 
@@ -22,6 +22,7 @@ export default function LabIntMappings() {
   const { data: mappings, isLoading } = useLabExamMappingsWithDetails();
   const { create, update } = useLabExamMappings();
   const { list: partners } = useLabPartners();
+  const { list: equipment } = useLabEquipment();
   const labExams = useLabExams();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -126,7 +127,7 @@ export default function LabIntMappings() {
                   <TableCell>{m.external_name ?? "—"}</TableCell>
                   <TableCell>
                     {m.lab_partners ? <Badge variant="outline" className="text-xs">{m.lab_partners.name}</Badge> : null}
-                    {m.lab_equipment ? <Badge variant="secondary" className="text-xs">{m.lab_equipment.name}</Badge> : null}
+                    {m.lab_equipment ? <Badge variant="secondary" className="text-xs ml-1">{m.lab_equipment.name}</Badge> : null}
                   </TableCell>
                   <TableCell className="font-mono text-xs">{m.loinc_code ?? "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{m.tuss_code ?? "—"}</TableCell>
@@ -146,10 +147,13 @@ export default function LabIntMappings() {
           <DialogHeader><DialogTitle>{editingId ? "Editar Mapeamento" : "Novo Mapeamento"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <Label>Exame Interno *</Label>
-              <Select value={form.exam_id} onValueChange={v => F("exam_id", v)}>
+              <Label>Exame Interno</Label>
+              <Select value={form.exam_id || "__none__"} onValueChange={v => F("exam_id", v === "__none__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Selecionar exame" /></SelectTrigger>
-                <SelectContent>{labExams.list.data?.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.name} ({e.code})</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
+                  {labExams.list.data?.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.name} ({e.code})</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
             <div>
@@ -163,6 +167,16 @@ export default function LabIntMappings() {
               </Select>
             </div>
             <div>
+              <Label>Equipamento</Label>
+              <Select value={form.equipment_id || "__none__"} onValueChange={v => F("equipment_id", v === "__none__" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
+                  {equipment.data?.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label>Criticidade</Label>
               <Select value={form.criticality} onValueChange={v => F("criticality", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -171,6 +185,8 @@ export default function LabIntMappings() {
             </div>
             <div><Label>Código Externo *</Label><Input value={form.external_code} onChange={e => F("external_code", e.target.value)} /></div>
             <div><Label>Nome Externo</Label><Input value={form.external_name} onChange={e => F("external_name", e.target.value)} /></div>
+            <div><Label>Método</Label><Input value={form.external_method} onChange={e => F("external_method", e.target.value)} placeholder="Ex: Fotometria" /></div>
+            <div><Label>Material</Label><Input value={form.external_material} onChange={e => F("external_material", e.target.value)} placeholder="Ex: Soro" /></div>
             <div><Label>LOINC</Label><Input value={form.loinc_code} onChange={e => F("loinc_code", e.target.value)} placeholder="Ex: 30522-7" /></div>
             <div><Label>TUSS</Label><Input value={form.tuss_code} onChange={e => F("tuss_code", e.target.value)} placeholder="Ex: 40301630" /></div>
             <div><Label>Prazo (horas)</Label><Input type="number" value={form.expected_hours} onChange={e => F("expected_hours", Number(e.target.value))} /></div>

@@ -8,10 +8,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useLabExternalOrdersWithDetails, useLabExternalOrders, useLabPartners } from "@/hooks/useLabIntegration";
+import { useLabExternalOrdersWithDetails, useLabExternalOrders, useLabPartners, createIntegrationLog } from "@/hooks/useLabIntegration";
 import { Send, Plus, Search, Eye, RefreshCw, X } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 const statusColors: Record<string, string> = {
   rascunho: "bg-gray-100 text-gray-800",
@@ -38,6 +40,8 @@ export default function LabIntOrders() {
   const { data: orders, isLoading } = useLabExternalOrdersWithDetails();
   const { create, update } = useLabExternalOrders();
   const { list: partners } = useLabPartners();
+  const { user } = useAuth();
+  const qc = useQueryClient();
   const [showNew, setShowNew] = useState(false);
   const [showDetail, setShowDetail] = useState<any>(null);
   const [search, setSearch] = useState("");
@@ -49,6 +53,12 @@ export default function LabIntOrders() {
     insurance_name: "", requesting_doctor: "", unit: "",
   });
 
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ["lab-external-orders-details"] });
+    qc.invalidateQueries({ queryKey: ["lab-integration-dashboard"] });
+    qc.invalidateQueries({ queryKey: ["lab-integration-logs"] });
+  };
+
   const handleCreate = () => {
     if (!form.partner_id) { toast.error("Selecione um parceiro"); return; }
     const activePartner = partners.data?.find((p: any) => p.id === form.partner_id);
@@ -58,22 +68,57 @@ export default function LabIntOrders() {
     create.mutate({
       ...form, order_number: orderNumber, internal_status: "rascunho",
       partner_id: form.partner_id || null,
-    } as any, { onSuccess: () => { setShowNew(false); toast.success("Pedido criado como rascunho"); } });
+    } as any, {
+      onSuccess: () => {
+        setShowNew(false);
+        setForm({ partner_id: "", priority: "rotina", material: "", clinical_notes: "", insurance_name: "", requesting_doctor: "", unit: "" });
+        createIntegrationLog({
+          log_level: "info", log_type: "funcional", action: "pedido_criado",
+          message: `Pedido ${orderNumber} criado como rascunho`,
+          partner_id: form.partner_id || null, performed_by: user?.id,
+        });
+        toast.success("Pedido criado como rascunho");
+      },
+    });
   };
 
   const handleSend = (o: any) => {
     update.mutate({ id: o.id, internal_status: "enviado", sent_at: new Date().toISOString() } as any, {
-      onSuccess: () => toast.success("Pedido enviado"),
+      onSuccess: () => {
+        createIntegrationLog({
+          log_level: "info", log_type: "funcional", action: "pedido_enviado",
+          message: `Pedido ${o.order_number} enviado ao parceiro`,
+          partner_id: o.partner_id, order_id: o.id, performed_by: user?.id,
+        });
+        invalidateAll();
+        toast.success("Pedido enviado");
+      },
     });
   };
   const handleCancel = (o: any) => {
     update.mutate({ id: o.id, internal_status: "cancelado" } as any, {
-      onSuccess: () => toast.success("Pedido cancelado"),
+      onSuccess: () => {
+        createIntegrationLog({
+          log_level: "warn", log_type: "funcional", action: "pedido_cancelado",
+          message: `Pedido ${o.order_number} cancelado`,
+          partner_id: o.partner_id, order_id: o.id, performed_by: user?.id,
+        });
+        invalidateAll();
+        toast.success("Pedido cancelado");
+      },
     });
   };
   const handleRetry = (o: any) => {
-    update.mutate({ id: o.id, internal_status: "pronto_para_envio", error_message: null } as any, {
-      onSuccess: () => toast.success("Pedido reenviado"),
+    update.mutate({ id: o.id, internal_status: "enviado", sent_at: new Date().toISOString(), error_message: null } as any, {
+      onSuccess: () => {
+        createIntegrationLog({
+          log_level: "info", log_type: "funcional", action: "pedido_reenviado",
+          message: `Pedido ${o.order_number} reenviado após falha`,
+          partner_id: o.partner_id, order_id: o.id, performed_by: user?.id,
+        });
+        invalidateAll();
+        toast.success("Pedido reenviado");
+      },
     });
   };
 
@@ -121,6 +166,7 @@ export default function LabIntOrders() {
                 <TableHead>Nº Pedido</TableHead>
                 <TableHead>Parceiro</TableHead>
                 <TableHead>Protocolo Ext.</TableHead>
+                <TableHead>Médico</TableHead>
                 <TableHead>Material</TableHead>
                 <TableHead>Prioridade</TableHead>
                 <TableHead>Status</TableHead>
@@ -130,14 +176,15 @@ export default function LabIntOrders() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !filtered.length ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum pedido</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhum pedido</TableCell></TableRow>
               ) : filtered.map((o: any) => (
                 <TableRow key={o.id} className={o.internal_status === "falha_envio" ? "bg-red-50/30" : ""}>
                   <TableCell className="font-mono text-sm">{o.order_number}</TableCell>
                   <TableCell>{o.lab_partners?.name ?? "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{o.external_protocol ?? "—"}</TableCell>
+                  <TableCell className="text-sm">{o.requesting_doctor ?? "—"}</TableCell>
                   <TableCell>{o.material ?? "—"}</TableCell>
                   <TableCell><Badge variant={o.priority === "urgente" ? "destructive" : "secondary"} className="text-xs">{o.priority}</Badge></TableCell>
                   <TableCell><Badge className={`text-xs ${statusColors[o.internal_status] || ""}`}>{statusLabels[o.internal_status] || o.internal_status}</Badge></TableCell>
@@ -175,6 +222,7 @@ export default function LabIntOrders() {
               {showDetail.error_message && <div className="col-span-2 text-destructive"><span className="text-muted-foreground">Erro:</span> {showDetail.error_message}</div>}
               <div><span className="text-muted-foreground">Enviado em:</span> {showDetail.sent_at ? format(new Date(showDetail.sent_at), "dd/MM/yy HH:mm") : "—"}</div>
               <div><span className="text-muted-foreground">Retorno em:</span> {showDetail.result_at ? format(new Date(showDetail.result_at), "dd/MM/yy HH:mm") : "—"}</div>
+              <div><span className="text-muted-foreground">Criado em:</span> {format(new Date(showDetail.created_at), "dd/MM/yy HH:mm")}</div>
             </div>
           )}
         </DialogContent>
@@ -190,7 +238,7 @@ export default function LabIntOrders() {
               <Select value={form.partner_id} onValueChange={v => F("partner_id", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecionar parceiro" /></SelectTrigger>
                 <SelectContent>
-                  {partners.data?.filter((p: any) => p.active).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  {partners.data?.filter((p: any) => p.active).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name} ({p.code})</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
