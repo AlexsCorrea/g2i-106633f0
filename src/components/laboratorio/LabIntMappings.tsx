@@ -22,7 +22,7 @@ export default function LabIntMappings() {
   const { data: mappings, isLoading } = useLabExamMappingsWithDetails();
   const { create, update } = useLabExamMappings();
   const { list: partners } = useLabPartners();
-  const { labExams } = useLaboratory();
+  const labExams = useLabExams();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);

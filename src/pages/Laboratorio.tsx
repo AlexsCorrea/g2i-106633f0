@@ -28,6 +28,7 @@ import LabIntLogs from "@/components/laboratorio/LabIntLogs";
 import LabIntIssues from "@/components/laboratorio/LabIntIssues";
 import LabIntReports from "@/components/laboratorio/LabIntReports";
 import LabIntConfig from "@/components/laboratorio/LabIntConfig";
+import LabIntEquipment from "@/components/laboratorio/LabIntEquipment";
 
 const mainTabs = [
   { value: "dashboard", label: "Dashboard", icon: BarChart3 },
