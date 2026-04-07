@@ -3421,6 +3421,7 @@ export type Database = {
           reference_text: string | null
           released_at: string | null
           released_by: string | null
+          result_type: string | null
           unit: string | null
           updated_at: string
           value: string | null
@@ -3448,6 +3449,7 @@ export type Database = {
           reference_text?: string | null
           released_at?: string | null
           released_by?: string | null
+          result_type?: string | null
           unit?: string | null
           updated_at?: string
           value?: string | null
@@ -3475,6 +3477,7 @@ export type Database = {
           reference_text?: string | null
           released_at?: string | null
           released_by?: string | null
+          result_type?: string | null
           unit?: string | null
           updated_at?: string
           value?: string | null
