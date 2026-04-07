@@ -124,7 +124,7 @@ export default function LabResults() {
 
       <Dialog open={!!editing} onOpenChange={() => setEditing(null)}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Digitar / Editar Resultado</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Digitar / Editar Resultado</DialogTitle><p className="text-sm text-muted-foreground">Informe o valor e flags do resultado</p></DialogHeader>
           <div className="space-y-3">
             <div><Label>Valor</Label><Input value={editForm.value} onChange={e => setEditForm(f => ({ ...f, value: e.target.value }))} /></div>
             <div><Label>Observação Técnica</Label><Textarea value={editForm.technical_notes} onChange={e => setEditForm(f => ({ ...f, technical_notes: e.target.value }))} rows={2} /></div>
