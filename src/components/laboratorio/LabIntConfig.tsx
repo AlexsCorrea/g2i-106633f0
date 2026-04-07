@@ -41,6 +41,7 @@ export default function LabIntConfig() {
         },
       });
       if (error) throw error;
+      console.log("[FHIR-SANDBOX] raw response data:", JSON.stringify(data));
       setFhirResult(data);
       setExecutedAt(new Date().toISOString());
       if (data?.success) {
