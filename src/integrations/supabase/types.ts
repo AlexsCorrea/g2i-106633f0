@@ -2939,39 +2939,63 @@ export type Database = {
       }
       lab_equipment: {
         Row: {
+          active: boolean | null
+          connection_type: string | null
           created_at: string
+          host: string | null
           id: string
           interface_code: string | null
           manufacturer: string | null
+          message_format: string | null
           model: string | null
           name: string
           notes: string | null
+          parsing_rules: Json | null
+          port: number | null
+          protocol: string | null
+          responsible: string | null
           sector_id: string | null
           serial_number: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          active?: boolean | null
+          connection_type?: string | null
           created_at?: string
+          host?: string | null
           id?: string
           interface_code?: string | null
           manufacturer?: string | null
+          message_format?: string | null
           model?: string | null
           name: string
           notes?: string | null
+          parsing_rules?: Json | null
+          port?: number | null
+          protocol?: string | null
+          responsible?: string | null
           sector_id?: string | null
           serial_number?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          active?: boolean | null
+          connection_type?: string | null
           created_at?: string
+          host?: string | null
           id?: string
           interface_code?: string | null
           manufacturer?: string | null
+          message_format?: string | null
           model?: string | null
           name?: string
           notes?: string | null
+          parsing_rules?: Json | null
+          port?: number | null
+          protocol?: string | null
+          responsible?: string | null
           sector_id?: string | null
           serial_number?: string | null
           status?: string
@@ -4007,6 +4031,7 @@ export type Database = {
           integration_type: string
           name: string
           notes: string | null
+          partner_type: string | null
           retry_attempts: number | null
           retry_interval_seconds: number | null
           returns_rejection_code: boolean
@@ -4031,6 +4056,7 @@ export type Database = {
           integration_type?: string
           name: string
           notes?: string | null
+          partner_type?: string | null
           retry_attempts?: number | null
           retry_interval_seconds?: number | null
           returns_rejection_code?: boolean
@@ -4055,6 +4081,7 @@ export type Database = {
           integration_type?: string
           name?: string
           notes?: string | null
+          partner_type?: string | null
           retry_attempts?: number | null
           retry_interval_seconds?: number | null
           returns_rejection_code?: boolean

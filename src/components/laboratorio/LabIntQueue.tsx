@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLabIntegrationQueueWithDetails, useLabIntegrationQueue } from "@/hooks/useLabIntegration";
-import { Search, RefreshCw, ListFilter } from "lucide-react";
+import { Search, RefreshCw, ListFilter, Eye, X } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -24,17 +25,25 @@ export default function LabIntQueue() {
   const { update } = useLabIntegrationQueue();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [showPayload, setShowPayload] = useState<any>(null);
 
   const filtered = queue?.filter((q: any) => {
     const s = search.toLowerCase();
     const matchSearch = !s || q.status?.includes(s) || q.lab_partners?.name?.toLowerCase().includes(s) || q.lab_equipment?.name?.toLowerCase().includes(s);
     const matchType = typeFilter === "all" || q.queue_type === typeFilter;
-    return matchSearch && matchType;
+    const matchStatus = statusFilter === "all" || q.status === statusFilter;
+    return matchSearch && matchType && matchStatus;
   }) ?? [];
 
   const handleRetry = (item: any) => {
     update.mutate({ id: item.id, status: "pendente", attempt: 0, error_message: null } as any, {
       onSuccess: () => toast.success("Item reenfileirado"),
+    });
+  };
+  const handleCancel = (item: any) => {
+    update.mutate({ id: item.id, status: "cancelado" } as any, {
+      onSuccess: () => toast.success("Item cancelado"),
     });
   };
 
@@ -46,11 +55,22 @@ export default function LabIntQueue() {
           <Input placeholder="Buscar na fila..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-40"><ListFilter className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-36"><ListFilter className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="apoio">Apoio</SelectItem>
             <SelectItem value="equipamento">Equipamento</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-32"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="pendente">Pendente</SelectItem>
+            <SelectItem value="processando">Processando</SelectItem>
+            <SelectItem value="sucesso">Sucesso</SelectItem>
+            <SelectItem value="erro">Erro</SelectItem>
+            <SelectItem value="erro_parsing">Erro Parsing</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -65,7 +85,7 @@ export default function LabIntQueue() {
                 <TableHead>Status</TableHead>
                 <TableHead>Tentativas</TableHead>
                 <TableHead>HTTP</TableHead>
-                <TableHead>Tempo (ms)</TableHead>
+                <TableHead>Tempo</TableHead>
                 <TableHead>Erro</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Ações</TableHead>
@@ -77,22 +97,28 @@ export default function LabIntQueue() {
               ) : !filtered.length ? (
                 <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Fila vazia</TableCell></TableRow>
               ) : filtered.map((q: any) => (
-                <TableRow key={q.id} className={q.status === "erro" || q.status === "erro_parsing" ? "bg-red-50/30" : ""}>
+                <TableRow key={q.id} className={["erro", "erro_parsing"].includes(q.status) ? "bg-red-50/30" : ""}>
                   <TableCell><Badge variant="outline" className="text-xs">{q.queue_type}</Badge></TableCell>
                   <TableCell className="text-xs">{q.direction === "outbound" ? "⬆ Envio" : "⬇ Recebimento"}</TableCell>
                   <TableCell className="text-sm">{q.lab_partners?.name ?? q.lab_equipment?.name ?? "—"}</TableCell>
                   <TableCell><Badge className={`text-xs ${statusColors[q.status] || ""}`}>{q.status}</Badge></TableCell>
                   <TableCell className="text-center">{q.attempt}/{q.max_attempts}</TableCell>
                   <TableCell className="font-mono text-xs">{q.response_status ?? "—"}</TableCell>
-                  <TableCell className="text-xs">{q.response_time_ms ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{q.response_time_ms ? `${q.response_time_ms}ms` : "—"}</TableCell>
                   <TableCell className="max-w-[200px] truncate text-xs text-destructive">{q.error_message ?? "—"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{format(new Date(q.created_at), "dd/MM HH:mm")}</TableCell>
                   <TableCell>
-                    {(q.status === "erro" || q.status === "erro_parsing") && (
-                      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => handleRetry(q)}>
-                        <RefreshCw className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
+                    <div className="flex gap-1">
+                      {(q.payload_sent || q.payload_received) && (
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setShowPayload(q)}><Eye className="h-3.5 w-3.5" /></Button>
+                      )}
+                      {["erro", "erro_parsing"].includes(q.status) && (
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleRetry(q)}><RefreshCw className="h-3.5 w-3.5" /></Button>
+                      )}
+                      {["pendente", "erro"].includes(q.status) && (
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleCancel(q)}><X className="h-3.5 w-3.5" /></Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -100,6 +126,31 @@ export default function LabIntQueue() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!showPayload} onOpenChange={() => setShowPayload(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Payload da Integração</DialogTitle></DialogHeader>
+          {showPayload && (
+            <div className="space-y-3">
+              {showPayload.payload_sent && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Payload Enviado</p>
+                  <pre className="bg-muted/50 p-3 rounded text-xs overflow-auto max-h-48 font-mono">{JSON.stringify(showPayload.payload_sent, null, 2)}</pre>
+                </div>
+              )}
+              {showPayload.payload_received && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Payload Recebido</p>
+                  <pre className="bg-muted/50 p-3 rounded text-xs overflow-auto max-h-48 font-mono">{JSON.stringify(showPayload.payload_received, null, 2)}</pre>
+                </div>
+              )}
+              {showPayload.endpoint_url && (
+                <div className="text-xs"><span className="text-muted-foreground">Endpoint:</span> <span className="font-mono">{showPayload.endpoint_url}</span></div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
