@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
+const normalize = (value: unknown) => String(value ?? "").toLowerCase();
+
 const confColors: Record<string, string> = {
   pendente: "bg-amber-100 text-amber-800",
   conferido: "bg-blue-100 text-blue-800",
@@ -33,6 +35,30 @@ export default function LabIntResults() {
   const [criticalOnly, setCriticalOnly] = useState(false);
   const [showDetail, setShowDetail] = useState<any>(null);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set(["all"]));
+
+  const resultsWithResolvedOrder = (results ?? []).map((result: any) => {
+    if (result.lab_external_orders?.order_number) return result;
+
+    const resolvedOrder = (results ?? []).find((candidate: any) => {
+      if (!candidate.lab_external_orders?.order_number) return false;
+
+      const samePatient = candidate.lab_external_orders.patient_id && result.patient_id
+        ? candidate.lab_external_orders.patient_id === result.patient_id
+        : false;
+      const samePartner = candidate.lab_external_orders.partner_id && result.partner_id
+        ? candidate.lab_external_orders.partner_id === result.partner_id
+        : false;
+      const sameWindow = candidate.lab_external_orders.external_protocol
+        ? normalize(candidate.lab_external_orders.external_protocol).includes(normalize(result.external_protocol).replace(/^fhir-dr-/, "fhir-"))
+        : false;
+
+      return samePatient || (samePartner && sameWindow);
+    });
+
+    return resolvedOrder
+      ? { ...result, lab_external_orders: resolvedOrder.lab_external_orders, resolved_traceability: true }
+      : result;
+  });
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["lab-external-results-details"] });
@@ -92,18 +118,20 @@ export default function LabIntResults() {
   };
 
   // Search across all relevant fields
-  const filtered = results?.filter((r: any) => {
+  const filtered = resultsWithResolvedOrder.filter((r: any) => {
     const s = search.toLowerCase();
     const orderNum = r.lab_external_orders?.order_number?.toLowerCase() ?? "";
     const sendProtocol = r.lab_external_orders?.external_protocol?.toLowerCase() ?? "";
     const resultProtocol = r.external_protocol?.toLowerCase() ?? "";
+    const patientName = r.patients?.full_name?.toLowerCase() ?? "";
     const matchSearch = !s
       || r.exam_name?.toLowerCase().includes(s)
       || r.exam_code?.toLowerCase().includes(s)
       || r.value?.toLowerCase().includes(s)
       || orderNum.includes(s)
       || sendProtocol.includes(s)
-      || resultProtocol.includes(s);
+      || resultProtocol.includes(s)
+      || patientName.includes(s);
     const matchConf = confFilter === "all" || r.conference_status === confFilter;
     const matchPartner = partnerFilter === "all" || r.partner_id === partnerFilter;
     const matchCritical = !criticalOnly || r.is_critical;
@@ -112,10 +140,11 @@ export default function LabIntResults() {
 
   // Group by ORDER (not by result protocol)
   const grouped = filtered.reduce((acc: Record<string, { order: any; results: any[] }>, r: any) => {
-    const orderId = r.order_id || "sem-pedido";
+    const orderId = r.order_id || r.lab_external_orders?.id || `sem-pedido-${r.partner_id ?? "na"}-${r.patient_id ?? r.id}`;
     if (!acc[orderId]) {
       acc[orderId] = {
         order: r.lab_external_orders ? {
+          id: r.lab_external_orders.id,
           order_number: r.lab_external_orders.order_number,
           external_protocol: r.lab_external_orders.external_protocol,
           internal_status: r.lab_external_orders.internal_status,
@@ -136,8 +165,8 @@ export default function LabIntResults() {
     });
   };
 
-  const pendingCount = results?.filter((r: any) => r.conference_status === "pendente").length ?? 0;
-  const criticalCount = results?.filter((r: any) => r.is_critical && r.conference_status === "pendente").length ?? 0;
+   const pendingCount = resultsWithResolvedOrder.filter((r: any) => r.conference_status === "pendente").length;
+   const criticalCount = resultsWithResolvedOrder.filter((r: any) => r.is_critical && r.conference_status === "pendente").length;
 
   return (
     <div className="space-y-4">
@@ -210,11 +239,16 @@ export default function LabIntResults() {
                     <Package className="h-4 w-4 text-primary" />
                     <span className="text-sm font-semibold">Pedido: <span className="font-mono">{order?.order_number ?? "Sem pedido"}</span></span>
                   </div>
-                  {order?.external_protocol && (
+                   {order?.external_protocol && (
                     <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
                       Protocolo envio: {order.external_protocol}
                     </Badge>
                   )}
+                   {!items[0]?.order_id && order?.order_number && (
+                     <Badge variant="outline" className="text-xs bg-amber-50 text-amber-800 border-amber-200">
+                       vínculo recuperado
+                     </Badge>
+                   )}
                   <Badge variant="outline" className="text-xs">{partnerName}</Badge>
                 </div>
                 <div className="flex gap-2 items-center">
@@ -243,7 +277,7 @@ export default function LabIntResults() {
                     {items.map((r: any) => (
                       <TableRow key={r.id} className={r.is_critical ? "bg-red-50/40" : r.is_abnormal ? "bg-amber-50/30" : ""}>
                         <TableCell className="font-mono text-xs">{r.external_protocol ?? "—"}</TableCell>
-                        <TableCell className="font-medium">{r.exam_name} <span className="text-xs text-muted-foreground">({r.exam_code})</span></TableCell>
+                         <TableCell className="font-medium">{r.exam_name} <span className="text-xs text-muted-foreground">({r.exam_code})</span><div className="text-[11px] text-muted-foreground">{r.patients?.full_name ?? "—"}</div></TableCell>
                         <TableCell className={`font-mono ${r.is_critical ? "text-destructive font-bold" : r.is_abnormal ? "text-amber-700 font-semibold" : ""}`}>{r.value}</TableCell>
                         <TableCell>{r.unit ?? "—"}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{r.reference_text ?? "—"}</TableCell>
