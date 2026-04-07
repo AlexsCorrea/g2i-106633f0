@@ -2876,6 +2876,1123 @@ export type Database = {
           },
         ]
       }
+      lab_collections: {
+        Row: {
+          collected_at: string
+          collection_site: string | null
+          collector_id: string | null
+          created_at: string
+          id: string
+          incident: string | null
+          notes: string | null
+          patient_id: string | null
+          request_item_id: string | null
+          status: string
+        }
+        Insert: {
+          collected_at?: string
+          collection_site?: string | null
+          collector_id?: string | null
+          created_at?: string
+          id?: string
+          incident?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          request_item_id?: string | null
+          status?: string
+        }
+        Update: {
+          collected_at?: string
+          collection_site?: string | null
+          collector_id?: string | null
+          created_at?: string
+          id?: string
+          incident?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          request_item_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_collections_collector_id_fkey"
+            columns: ["collector_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_collections_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_collections_request_item_id_fkey"
+            columns: ["request_item_id"]
+            isOneToOne: false
+            referencedRelation: "lab_request_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_equipment: {
+        Row: {
+          created_at: string
+          id: string
+          interface_code: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          sector_id: string | null
+          serial_number: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interface_code?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          name: string
+          notes?: string | null
+          sector_id?: string | null
+          serial_number?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interface_code?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          name?: string
+          notes?: string | null
+          sector_id?: string | null
+          serial_number?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_equipment_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "lab_sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_exams: {
+        Row: {
+          active: boolean
+          code: string | null
+          created_at: string
+          criticality: string
+          fasting_hours: number | null
+          id: string
+          material_id: string | null
+          method_id: string | null
+          name: string
+          preparation_instructions: string | null
+          requires_fasting: boolean
+          sector_id: string | null
+          sla_minutes: number | null
+          tube_id: string | null
+          tuss_code: string | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          criticality?: string
+          fasting_hours?: number | null
+          id?: string
+          material_id?: string | null
+          method_id?: string | null
+          name: string
+          preparation_instructions?: string | null
+          requires_fasting?: boolean
+          sector_id?: string | null
+          sla_minutes?: number | null
+          tube_id?: string | null
+          tuss_code?: string | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          criticality?: string
+          fasting_hours?: number | null
+          id?: string
+          material_id?: string | null
+          method_id?: string | null
+          name?: string
+          preparation_instructions?: string | null
+          requires_fasting?: boolean
+          sector_id?: string | null
+          sla_minutes?: number | null
+          tube_id?: string | null
+          tuss_code?: string | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_exams_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "lab_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_exams_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "lab_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_exams_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "lab_sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_exams_tube_id_fkey"
+            columns: ["tube_id"]
+            isOneToOne: false
+            referencedRelation: "lab_tubes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json | null
+          new_values: Json | null
+          old_values: Json | null
+          performed_by: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          performed_by?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_logs_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_materials: {
+        Row: {
+          active: boolean
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lab_methods: {
+        Row: {
+          active: boolean
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lab_panel_items: {
+        Row: {
+          created_at: string
+          display_order: number
+          exam_id: string
+          id: string
+          panel_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          exam_id: string
+          id?: string
+          panel_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          exam_id?: string
+          id?: string
+          panel_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_panel_items_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "lab_exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_panel_items_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "lab_panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_panels: {
+        Row: {
+          active: boolean
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lab_pending_issues: {
+        Row: {
+          created_at: string
+          description: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          issue_type: string
+          notes: string | null
+          patient_id: string | null
+          priority: string
+          resolved_at: string | null
+          resolved_by: string | null
+          sla_deadline: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          issue_type: string
+          notes?: string | null
+          patient_id?: string | null
+          priority?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sla_deadline?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          issue_type?: string
+          notes?: string | null
+          patient_id?: string | null
+          priority?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sla_deadline?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_pending_issues_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_pending_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_reference_values: {
+        Row: {
+          age_max_years: number | null
+          age_min_years: number | null
+          created_at: string
+          exam_id: string
+          id: string
+          max_value: number | null
+          min_value: number | null
+          reference_text: string | null
+          sex: string | null
+          unit: string | null
+        }
+        Insert: {
+          age_max_years?: number | null
+          age_min_years?: number | null
+          created_at?: string
+          exam_id: string
+          id?: string
+          max_value?: number | null
+          min_value?: number | null
+          reference_text?: string | null
+          sex?: string | null
+          unit?: string | null
+        }
+        Update: {
+          age_max_years?: number | null
+          age_min_years?: number | null
+          created_at?: string
+          exam_id?: string
+          id?: string
+          max_value?: number | null
+          min_value?: number | null
+          reference_text?: string | null
+          sex?: string | null
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_reference_values_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "lab_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_rejection_reasons: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      lab_report_items: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          report_id: string
+          result_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          report_id: string
+          result_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          report_id?: string
+          result_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_report_items_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "lab_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_report_items_result_id_fkey"
+            columns: ["result_id"]
+            isOneToOne: false
+            referencedRelation: "lab_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_reports: {
+        Row: {
+          attendance_id: string | null
+          created_at: string
+          id: string
+          issued_at: string | null
+          notes: string | null
+          patient_id: string | null
+          released_at: string | null
+          released_by: string | null
+          report_number: string
+          request_id: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          attendance_id?: string | null
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          report_number: string
+          request_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          attendance_id?: string | null
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          report_number?: string
+          request_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_reports_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_reports_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_reports_released_by_fkey"
+            columns: ["released_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_reports_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "lab_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_request_items: {
+        Row: {
+          created_at: string
+          exam_id: string
+          id: string
+          material_id: string | null
+          notes: string | null
+          priority: string
+          request_id: string
+          sector_id: string | null
+          sla_deadline: string | null
+          status: string
+          tube_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          exam_id: string
+          id?: string
+          material_id?: string | null
+          notes?: string | null
+          priority?: string
+          request_id: string
+          sector_id?: string | null
+          sla_deadline?: string | null
+          status?: string
+          tube_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          exam_id?: string
+          id?: string
+          material_id?: string | null
+          notes?: string | null
+          priority?: string
+          request_id?: string
+          sector_id?: string | null
+          sla_deadline?: string | null
+          status?: string
+          tube_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_request_items_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "lab_exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_request_items_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "lab_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "lab_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_request_items_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "lab_sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_request_items_tube_id_fkey"
+            columns: ["tube_id"]
+            isOneToOne: false
+            referencedRelation: "lab_tubes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_requests: {
+        Row: {
+          attendance_id: string | null
+          clinical_notes: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          insurance_name: string | null
+          patient_id: string | null
+          priority: string
+          request_number: string
+          requesting_doctor_id: string | null
+          specialty: string | null
+          status: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          attendance_id?: string | null
+          clinical_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          insurance_name?: string | null
+          patient_id?: string | null
+          priority?: string
+          request_number: string
+          requesting_doctor_id?: string | null
+          specialty?: string | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attendance_id?: string | null
+          clinical_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          insurance_name?: string | null
+          patient_id?: string | null
+          priority?: string
+          request_number?: string
+          requesting_doctor_id?: string | null
+          specialty?: string | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_requests_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_requests_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_requests_requesting_doctor_id_fkey"
+            columns: ["requesting_doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_results: {
+        Row: {
+          created_at: string
+          equipment_id: string | null
+          id: string
+          is_abnormal: boolean
+          is_critical: boolean
+          method_id: string | null
+          numeric_value: number | null
+          performed_at: string | null
+          performed_by: string | null
+          reference_text: string | null
+          request_item_id: string
+          result_source: string
+          sample_id: string | null
+          status: string
+          technical_notes: string | null
+          unit: string | null
+          updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          equipment_id?: string | null
+          id?: string
+          is_abnormal?: boolean
+          is_critical?: boolean
+          method_id?: string | null
+          numeric_value?: number | null
+          performed_at?: string | null
+          performed_by?: string | null
+          reference_text?: string | null
+          request_item_id: string
+          result_source?: string
+          sample_id?: string | null
+          status?: string
+          technical_notes?: string | null
+          unit?: string | null
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          equipment_id?: string | null
+          id?: string
+          is_abnormal?: boolean
+          is_critical?: boolean
+          method_id?: string | null
+          numeric_value?: number | null
+          performed_at?: string | null
+          performed_by?: string | null
+          reference_text?: string | null
+          request_item_id?: string
+          result_source?: string
+          sample_id?: string | null
+          status?: string
+          technical_notes?: string | null
+          unit?: string | null
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_results_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "lab_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_results_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "lab_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_results_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_results_request_item_id_fkey"
+            columns: ["request_item_id"]
+            isOneToOne: false
+            referencedRelation: "lab_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_results_sample_id_fkey"
+            columns: ["sample_id"]
+            isOneToOne: false
+            referencedRelation: "lab_samples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_results_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_sample_triage: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          performed_at: string
+          performed_by: string | null
+          rejection_notes: string | null
+          rejection_reason_id: string | null
+          sample_id: string
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          id?: string
+          performed_at?: string
+          performed_by?: string | null
+          rejection_notes?: string | null
+          rejection_reason_id?: string | null
+          sample_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          performed_at?: string
+          performed_by?: string | null
+          rejection_notes?: string | null
+          rejection_reason_id?: string | null
+          sample_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_sample_triage_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_sample_triage_rejection_reason_id_fkey"
+            columns: ["rejection_reason_id"]
+            isOneToOne: false
+            referencedRelation: "lab_rejection_reasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_sample_triage_sample_id_fkey"
+            columns: ["sample_id"]
+            isOneToOne: false
+            referencedRelation: "lab_samples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_samples: {
+        Row: {
+          barcode: string
+          collected_at: string | null
+          collection_id: string | null
+          condition: string
+          created_at: string
+          current_sector_id: string | null
+          id: string
+          material_id: string | null
+          notes: string | null
+          patient_id: string | null
+          received_at: string | null
+          request_item_id: string | null
+          status: string
+          tube_id: string | null
+          updated_at: string
+          volume_ml: number | null
+        }
+        Insert: {
+          barcode: string
+          collected_at?: string | null
+          collection_id?: string | null
+          condition?: string
+          created_at?: string
+          current_sector_id?: string | null
+          id?: string
+          material_id?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          received_at?: string | null
+          request_item_id?: string | null
+          status?: string
+          tube_id?: string | null
+          updated_at?: string
+          volume_ml?: number | null
+        }
+        Update: {
+          barcode?: string
+          collected_at?: string | null
+          collection_id?: string | null
+          condition?: string
+          created_at?: string
+          current_sector_id?: string | null
+          id?: string
+          material_id?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          received_at?: string | null
+          request_item_id?: string | null
+          status?: string
+          tube_id?: string | null
+          updated_at?: string
+          volume_ml?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_samples_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "lab_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_samples_current_sector_id_fkey"
+            columns: ["current_sector_id"]
+            isOneToOne: false
+            referencedRelation: "lab_sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_samples_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "lab_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_samples_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_samples_request_item_id_fkey"
+            columns: ["request_item_id"]
+            isOneToOne: false
+            referencedRelation: "lab_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_samples_tube_id_fkey"
+            columns: ["tube_id"]
+            isOneToOne: false
+            referencedRelation: "lab_tubes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_sectors: {
+        Row: {
+          active: boolean
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lab_tubes: {
+        Row: {
+          active: boolean
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          volume_ml: number | null
+        }
+        Insert: {
+          active?: boolean
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          volume_ml?: number | null
+        }
+        Update: {
+          active?: boolean
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          volume_ml?: number | null
+        }
+        Relationships: []
+      }
       medical_history: {
         Row: {
           created_at: string
