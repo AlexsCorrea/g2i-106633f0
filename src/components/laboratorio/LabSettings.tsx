@@ -70,7 +70,7 @@ function SimpleTable({ hook, columns, entityName }: { hook: any; columns: { key:
 
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Novo {entityName}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Novo {entityName}</DialogTitle><p className="text-sm text-muted-foreground">Preencha o nome para criar um novo registro</p></DialogHeader>
           <div><Label>Nome</Label><Input value={newName} onChange={e => setNewName(e.target.value)} /></div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Cancelar</Button>
