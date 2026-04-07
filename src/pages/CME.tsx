@@ -1101,7 +1101,7 @@ function ArmazenamentoTab({ search }: { search: string }) {
               <Select value={form.reservado_para} onValueChange={(v) => setForm({ ...form, reservado_para: v })}>
                 <SelectTrigger className="col-span-2"><SelectValue placeholder="Reservar para setor (opcional)" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem reserva</SelectItem>
+                  <SelectItem value="__none__">Sem reserva</SelectItem>
                   {SETORES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>

@@ -69,7 +69,7 @@ export function DiagnosisForm({ patientId, open, onOpenChange }: DiagnosisFormPr
             <Select value={form.laterality} onValueChange={v => setForm({ ...form, laterality: v })}>
               <SelectTrigger><SelectValue placeholder="N/A" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">N/A</SelectItem>
+                <SelectItem value="__none__">N/A</SelectItem>
                 <SelectItem value="Direito">Direito</SelectItem>
                 <SelectItem value="Esquerdo">Esquerdo</SelectItem>
                 <SelectItem value="Bilateral">Bilateral</SelectItem>
