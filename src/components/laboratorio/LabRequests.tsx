@@ -39,13 +39,17 @@ export default function LabRequests() {
   const [patientSearch, setPatientSearch] = useState("");
   const [form, setForm] = useState({ patient_id: "", priority: "rotina", clinical_notes: "", insurance_name: "", specialty: "" });
 
-  // Simple patient search from existing data
-  const { list: patients } = usePatients();
-  const filteredPatients = patients.data?.filter((p: any) => {
-    if (!patientSearch.trim()) return false;
-    return p.full_name?.toLowerCase().includes(patientSearch.toLowerCase())
-      || p.cpf?.includes(patientSearch);
-  })?.slice(0, 8) ?? [];
+  // Simple patient search
+  const { data: patients } = useQuery({
+    queryKey: ["patients-lab-search", patientSearch],
+    queryFn: async () => {
+      if (!patientSearch.trim() || patientSearch.length < 2) return [];
+      const { data } = await supabase.from("patients").select("id, full_name, cpf").ilike("full_name", `%${patientSearch}%`).limit(8);
+      return data ?? [];
+    },
+    enabled: patientSearch.length >= 2 && !form.patient_id,
+  });
+  const filteredPatients = patients ?? [];
 
   const filtered = requests?.filter(r => {
     const s = search.toLowerCase();
