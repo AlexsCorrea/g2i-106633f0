@@ -167,14 +167,14 @@ export function useLabIntegrationQueueWithDetails() {
   });
 }
 
-// Results with partner
+// Results with partner + order details (including send protocol)
 export function useLabExternalResultsWithDetails() {
   return useQuery({
     queryKey: ["lab-external-results-details"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("lab_external_results")
-        .select("*, lab_partners(name, code), lab_external_orders(order_number, internal_status)")
+        .select("*, lab_partners(name, code), lab_external_orders(order_number, internal_status, external_protocol)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
