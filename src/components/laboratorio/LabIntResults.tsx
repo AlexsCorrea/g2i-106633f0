@@ -187,7 +187,8 @@ export default function LabIntResults() {
         <div className="text-center py-8 text-muted-foreground">Carregando...</div>
       ) : !filtered.length ? (
         <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum resultado externo</CardContent></Card>
-      ) : Object.entries(grouped).map(([orderId, group]) => {
+      ) : Object.entries(grouped).map(([orderId, groupRaw]) => {
+        const group = groupRaw as { order: any; results: any[] };
         const isExpanded = expandedOrders.has(orderId) || expandedOrders.has("all");
         const order = group.order;
         const items = group.results;
