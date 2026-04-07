@@ -274,6 +274,11 @@ export default function LabIntOrders() {
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setShowDetail(o)}><Eye className="h-3.5 w-3.5" /></Button>
                       {o.internal_status === "rascunho" && <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-primary" onClick={() => handleSend(o)}>Enviar</Button>}
                       {o.internal_status === "falha_envio" && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleRetry(o)}><RefreshCw className="h-3.5 w-3.5" /></Button>}
+                      {["rascunho", "enviado", "recebido"].includes(o.internal_status) && (
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-teal-600" onClick={() => handleFhirTest(o)} disabled={fhirLoading}>
+                          {fhirLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5 mr-1" />}FHIR
+                        </Button>
+                      )}
                       {["rascunho", "pronto_para_envio"].includes(o.internal_status) && <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleCancel(o)}><X className="h-3.5 w-3.5" /></Button>}
                     </div>
                   </TableCell>
