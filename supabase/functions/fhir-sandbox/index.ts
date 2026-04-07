@@ -201,6 +201,7 @@ Deno.serve(async (req) => {
         const { data: order } = await supabase.from("lab_external_orders").select("partner_id, patient_id").eq("id", body.order_id).single();
 
         await supabase.from("lab_external_results").insert({
+          order_id: body.order_id,
           partner_id: order?.partner_id || null,
           patient_id: order?.patient_id || null,
           external_protocol: `FHIR-DR-${fhirDR.id}`,
