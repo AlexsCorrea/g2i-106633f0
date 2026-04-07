@@ -4,12 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useLabExternalOrdersWithDetails, useLabExternalOrders, useLabPartners, createIntegrationLog } from "@/hooks/useLabIntegration";
-import { Send, Plus, Search, Eye, RefreshCw, X } from "lucide-react";
+import { useLabExternalOrdersWithDetails, useLabExternalOrders, useLabPartners, useLabExamMappings, createIntegrationLog } from "@/hooks/useLabIntegration";
+import { Send, Plus, Search, Eye, RefreshCw, X, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,6 +40,7 @@ export default function LabIntOrders() {
   const { data: orders, isLoading } = useLabExternalOrdersWithDetails();
   const { create, update } = useLabExternalOrders();
   const { list: partners } = useLabPartners();
+  const { list: mappings } = useLabExamMappings();
   const { user } = useAuth();
   const qc = useQueryClient();
   const [showNew, setShowNew] = useState(false);
@@ -55,14 +56,28 @@ export default function LabIntOrders() {
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["lab-external-orders-details"] });
+    qc.invalidateQueries({ queryKey: ["lab-external-orders"] });
     qc.invalidateQueries({ queryKey: ["lab-integration-dashboard"] });
     qc.invalidateQueries({ queryKey: ["lab-integration-logs"] });
   };
 
+  const getPartnerMappingCount = (partnerId: string) => {
+    return mappings.data?.filter((m: any) => m.partner_id === partnerId && m.active)?.length ?? 0;
+  };
+
   const handleCreate = () => {
     if (!form.partner_id) { toast.error("Selecione um parceiro"); return; }
+    if (!form.material.trim()) { toast.error("Informe o material"); return; }
+    if (!form.requesting_doctor.trim()) { toast.error("Informe o médico solicitante"); return; }
+
     const activePartner = partners.data?.find((p: any) => p.id === form.partner_id);
-    if (activePartner && !activePartner.active) { toast.error("Parceiro inativo não pode receber pedidos"); return; }
+    if (!activePartner || !activePartner.active) { toast.error("Parceiro inativo não pode receber pedidos"); return; }
+
+    const mappingCount = getPartnerMappingCount(form.partner_id);
+    if (mappingCount === 0) {
+      toast.error("Este parceiro não possui mapeamento de exames ativo. Configure os mapeamentos primeiro.");
+      return;
+    }
 
     const orderNumber = `PED-EXT-${String(Date.now()).slice(-6)}`;
     create.mutate({
@@ -77,24 +92,48 @@ export default function LabIntOrders() {
           message: `Pedido ${orderNumber} criado como rascunho`,
           partner_id: form.partner_id || null, performed_by: user?.id,
         });
+        invalidateAll();
         toast.success("Pedido criado como rascunho");
       },
     });
   };
 
   const handleSend = (o: any) => {
+    // Validate before send
+    const partner = partners.data?.find((p: any) => p.id === o.partner_id);
+    if (!partner?.active) {
+      toast.error("Parceiro inativo — não é possível enviar");
+      return;
+    }
+    if (!o.material) {
+      toast.error("Pedido sem material informado — não é possível enviar");
+      return;
+    }
+    const mappingCount = getPartnerMappingCount(o.partner_id);
+    if (mappingCount === 0) {
+      toast.error("Parceiro sem mapeamento de exames ativo");
+      createIntegrationLog({
+        log_level: "error", log_type: "funcional", action: "envio_bloqueado",
+        message: `Pedido ${o.order_number} bloqueado: parceiro sem mapeamento`,
+        partner_id: o.partner_id, order_id: o.id, performed_by: user?.id,
+      });
+      return;
+    }
+
     update.mutate({ id: o.id, internal_status: "enviado", sent_at: new Date().toISOString() } as any, {
       onSuccess: () => {
         createIntegrationLog({
           log_level: "info", log_type: "funcional", action: "pedido_enviado",
-          message: `Pedido ${o.order_number} enviado ao parceiro`,
+          message: `Pedido ${o.order_number} enviado ao parceiro ${partner?.name ?? ""}`,
           partner_id: o.partner_id, order_id: o.id, performed_by: user?.id,
+          endpoint: partner?.endpoint_url ?? null,
         });
         invalidateAll();
         toast.success("Pedido enviado");
       },
     });
   };
+
   const handleCancel = (o: any) => {
     update.mutate({ id: o.id, internal_status: "cancelado" } as any, {
       onSuccess: () => {
@@ -108,6 +147,7 @@ export default function LabIntOrders() {
       },
     });
   };
+
   const handleRetry = (o: any) => {
     update.mutate({ id: o.id, internal_status: "enviado", sent_at: new Date().toISOString(), error_message: null } as any, {
       onSuccess: () => {
@@ -124,13 +164,15 @@ export default function LabIntOrders() {
 
   const filtered = orders?.filter((o: any) => {
     const s = search.toLowerCase();
-    const matchSearch = !s || o.order_number?.toLowerCase().includes(s) || o.lab_partners?.name?.toLowerCase().includes(s) || o.requesting_doctor?.toLowerCase().includes(s);
+    const matchSearch = !s || o.order_number?.toLowerCase().includes(s) || o.lab_partners?.name?.toLowerCase().includes(s) || o.requesting_doctor?.toLowerCase().includes(s) || o.external_protocol?.toLowerCase().includes(s);
     const matchStatus = statusFilter === "all" || o.internal_status === statusFilter;
     const matchPartner = partnerFilter === "all" || o.partner_id === partnerFilter;
     return matchSearch && matchStatus && matchPartner;
   }) ?? [];
 
   const F = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
+
+  const selectedPartnerMappings = form.partner_id ? getPartnerMappingCount(form.partner_id) : 0;
 
   return (
     <div className="space-y-4">
@@ -141,7 +183,7 @@ export default function LabIntOrders() {
       <div className="flex gap-2 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar pedido..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Buscar pedido, protocolo..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
@@ -207,7 +249,10 @@ export default function LabIntOrders() {
       {/* Detail */}
       <Dialog open={!!showDetail} onOpenChange={() => setShowDetail(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Pedido {showDetail?.order_number}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Pedido {showDetail?.order_number}</DialogTitle>
+            <DialogDescription>Detalhes do pedido externo</DialogDescription>
+          </DialogHeader>
           {showDetail && (
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div><span className="text-muted-foreground">Parceiro:</span> {showDetail.lab_partners?.name}</div>
@@ -231,7 +276,10 @@ export default function LabIntOrders() {
       {/* New order */}
       <Dialog open={showNew} onOpenChange={setShowNew}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Novo Pedido Externo</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Novo Pedido Externo</DialogTitle>
+            <DialogDescription>Criar pedido para laboratório de apoio</DialogDescription>
+          </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <Label>Parceiro *</Label>
@@ -241,6 +289,14 @@ export default function LabIntOrders() {
                   {partners.data?.filter((p: any) => p.active).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name} ({p.code})</SelectItem>)}
                 </SelectContent>
               </Select>
+              {form.partner_id && selectedPartnerMappings === 0 && (
+                <div className="flex items-center gap-1 mt-1 text-xs text-destructive">
+                  <AlertTriangle className="h-3 w-3" />Nenhum mapeamento de exame ativo para este parceiro
+                </div>
+              )}
+              {form.partner_id && selectedPartnerMappings > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">{selectedPartnerMappings} exame(s) mapeado(s)</p>
+              )}
             </div>
             <div>
               <Label>Prioridade</Label>
@@ -249,15 +305,15 @@ export default function LabIntOrders() {
                 <SelectContent><SelectItem value="rotina">Rotina</SelectItem><SelectItem value="urgente">Urgente</SelectItem></SelectContent>
               </Select>
             </div>
-            <div><Label>Material</Label><Input value={form.material} onChange={e => F("material", e.target.value)} placeholder="Sangue venoso, Urina..." /></div>
+            <div><Label>Material *</Label><Input value={form.material} onChange={e => F("material", e.target.value)} placeholder="Sangue venoso, Urina..." /></div>
             <div><Label>Convênio</Label><Input value={form.insurance_name} onChange={e => F("insurance_name", e.target.value)} /></div>
-            <div><Label>Médico Solicitante</Label><Input value={form.requesting_doctor} onChange={e => F("requesting_doctor", e.target.value)} /></div>
+            <div><Label>Médico Solicitante *</Label><Input value={form.requesting_doctor} onChange={e => F("requesting_doctor", e.target.value)} /></div>
             <div><Label>Unidade</Label><Input value={form.unit} onChange={e => F("unit", e.target.value)} placeholder="Ambulatório, PA..." /></div>
             <div className="col-span-2"><Label>Observação Clínica</Label><Textarea value={form.clinical_notes} onChange={e => F("clinical_notes", e.target.value)} rows={2} /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
-            <Button onClick={handleCreate}>Criar Rascunho</Button>
+            <Button onClick={handleCreate} disabled={!form.partner_id || selectedPartnerMappings === 0}>Criar Rascunho</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
