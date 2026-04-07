@@ -149,7 +149,7 @@ export default function LabIntMappings() {
               <Label>Exame Interno *</Label>
               <Select value={form.exam_id} onValueChange={v => F("exam_id", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecionar exame" /></SelectTrigger>
-                <SelectContent>{labExams.data?.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.name} ({e.code})</SelectItem>)}</SelectContent>
+                <SelectContent>{labExams.list.data?.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.name} ({e.code})</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
