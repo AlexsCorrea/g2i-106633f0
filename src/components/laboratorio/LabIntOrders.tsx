@@ -47,7 +47,7 @@ export default function LabIntOrders() {
   const [showNew, setShowNew] = useState(false);
   const [showDetail, setShowDetail] = useState<any>(null);
   const [search, setSearch] = useState("");
-  const [fhirLoading, setFhirLoading] = useState(false);
+  const [fhirLoadingId, setFhirLoadingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [partnerFilter, setPartnerFilter] = useState("all");
 
@@ -165,7 +165,7 @@ export default function LabIntOrders() {
   };
 
   const handleFhirTest = async (o: any) => {
-    setFhirLoading(true);
+    setFhirLoadingId(o.id);
     try {
       // Get order items to send as exams
       const { data: items } = await (supabase as any).from("lab_external_order_items")
@@ -188,15 +188,17 @@ export default function LabIntOrders() {
       if (error) throw error;
 
       if (data?.success) {
-        toast.success(`Ciclo FHIR completo! IDs: Patient/${data.fhir_ids?.patient}, DR/${data.fhir_ids?.diagnostic_report}`);
+        toast.success(`Ciclo FHIR completo para ${o.order_number}! DR/${data.fhir_ids?.diagnostic_report}`);
         invalidateAll();
+        qc.invalidateQueries({ queryKey: ["lab-external-results-details"] });
+        qc.invalidateQueries({ queryKey: ["lab-external-results"] });
       } else {
         toast.error(data?.error || "Erro no teste FHIR");
       }
     } catch (e: any) {
       toast.error(`Erro FHIR: ${e.message}`);
     } finally {
-      setFhirLoading(false);
+      setFhirLoadingId(null);
     }
   };
 
@@ -275,8 +277,8 @@ export default function LabIntOrders() {
                       {o.internal_status === "rascunho" && <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-primary" onClick={() => handleSend(o)}>Enviar</Button>}
                       {o.internal_status === "falha_envio" && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleRetry(o)}><RefreshCw className="h-3.5 w-3.5" /></Button>}
                       {["rascunho", "enviado", "recebido"].includes(o.internal_status) && (
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-teal-600" onClick={() => handleFhirTest(o)} disabled={fhirLoading}>
-                          {fhirLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5 mr-1" />}FHIR
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-teal-600" onClick={() => handleFhirTest(o)} disabled={fhirLoadingId !== null}>
+                          {fhirLoadingId === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5 mr-1" />}FHIR
                         </Button>
                       )}
                       {["rascunho", "pronto_para_envio"].includes(o.internal_status) && <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleCancel(o)}><X className="h-3.5 w-3.5" /></Button>}

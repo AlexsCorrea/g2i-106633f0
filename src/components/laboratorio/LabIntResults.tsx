@@ -93,7 +93,7 @@ export default function LabIntResults() {
 
   const filtered = results?.filter((r: any) => {
     const s = search.toLowerCase();
-    const matchSearch = !s || r.exam_name?.toLowerCase().includes(s) || r.external_protocol?.toLowerCase().includes(s) || r.exam_code?.toLowerCase().includes(s) || r.value?.toLowerCase().includes(s);
+    const matchSearch = !s || r.exam_name?.toLowerCase().includes(s) || r.external_protocol?.toLowerCase().includes(s) || r.exam_code?.toLowerCase().includes(s) || r.value?.toLowerCase().includes(s) || r.lab_external_orders?.order_number?.toLowerCase().includes(s);
     const matchConf = confFilter === "all" || r.conference_status === confFilter;
     const matchPartner = partnerFilter === "all" || r.partner_id === partnerFilter;
     const matchCritical = !criticalOnly || r.is_critical;
@@ -163,6 +163,9 @@ export default function LabIntResults() {
             <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-between">
               <span className="text-sm font-medium">Protocolo: <span className="font-mono">{protocol}</span></span>
               <div className="flex gap-2">
+                {(items as any[])[0]?.lab_external_orders?.order_number && (
+                  <Badge variant="outline" className="text-xs font-mono">Pedido: {(items as any[])[0].lab_external_orders.order_number}</Badge>
+                )}
                 <Badge variant="outline" className="text-xs">{(items as any[])[0]?.lab_partners?.name ?? "—"}</Badge>
                 <Badge variant="secondary" className="text-xs">{(items as any[]).length} exame(s)</Badge>
               </div>

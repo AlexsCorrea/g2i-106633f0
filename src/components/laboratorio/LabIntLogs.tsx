@@ -111,7 +111,7 @@ export default function LabIntLogs() {
                   <TableCell><Badge className={`text-xs ${levelColors[l.log_level] || ""}`}>{l.log_level}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{l.log_type}</Badge></TableCell>
                   <TableCell className="font-mono text-xs">{l.action}</TableCell>
-                  <TableCell className="max-w-[280px] truncate text-sm">{l.message ?? "—"}</TableCell>
+                  <TableCell className="max-w-[400px] text-sm whitespace-pre-wrap break-words">{l.message ?? "—"}</TableCell>
                   <TableCell className="text-xs">
                     {l.partner_id ? <Badge variant="outline" className="text-xs">{getPartnerName(l.partner_id) ?? "Parceiro"}</Badge> : null}
                     {l.equipment_id ? <Badge variant="secondary" className="text-xs">{getEquipName(l.equipment_id) ?? "Equip."}</Badge> : null}
