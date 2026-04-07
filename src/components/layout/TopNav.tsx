@@ -180,7 +180,7 @@ const menuConfig: MenuItem[] = [
       {
         heading: "Especializado",
         items: [
-          { label: "Laboratório", icon: FlaskConical, path: "/assistencial/laboratorio" },
+          { label: "Laboratório", icon: FlaskConical, path: "/laboratorio" },
           { label: "SCIH", icon: ShieldAlert, path: "/assistencial/scih" },
           { label: "Triagem", icon: ListChecks, path: "/assistencial/triagem" },
           { label: "Oncologia", icon: Radiation, path: "/assistencial/oncologia" },

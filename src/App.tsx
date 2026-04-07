@@ -42,6 +42,7 @@ import Estoque from "./pages/Estoque";
 import Diagnostico from "./pages/Diagnostico";
 import Escalas from "./pages/Escalas";
 import Assistencial from "./pages/Assistencial";
+import Laboratorio from "./pages/Laboratorio";
 
 const queryClient = new QueryClient();
 
@@ -98,6 +99,9 @@ function App() {
                 <Route path="/diagnostico/laudos" element={<ProtectedRoute><Diagnostico /></ProtectedRoute>} />
                 <Route path="/diagnostico/fila" element={<ProtectedRoute><Diagnostico /></ProtectedRoute>} />
                 <Route path="/diagnostico/etiquetas" element={<ProtectedRoute><Diagnostico /></ProtectedRoute>} />
+
+                {/* Laboratório */}
+                <Route path="/laboratorio" element={<ProtectedRoute><Laboratorio /></ProtectedRoute>} />
 
                 {/* Assistencial */}
                 <Route path="/assistencial/homecare" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
