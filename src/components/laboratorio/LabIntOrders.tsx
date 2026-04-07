@@ -9,11 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useLabExternalOrdersWithDetails, useLabExternalOrders, useLabPartners, useLabExamMappings, createIntegrationLog } from "@/hooks/useLabIntegration";
-import { Send, Plus, Search, Eye, RefreshCw, X, AlertTriangle } from "lucide-react";
+import { Send, Plus, Search, Eye, RefreshCw, X, AlertTriangle, Globe, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const statusColors: Record<string, string> = {
   rascunho: "bg-gray-100 text-gray-800",
@@ -46,6 +47,7 @@ export default function LabIntOrders() {
   const [showNew, setShowNew] = useState(false);
   const [showDetail, setShowDetail] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [fhirLoading, setFhirLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [partnerFilter, setPartnerFilter] = useState("all");
 
@@ -162,6 +164,42 @@ export default function LabIntOrders() {
     });
   };
 
+  const handleFhirTest = async (o: any) => {
+    setFhirLoading(true);
+    try {
+      // Get order items to send as exams
+      const { data: items } = await (supabase as any).from("lab_external_order_items")
+        .select("external_code, external_name").eq("order_id", o.id);
+      
+      const exams = items?.map((i: any) => ({ code: i.external_code, name: i.external_name })) || [
+        { code: "HMG", name: "Hemograma Completo" },
+      ];
+
+      const { data, error } = await supabase.functions.invoke("fhir-sandbox", {
+        body: {
+          action: "simulate_full_cycle",
+          order_id: o.id,
+          patient_id: o.patient_id,
+          patient_name: o.requesting_doctor || "Paciente FHIR",
+          exams,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`Ciclo FHIR completo! IDs: Patient/${data.fhir_ids?.patient}, DR/${data.fhir_ids?.diagnostic_report}`);
+        invalidateAll();
+      } else {
+        toast.error(data?.error || "Erro no teste FHIR");
+      }
+    } catch (e: any) {
+      toast.error(`Erro FHIR: ${e.message}`);
+    } finally {
+      setFhirLoading(false);
+    }
+  };
+
   const filtered = orders?.filter((o: any) => {
     const s = search.toLowerCase();
     const matchSearch = !s || o.order_number?.toLowerCase().includes(s) || o.lab_partners?.name?.toLowerCase().includes(s) || o.requesting_doctor?.toLowerCase().includes(s) || o.external_protocol?.toLowerCase().includes(s);
@@ -236,6 +274,11 @@ export default function LabIntOrders() {
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setShowDetail(o)}><Eye className="h-3.5 w-3.5" /></Button>
                       {o.internal_status === "rascunho" && <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-primary" onClick={() => handleSend(o)}>Enviar</Button>}
                       {o.internal_status === "falha_envio" && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleRetry(o)}><RefreshCw className="h-3.5 w-3.5" /></Button>}
+                      {["rascunho", "enviado", "recebido"].includes(o.internal_status) && (
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-teal-600" onClick={() => handleFhirTest(o)} disabled={fhirLoading}>
+                          {fhirLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5 mr-1" />}FHIR
+                        </Button>
+                      )}
                       {["rascunho", "pronto_para_envio"].includes(o.internal_status) && <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleCancel(o)}><X className="h-3.5 w-3.5" /></Button>}
                     </div>
                   </TableCell>
