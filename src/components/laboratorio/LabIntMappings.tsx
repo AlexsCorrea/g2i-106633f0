@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useLabExamMappingsWithDetails, useLabExamMappings, useLabPartners } from "@/hooks/useLabIntegration";
-import { useLaboratory } from "@/hooks/useLaboratory";
+import { useLabExams } from "@/hooks/useLaboratory";
 import { ArrowLeftRight, Plus, Search, Pencil, AlertTriangle } from "lucide-react";
 
 const emptyForm = {

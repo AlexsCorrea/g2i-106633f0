@@ -123,7 +123,7 @@ export default function Laboratorio() {
           </TabsList>
           <TabsContent value="int-dashboard"><LabIntDashboard /></TabsContent>
           <TabsContent value="int-partners"><LabIntPartners /></TabsContent>
-          <TabsContent value="int-equipment"><LabInterface /></TabsContent>
+          <TabsContent value="int-equipment"><LabIntEquipment /></TabsContent>
           <TabsContent value="int-mappings"><LabIntMappings /></TabsContent>
           <TabsContent value="int-queue"><LabIntQueue /></TabsContent>
           <TabsContent value="int-orders"><LabIntOrders /></TabsContent>
