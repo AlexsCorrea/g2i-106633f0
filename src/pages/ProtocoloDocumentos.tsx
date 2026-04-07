@@ -11,6 +11,7 @@ import ProtocolSectors from "@/components/protocolo/ProtocolSectors";
 import ProtocolDocTypes from "@/components/protocolo/ProtocolDocTypes";
 import ProtocolReasons from "@/components/protocolo/ProtocolReasons";
 import ProtocolList from "@/components/protocolo/ProtocolList";
+import ProtocolReports from "@/components/protocolo/ProtocolReports";
 
 export default function ProtocoloDocumentos() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export default function ProtocoloDocumentos() {
     { value: "recebimento", label: "Recebimento", icon: Inbox },
     { value: "rastreabilidade", label: "Rastreabilidade", icon: Route },
     { value: "protocolos", label: "Protocolos", icon: ClipboardList },
+    { value: "relatorios", label: "Relatórios", icon: BarChart3 },
     { value: "setores", label: "Setores", icon: Building2 },
     { value: "tipos", label: "Tipos Documento", icon: FileText },
     { value: "motivos", label: "Motivos", icon: MessageSquareText },
@@ -54,6 +56,7 @@ export default function ProtocoloDocumentos() {
         <TabsContent value="recebimento" className="mt-4"><ProtocolReceipt /></TabsContent>
         <TabsContent value="rastreabilidade" className="mt-4"><ProtocolTraceability /></TabsContent>
         <TabsContent value="protocolos" className="mt-4"><ProtocolList /></TabsContent>
+        <TabsContent value="relatorios" className="mt-4"><ProtocolReports /></TabsContent>
         <TabsContent value="setores" className="mt-4"><ProtocolSectors /></TabsContent>
         <TabsContent value="tipos" className="mt-4"><ProtocolDocTypes /></TabsContent>
         <TabsContent value="motivos" className="mt-4"><ProtocolReasons /></TabsContent>

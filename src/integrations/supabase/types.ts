@@ -2049,6 +2049,7 @@ export type Database = {
       }
       doc_protocol_items: {
         Row: {
+          accepted_at: string | null
           account_number: string | null
           attendance_date: string | null
           attendance_id: string | null
@@ -2060,15 +2061,19 @@ export type Database = {
           document_type_id: string | null
           id: string
           insurance_name: string | null
+          item_status: string
           medical_record: string | null
           notes: string | null
           patient_id: string | null
           priority: string | null
           protocol_id: string
+          return_reason: string | null
+          returned_at: string | null
           sla_deadline: string | null
           tags: string[] | null
         }
         Insert: {
+          accepted_at?: string | null
           account_number?: string | null
           attendance_date?: string | null
           attendance_id?: string | null
@@ -2080,15 +2085,19 @@ export type Database = {
           document_type_id?: string | null
           id?: string
           insurance_name?: string | null
+          item_status?: string
           medical_record?: string | null
           notes?: string | null
           patient_id?: string | null
           priority?: string | null
           protocol_id: string
+          return_reason?: string | null
+          returned_at?: string | null
           sla_deadline?: string | null
           tags?: string[] | null
         }
         Update: {
+          accepted_at?: string | null
           account_number?: string | null
           attendance_date?: string | null
           attendance_id?: string | null
@@ -2100,11 +2109,14 @@ export type Database = {
           document_type_id?: string | null
           id?: string
           insurance_name?: string | null
+          item_status?: string
           medical_record?: string | null
           notes?: string | null
           patient_id?: string | null
           priority?: string | null
           protocol_id?: string
+          return_reason?: string | null
+          returned_at?: string | null
           sla_deadline?: string | null
           tags?: string[] | null
         }
@@ -2299,6 +2311,7 @@ export type Database = {
       doc_protocol_sectors: {
         Row: {
           active: boolean
+          allowed_destinations: string[] | null
           allowed_doc_types: string[] | null
           can_return: boolean
           code: string | null
@@ -2317,6 +2330,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          allowed_destinations?: string[] | null
           allowed_doc_types?: string[] | null
           can_return?: boolean
           code?: string | null
@@ -2335,6 +2349,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          allowed_destinations?: string[] | null
           allowed_doc_types?: string[] | null
           can_return?: boolean
           code?: string | null
@@ -2356,6 +2371,7 @@ export type Database = {
       doc_protocols: {
         Row: {
           accepted_at: string | null
+          accepted_items: number | null
           batch_number: string | null
           created_at: string
           emitter_id: string | null
@@ -2368,6 +2384,7 @@ export type Database = {
           protocol_type: string
           reason_id: string | null
           receiver_id: string | null
+          returned_items: number | null
           sector_destination_id: string | null
           sector_origin_id: string | null
           status: string
@@ -2376,6 +2393,7 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          accepted_items?: number | null
           batch_number?: string | null
           created_at?: string
           emitter_id?: string | null
@@ -2388,6 +2406,7 @@ export type Database = {
           protocol_type?: string
           reason_id?: string | null
           receiver_id?: string | null
+          returned_items?: number | null
           sector_destination_id?: string | null
           sector_origin_id?: string | null
           status?: string
@@ -2396,6 +2415,7 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          accepted_items?: number | null
           batch_number?: string | null
           created_at?: string
           emitter_id?: string | null
@@ -2408,6 +2428,7 @@ export type Database = {
           protocol_type?: string
           reason_id?: string | null
           receiver_id?: string | null
+          returned_items?: number | null
           sector_destination_id?: string | null
           sector_origin_id?: string | null
           status?: string
