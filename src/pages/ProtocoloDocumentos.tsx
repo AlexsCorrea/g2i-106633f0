@@ -56,6 +56,7 @@ export default function ProtocoloDocumentos() {
         <TabsContent value="recebimento" className="mt-4"><ProtocolReceipt /></TabsContent>
         <TabsContent value="rastreabilidade" className="mt-4"><ProtocolTraceability /></TabsContent>
         <TabsContent value="protocolos" className="mt-4"><ProtocolList /></TabsContent>
+        <TabsContent value="relatorios" className="mt-4"><ProtocolReports /></TabsContent>
         <TabsContent value="setores" className="mt-4"><ProtocolSectors /></TabsContent>
         <TabsContent value="tipos" className="mt-4"><ProtocolDocTypes /></TabsContent>
         <TabsContent value="motivos" className="mt-4"><ProtocolReasons /></TabsContent>
