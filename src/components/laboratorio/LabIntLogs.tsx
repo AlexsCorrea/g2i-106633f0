@@ -34,15 +34,31 @@ export default function LabIntLogs() {
   const getOrderNumber = (id: string | null) => orders.data?.find((o: any) => o.id === id)?.order_number ?? null;
   const getOrderProtocol = (id: string | null) => orders.data?.find((o: any) => o.id === id)?.external_protocol ?? null;
 
+  const getTraceabilityFromMessage = (message: string | null | undefined) => {
+    const text = message ?? "";
+    const orderMatch = text.match(/(?:pedido|Pedido):?\s*([A-Z0-9-]+)/);
+    const sendMatch = text.match(/protocolo envio:?\s*([A-Z0-9-]+)/i);
+    const resultMatch = text.match(/protocolo resultado:?\s*([A-Z0-9-]+)/i);
+    return {
+      orderNumber: orderMatch?.[1] ?? null,
+      sendProtocol: sendMatch?.[1] ?? null,
+      resultProtocol: resultMatch?.[1] ?? null,
+    };
+  };
+
   const filtered = list.data?.filter((l: any) => {
     const s = search.toLowerCase();
     const orderNum = l.order_id ? (getOrderNumber(l.order_id) ?? "").toLowerCase() : "";
     const orderProto = l.order_id ? (getOrderProtocol(l.order_id) ?? "").toLowerCase() : "";
+    const trace = getTraceabilityFromMessage(l.message);
     const matchSearch = !s
-      || l.action?.includes(s)
+      || l.action?.toLowerCase().includes(s)
       || l.message?.toLowerCase().includes(s)
       || orderNum.includes(s)
       || orderProto.includes(s)
+      || normalize(trace.orderNumber).includes(s)
+      || normalize(trace.sendProtocol).includes(s)
+      || normalize(trace.resultProtocol).includes(s)
       || l.endpoint?.toLowerCase().includes(s);
     const matchType = typeFilter === "all" || l.log_type === typeFilter;
     const matchLevel = levelFilter === "all" || l.log_level === levelFilter;
@@ -131,6 +147,7 @@ export default function LabIntLogs() {
                 const isExpanded = expandedRows.has(l.id);
                 const orderNum = l.order_id ? getOrderNumber(l.order_id) : null;
                 const orderProto = l.order_id ? getOrderProtocol(l.order_id) : null;
+                const trace = getTraceabilityFromMessage(l.message);
                 const hasExtra = l.payload || l.response || l.error_details;
                 return (
                   <>
@@ -142,10 +159,11 @@ export default function LabIntLogs() {
                       <TableCell><Badge variant="outline" className="text-xs">{l.log_type}</Badge></TableCell>
                       <TableCell className="font-mono text-xs">{l.action}</TableCell>
                       <TableCell className="text-xs">
-                        {orderNum ? (
+                        {orderNum || trace.orderNumber || orderProto || trace.sendProtocol ? (
                           <div className="space-y-0.5">
-                            <div className="font-mono font-medium">{orderNum}</div>
-                            {orderProto && <div className="font-mono text-muted-foreground text-[10px]">{orderProto}</div>}
+                            <div className="font-mono font-medium">{orderNum ?? trace.orderNumber ?? "—"}</div>
+                            {(orderProto || trace.sendProtocol) && <div className="font-mono text-muted-foreground text-[10px]">{orderProto ?? trace.sendProtocol}</div>}
+                            {trace.resultProtocol && <div className="font-mono text-muted-foreground text-[10px]">{trace.resultProtocol}</div>}
                           </div>
                         ) : "—"}
                       </TableCell>
@@ -168,6 +186,13 @@ export default function LabIntLogs() {
                         <TableCell colSpan={10} className="bg-muted/20 p-3">
                           <div className="text-sm whitespace-pre-wrap break-words">{l.message ?? "—"}</div>
                           {l.endpoint && <div className="text-xs text-muted-foreground mt-1">Endpoint: <span className="font-mono">{l.endpoint}</span></div>}
+                          {(trace.orderNumber || trace.sendProtocol || trace.resultProtocol) && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {trace.orderNumber && <Badge variant="outline" className="text-xs font-mono">{trace.orderNumber}</Badge>}
+                              {trace.sendProtocol && <Badge variant="outline" className="text-xs font-mono">{trace.sendProtocol}</Badge>}
+                              {trace.resultProtocol && <Badge variant="outline" className="text-xs font-mono">{trace.resultProtocol}</Badge>}
+                            </div>
+                          )}
                           {l.error_details && <div className="text-xs text-destructive mt-1 font-mono bg-red-50 p-2 rounded">{l.error_details}</div>}
                         </TableCell>
                       </TableRow>
@@ -193,6 +218,12 @@ export default function LabIntLogs() {
                 {showPayload.endpoint && <div><span className="text-muted-foreground">Endpoint:</span> <span className="font-mono text-xs break-all">{showPayload.endpoint}</span></div>}
                 {showPayload.order_id && (
                   <div><span className="text-muted-foreground">Pedido:</span> <span className="font-mono">{getOrderNumber(showPayload.order_id) ?? showPayload.order_id}</span></div>
+                )}
+                {getTraceabilityFromMessage(showPayload.message).sendProtocol && (
+                  <div><span className="text-muted-foreground">Protocolo envio:</span> <span className="font-mono">{getTraceabilityFromMessage(showPayload.message).sendProtocol}</span></div>
+                )}
+                {getTraceabilityFromMessage(showPayload.message).resultProtocol && (
+                  <div><span className="text-muted-foreground">Protocolo resultado:</span> <span className="font-mono">{getTraceabilityFromMessage(showPayload.message).resultProtocol}</span></div>
                 )}
               </div>
               {showPayload.payload && (
