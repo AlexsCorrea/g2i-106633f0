@@ -3414,6 +3414,7 @@ export type Database = {
           notes: string | null
           numeric_value: number | null
           observation: string | null
+          order_id: string | null
           order_item_id: string | null
           partner_id: string
           patient_id: string | null
@@ -3442,6 +3443,7 @@ export type Database = {
           notes?: string | null
           numeric_value?: number | null
           observation?: string | null
+          order_id?: string | null
           order_item_id?: string | null
           partner_id: string
           patient_id?: string | null
@@ -3470,6 +3472,7 @@ export type Database = {
           notes?: string | null
           numeric_value?: number | null
           observation?: string | null
+          order_id?: string | null
           order_item_id?: string | null
           partner_id?: string
           patient_id?: string | null
@@ -3495,6 +3498,13 @@ export type Database = {
             columns: ["linked_result_id"]
             isOneToOne: false
             referencedRelation: "lab_results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_external_results_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "lab_external_orders"
             referencedColumns: ["id"]
           },
           {

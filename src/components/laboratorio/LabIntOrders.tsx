@@ -47,7 +47,7 @@ export default function LabIntOrders() {
   const [showNew, setShowNew] = useState(false);
   const [showDetail, setShowDetail] = useState<any>(null);
   const [search, setSearch] = useState("");
-  const [fhirLoading, setFhirLoading] = useState(false);
+  const [fhirLoadingId, setFhirLoadingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [partnerFilter, setPartnerFilter] = useState("all");
 
