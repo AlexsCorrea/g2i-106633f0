@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useLabExternalResultsWithDetails, useLabExternalResults, useLabPartners, createIntegrationLog } from "@/hooks/useLabIntegration";
+import { useLabExternalResultsWithDetails, useLabExternalResults, useLabPartners, useLabExternalOrders, createIntegrationLog } from "@/hooks/useLabIntegration";
 import { CheckCircle2, XCircle, FileDown, Search, Eye, FileText, ExternalLink, AlertTriangle, Clock, ChevronDown, ChevronRight, Package } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -15,6 +15,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
 const normalize = (value: unknown) => String(value ?? "").toLowerCase();
+const toSendProtocolFromResult = (value: unknown) => {
+  const normalized = normalize(value);
+  return normalized.startsWith("fhir-dr-") ? normalized.replace("fhir-dr-", "fhir-") : normalized;
+};
 
 const confColors: Record<string, string> = {
   pendente: "bg-amber-100 text-amber-800",
@@ -27,6 +31,7 @@ export default function LabIntResults() {
   const { data: results, isLoading } = useLabExternalResultsWithDetails();
   const { update } = useLabExternalResults();
   const { list: partners } = useLabPartners();
+  const { list: orders } = useLabExternalOrders();
   const { user } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -39,24 +44,23 @@ export default function LabIntResults() {
   const resultsWithResolvedOrder = (results ?? []).map((result: any) => {
     if (result.lab_external_orders?.order_number) return result;
 
-    const resolvedOrder = (results ?? []).find((candidate: any) => {
-      if (!candidate.lab_external_orders?.order_number) return false;
+    const derivedSendProtocol = toSendProtocolFromResult(result.external_protocol);
+    const resolvedOrder = orders.data?.find((order: any) => {
+      const samePatient = order.patient_id && result.patient_id
+        ? order.patient_id === result.patient_id
+        : false;
+      const samePartner = order.partner_id && result.partner_id
+        ? order.partner_id === result.partner_id
+        : false;
+      const sameProtocol = order.external_protocol
+        ? normalize(order.external_protocol) === derivedSendProtocol
+        : false;
 
-      const samePatient = candidate.lab_external_orders.patient_id && result.patient_id
-        ? candidate.lab_external_orders.patient_id === result.patient_id
-        : false;
-      const samePartner = candidate.lab_external_orders.partner_id && result.partner_id
-        ? candidate.lab_external_orders.partner_id === result.partner_id
-        : false;
-      const sameWindow = candidate.lab_external_orders.external_protocol
-        ? normalize(candidate.lab_external_orders.external_protocol).includes(normalize(result.external_protocol).replace(/^fhir-dr-/, "fhir-"))
-        : false;
-
-      return samePatient || (samePartner && sameWindow);
+      return sameProtocol || (samePatient && samePartner);
     });
 
     return resolvedOrder
-      ? { ...result, lab_external_orders: resolvedOrder.lab_external_orders, resolved_traceability: true }
+      ? { ...result, order_id: result.order_id ?? resolvedOrder.id, lab_external_orders: resolvedOrder, resolved_traceability: true }
       : result;
   });
 
@@ -74,7 +78,7 @@ export default function LabIntResults() {
           log_level: action === "rejeitado" ? "warn" : "info",
           log_type: "funcional",
           action: action === "conferido" ? "resultado_conferido" : "resultado_rejeitado",
-          message: `Resultado ${r.exam_name} (${r.exam_code}) ${action} — protocolo resultado: ${r.external_protocol ?? "N/A"}, pedido: ${r.lab_external_orders?.order_number ?? "N/A"}`,
+          message: `Resultado ${r.exam_name} (${r.exam_code}) ${action} — pedido: ${r.lab_external_orders?.order_number ?? "N/A"}, protocolo envio: ${r.lab_external_orders?.external_protocol ?? "N/A"}, protocolo resultado: ${r.external_protocol ?? "N/A"}`,
           partner_id: r.partner_id, performed_by: user?.id,
         });
         invalidateAll();
@@ -94,7 +98,7 @@ export default function LabIntResults() {
           log_level: r.is_critical ? "warn" : "info",
           log_type: "funcional",
           action: "resultado_liberado",
-          message: `Resultado ${r.exam_name} liberado${r.is_critical ? " [CRÍTICO]" : ""} — pedido: ${r.lab_external_orders?.order_number ?? "N/A"}`,
+          message: `Resultado ${r.exam_name} liberado${r.is_critical ? " [CRÍTICO]" : ""} — pedido: ${r.lab_external_orders?.order_number ?? "N/A"}, protocolo envio: ${r.lab_external_orders?.external_protocol ?? "N/A"}, protocolo resultado: ${r.external_protocol ?? "N/A"}`,
           partner_id: r.partner_id, performed_by: user?.id,
         });
         invalidateAll();
@@ -108,7 +112,7 @@ export default function LabIntResults() {
       onSuccess: () => {
         createIntegrationLog({
           log_level: "warn", log_type: "funcional", action: "resultado_pendencia",
-          message: `Resultado ${r.exam_name} retornado a pendência — pedido: ${r.lab_external_orders?.order_number ?? "N/A"}`,
+          message: `Resultado ${r.exam_name} retornado a pendência — pedido: ${r.lab_external_orders?.order_number ?? "N/A"}, protocolo envio: ${r.lab_external_orders?.external_protocol ?? "N/A"}, protocolo resultado: ${r.external_protocol ?? "N/A"}`,
           partner_id: r.partner_id, performed_by: user?.id,
         });
         invalidateAll();
@@ -245,7 +249,7 @@ export default function LabIntResults() {
                     </Badge>
                   )}
                    {!items[0]?.order_id && order?.order_number && (
-                     <Badge variant="outline" className="text-xs bg-amber-50 text-amber-800 border-amber-200">
+                     <Badge variant="secondary" className="text-xs">
                        vínculo recuperado
                      </Badge>
                    )}
