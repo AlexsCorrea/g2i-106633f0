@@ -174,7 +174,7 @@ export function useLabExternalResultsWithDetails() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("lab_external_results")
-        .select("*, lab_partners(name, code)")
+        .select("*, lab_partners(name, code), lab_external_orders(order_number, internal_status)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
