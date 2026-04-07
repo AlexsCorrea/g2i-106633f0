@@ -4,14 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Settings2, Globe, Shield, Clock, FlaskConical, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Settings2, Globe, Shield, Clock, FlaskConical, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronRight, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+interface FhirExam { exam: string; code: string; sr: string; obs: string; dr: string; result_id?: string }
 interface FhirResult {
   success: boolean;
   message?: string;
-  fhir_ids?: { patient: string; service_request: string; observation: string; diagnostic_report: string };
+  fhir_ids?: { patient: string; exams: FhirExam[] };
+  result_imported?: boolean;
   error?: string;
 }
 
@@ -21,10 +23,14 @@ export default function LabIntConfig() {
   const [patientName, setPatientName] = useState("Maria Helena Santos");
   const [examCode, setExamCode] = useState("HMG");
   const [examName, setExamName] = useState("Hemograma Completo");
+  const [showRawJson, setShowRawJson] = useState(false);
+  const [executedAt, setExecutedAt] = useState<string | null>(null);
 
   const runFhirTest = async () => {
     setFhirLoading(true);
     setFhirResult(null);
+    setShowRawJson(false);
+    setExecutedAt(null);
     try {
       const { data, error } = await supabase.functions.invoke("fhir-sandbox", {
         body: {
@@ -36,6 +42,7 @@ export default function LabIntConfig() {
       });
       if (error) throw error;
       setFhirResult(data);
+      setExecutedAt(new Date().toISOString());
       if (data?.success) {
         toast.success("Teste FHIR concluído com sucesso!");
       } else {
@@ -147,13 +154,69 @@ export default function LabIntConfig() {
               </div>
             )}
           </div>
-          {fhirResult?.success && fhirResult.fhir_ids && (
-            <div className="bg-background rounded border p-3 text-xs font-mono space-y-1">
-              <p><span className="text-muted-foreground">Patient:</span> {fhirResult.fhir_ids.patient}</p>
-              <p><span className="text-muted-foreground">ServiceRequest:</span> {fhirResult.fhir_ids.service_request}</p>
-              <p><span className="text-muted-foreground">Observation:</span> {fhirResult.fhir_ids.observation}</p>
-              <p><span className="text-muted-foreground">DiagnosticReport:</span> {fhirResult.fhir_ids.diagnostic_report}</p>
-              <p className="text-muted-foreground pt-1">Endpoint: https://hapi.fhir.org/baseR4</p>
+          {fhirResult?.success && (
+            <div className="bg-background rounded border p-3 text-xs space-y-3">
+              {/* Summary */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground">{fhirResult.message}</span>
+                {executedAt && <span className="text-muted-foreground">{new Date(executedAt).toLocaleString("pt-BR")}</span>}
+              </div>
+
+              {/* Patient */}
+              {fhirResult.fhir_ids?.patient && (
+                <div className="font-mono">
+                  <span className="text-muted-foreground">Patient ID:</span>{" "}
+                  <a href={`https://hapi.fhir.org/baseR4/Patient/${fhirResult.fhir_ids.patient}`} target="_blank" rel="noreferrer" className="text-primary underline">{fhirResult.fhir_ids.patient}</a>
+                </div>
+              )}
+
+              {/* Exams table */}
+              {fhirResult.fhir_ids?.exams?.length ? (
+                <div className="border rounded overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left px-2 py-1 font-medium">Exame</th>
+                        <th className="text-left px-2 py-1 font-medium">ServiceRequest</th>
+                        <th className="text-left px-2 py-1 font-medium">Observation</th>
+                        <th className="text-left px-2 py-1 font-medium">DiagnosticReport</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fhirResult.fhir_ids.exams.map((e, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="px-2 py-1 font-medium">{e.exam} <span className="text-muted-foreground">({e.code})</span></td>
+                          <td className="px-2 py-1 font-mono"><a href={`https://hapi.fhir.org/baseR4/ServiceRequest/${e.sr}`} target="_blank" rel="noreferrer" className="text-primary underline">{e.sr}</a></td>
+                          <td className="px-2 py-1 font-mono"><a href={`https://hapi.fhir.org/baseR4/Observation/${e.obs}`} target="_blank" rel="noreferrer" className="text-primary underline">{e.obs}</a></td>
+                          <td className="px-2 py-1 font-mono"><a href={`https://hapi.fhir.org/baseR4/DiagnosticReport/${e.dr}`} target="_blank" rel="noreferrer" className="text-primary underline">{e.dr}</a></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+
+              {/* Meta */}
+              <div className="flex flex-wrap gap-3 font-mono text-muted-foreground">
+                <span>Endpoint: https://hapi.fhir.org/baseR4</span>
+                {fhirResult.result_imported && <Badge variant="secondary" className="text-xs">Resultado importado no banco</Badge>}
+              </div>
+
+              {/* Raw JSON toggle */}
+              <div>
+                <button onClick={() => setShowRawJson(!showRawJson)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {showRawJson ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  {showRawJson ? "Ocultar JSON" : "Ver JSON completo"}
+                </button>
+                {showRawJson && (
+                  <div className="relative mt-1">
+                    <pre className="bg-muted/50 p-3 rounded text-[11px] overflow-auto max-h-64 font-mono whitespace-pre-wrap break-words">{JSON.stringify(fhirResult, null, 2)}</pre>
+                    <Button size="sm" variant="ghost" className="absolute top-1 right-1 h-6 w-6 p-0" onClick={() => { navigator.clipboard.writeText(JSON.stringify(fhirResult, null, 2)); toast.success("JSON copiado"); }}>
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
