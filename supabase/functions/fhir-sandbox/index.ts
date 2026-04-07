@@ -248,6 +248,7 @@ Deno.serve(async (req) => {
         },
         result_imported: !!body.order_id,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     return new Response(JSON.stringify({ error: "Ação inválida. Use: send_order, check_results, simulate_full_cycle" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
