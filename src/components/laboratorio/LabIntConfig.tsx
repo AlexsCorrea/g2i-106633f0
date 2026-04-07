@@ -41,8 +41,10 @@ export default function LabIntConfig() {
         },
       });
       if (error) throw error;
-      console.log("[FHIR-SANDBOX] raw response data:", JSON.stringify(data));
-      setFhirResult(data);
+      // supabase.functions.invoke may return nested or flat — normalize
+      const payload: FhirResult = (data as any)?.data ?? data;
+      console.log("[FHIR-SANDBOX] response:", JSON.stringify(payload));
+      setFhirResult(payload);
       setExecutedAt(new Date().toISOString());
       if (data?.success) {
         toast.success("Teste FHIR concluído com sucesso!");
