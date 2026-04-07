@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -138,7 +138,7 @@ export default function LabIntEquipment() {
 
       <Dialog open={!!showDetail} onOpenChange={() => setShowDetail(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{showDetail?.name}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{showDetail?.name}</DialogTitle><DialogDescription>Detalhes do equipamento</DialogDescription></DialogHeader>
           {showDetail && (
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div><span className="text-muted-foreground">Fabricante:</span> {showDetail.manufacturer}</div>
@@ -159,7 +159,7 @@ export default function LabIntEquipment() {
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editingId ? "Editar Equipamento" : "Novo Equipamento"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? "Editar Equipamento" : "Novo Equipamento"}</DialogTitle><DialogDescription>Dados do equipamento/analisador</DialogDescription></DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Nome *</Label><Input value={form.name} onChange={e => F("name", e.target.value)} /></div>
             <div><Label>Fabricante</Label><Input value={form.manufacturer} onChange={e => F("manufacturer", e.target.value)} /></div>

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -139,7 +139,7 @@ export default function LabIntPartners() {
       {/* Detail modal */}
       <Dialog open={!!showDetail} onOpenChange={() => setShowDetail(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{showDetail?.name}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{showDetail?.name}</DialogTitle><DialogDescription>Detalhes do parceiro de apoio</DialogDescription></DialogHeader>
           {showDetail && (
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div><span className="text-muted-foreground">Código:</span> <span className="font-mono">{showDetail.code}</span></div>
@@ -166,7 +166,7 @@ export default function LabIntPartners() {
       {/* Create/Edit modal */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editingId ? "Editar Parceiro" : "Novo Parceiro de Apoio"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? "Editar Parceiro" : "Novo Parceiro de Apoio"}</DialogTitle><DialogDescription>Preencha os dados do parceiro</DialogDescription></DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Nome *</Label><Input value={form.name} onChange={e => F("name", e.target.value)} /></div>
             <div><Label>Código</Label><Input value={form.code} onChange={e => F("code", e.target.value)} /></div>
