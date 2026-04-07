@@ -200,7 +200,7 @@ export default function LabIntOrders() {
     }
   };
 
-
+  const filtered = orders?.filter((o: any) => {
     const s = search.toLowerCase();
     const matchSearch = !s || o.order_number?.toLowerCase().includes(s) || o.lab_partners?.name?.toLowerCase().includes(s) || o.requesting_doctor?.toLowerCase().includes(s) || o.external_protocol?.toLowerCase().includes(s);
     const matchStatus = statusFilter === "all" || o.internal_status === statusFilter;
