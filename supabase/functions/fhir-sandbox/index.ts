@@ -139,95 +139,100 @@ Deno.serve(async (req) => {
       });
       const fhirPatient = await patientResp.json();
 
-      // 2. ServiceRequest
-      const examCode = body.exams?.[0]?.code || "HMG";
-      const examName = body.exams?.[0]?.name || "Hemograma Completo";
-      const srResp = await fetch(`${FHIR_BASE}/ServiceRequest`, {
-        method: "POST",
-        headers: { "Content-Type": "application/fhir+json" },
-        body: JSON.stringify({
-          resourceType: "ServiceRequest",
-          status: "completed",
-          intent: "order",
-          code: { coding: [{ system: "urn:zurich:lab", code: examCode, display: examName }], text: examName },
-          subject: { reference: `Patient/${fhirPatient.id}` },
-          identifier: [{ system: "urn:zurich:order", value: body.order_id || "sim-order" }],
-          authoredOn: new Date().toISOString(),
-        }),
-      });
-      const fhirSR = await srResp.json();
+      // 2-4. Loop over ALL exams
+      const exams = body.exams?.length ? body.exams : [{ code: "HMG", name: "Hemograma Completo" }];
+      const allFhirIds: { exam: string; sr: string; obs: string; dr: string }[] = [];
 
-      // 3. Observation (lab result)
-      const obsResp = await fetch(`${FHIR_BASE}/Observation`, {
-        method: "POST",
-        headers: { "Content-Type": "application/fhir+json" },
-        body: JSON.stringify({
-          resourceType: "Observation",
-          status: "final",
-          category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "laboratory" }] }],
-          code: { coding: [{ system: "urn:zurich:lab", code: examCode, display: examName }], text: examName },
-          subject: { reference: `Patient/${fhirPatient.id}` },
-          basedOn: [{ reference: `ServiceRequest/${fhirSR.id}` }],
-          valueString: "Valores dentro da normalidade",
-          effectiveDateTime: new Date().toISOString(),
-          referenceRange: [{ text: "Ref: normal" }],
-        }),
-      });
-      const fhirObs = await obsResp.json();
-
-      // 4. DiagnosticReport
-      const drResp = await fetch(`${FHIR_BASE}/DiagnosticReport`, {
-        method: "POST",
-        headers: { "Content-Type": "application/fhir+json" },
-        body: JSON.stringify({
-          resourceType: "DiagnosticReport",
-          status: "final",
-          category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/v2-0074", code: "LAB" }] }],
-          code: { coding: [{ system: "urn:zurich:lab", code: examCode, display: examName }], text: examName },
-          subject: { reference: `Patient/${fhirPatient.id}` },
-          basedOn: [{ reference: `ServiceRequest/${fhirSR.id}` }],
-          result: [{ reference: `Observation/${fhirObs.id}` }],
-          effectiveDateTime: new Date().toISOString(),
-          issued: new Date().toISOString(),
-          identifier: [{ system: "urn:zurich:order", value: body.order_id || "sim-order" }],
-          conclusion: "Resultados dentro dos parâmetros de normalidade.",
-        }),
-      });
-      const fhirDR = await drResp.json();
-
-      // 5. If we have an order_id, import the result into our DB
-      if (body.order_id) {
-        // Create external result from FHIR response
-        const { data: order } = await supabase.from("lab_external_orders").select("partner_id, patient_id").eq("id", body.order_id).single();
-
-        await supabase.from("lab_external_results").insert({
-          order_id: body.order_id,
-          partner_id: order?.partner_id || null,
-          patient_id: order?.patient_id || null,
-          external_protocol: `FHIR-DR-${fhirDR.id}`,
-          exam_code: examCode,
-          exam_name: examName,
-          value: "Valores dentro da normalidade",
-          reference_text: "Ref: normal",
-          is_critical: false,
-          is_abnormal: false,
-          conference_status: "pendente",
-          raw_payload: JSON.stringify(fhirDR),
-          result_type: "texto",
+      for (const exam of exams) {
+        // ServiceRequest
+        const srResp = await fetch(`${FHIR_BASE}/ServiceRequest`, {
+          method: "POST",
+          headers: { "Content-Type": "application/fhir+json" },
+          body: JSON.stringify({
+            resourceType: "ServiceRequest",
+            status: "completed",
+            intent: "order",
+            code: { coding: [{ system: "urn:zurich:lab", code: exam.code, display: exam.name }], text: exam.name },
+            subject: { reference: `Patient/${fhirPatient.id}` },
+            identifier: [{ system: "urn:zurich:order", value: body.order_id || "sim-order" }],
+            authoredOn: new Date().toISOString(),
+          }),
         });
+        const fhirSR = await srResp.json();
 
-        // Update order status
+        // Observation
+        const obsResp = await fetch(`${FHIR_BASE}/Observation`, {
+          method: "POST",
+          headers: { "Content-Type": "application/fhir+json" },
+          body: JSON.stringify({
+            resourceType: "Observation",
+            status: "final",
+            category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "laboratory" }] }],
+            code: { coding: [{ system: "urn:zurich:lab", code: exam.code, display: exam.name }], text: exam.name },
+            subject: { reference: `Patient/${fhirPatient.id}` },
+            basedOn: [{ reference: `ServiceRequest/${fhirSR.id}` }],
+            valueString: "Valores dentro da normalidade",
+            effectiveDateTime: new Date().toISOString(),
+            referenceRange: [{ text: "Ref: normal" }],
+          }),
+        });
+        const fhirObs = await obsResp.json();
+
+        // DiagnosticReport
+        const drResp = await fetch(`${FHIR_BASE}/DiagnosticReport`, {
+          method: "POST",
+          headers: { "Content-Type": "application/fhir+json" },
+          body: JSON.stringify({
+            resourceType: "DiagnosticReport",
+            status: "final",
+            category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/v2-0074", code: "LAB" }] }],
+            code: { coding: [{ system: "urn:zurich:lab", code: exam.code, display: exam.name }], text: exam.name },
+            subject: { reference: `Patient/${fhirPatient.id}` },
+            basedOn: [{ reference: `ServiceRequest/${fhirSR.id}` }],
+            result: [{ reference: `Observation/${fhirObs.id}` }],
+            effectiveDateTime: new Date().toISOString(),
+            issued: new Date().toISOString(),
+            identifier: [{ system: "urn:zurich:order", value: body.order_id || "sim-order" }],
+            conclusion: "Resultados dentro dos parâmetros de normalidade.",
+          }),
+        });
+        const fhirDR = await drResp.json();
+
+        allFhirIds.push({ exam: exam.name, sr: fhirSR.id, obs: fhirObs.id, dr: fhirDR.id });
+
+        // Insert result for THIS exam
+        if (body.order_id) {
+          const { data: order } = await supabase.from("lab_external_orders").select("partner_id, patient_id").eq("id", body.order_id).single();
+          await supabase.from("lab_external_results").insert({
+            order_id: body.order_id,
+            partner_id: order?.partner_id || null,
+            patient_id: order?.patient_id || null,
+            external_protocol: `FHIR-DR-${fhirDR.id}`,
+            exam_code: exam.code,
+            exam_name: exam.name,
+            value: "Valores dentro da normalidade",
+            reference_text: "Ref: normal",
+            is_critical: false,
+            is_abnormal: false,
+            conference_status: "pendente",
+            raw_payload: JSON.stringify(fhirDR),
+            result_type: "texto",
+          });
+        }
+      }
+
+      // Update order status
+      if (body.order_id) {
         await supabase.from("lab_external_orders").update({
           internal_status: "resultado_final",
           external_protocol: `FHIR-${fhirPatient.id}`,
         }).eq("id", body.order_id);
 
-        // Log
         await supabase.from("lab_integration_logs").insert({
           log_level: "info",
           log_type: "tecnico",
           action: "fhir_full_cycle_complete",
-          message: `Ciclo FHIR completo: Patient/${fhirPatient.id} → SR/${fhirSR.id} → Obs/${fhirObs.id} → DR/${fhirDR.id}`,
+          message: `Ciclo FHIR completo: Patient/${fhirPatient.id} — ${allFhirIds.length} exame(s) processados: ${allFhirIds.map(e => `${e.exam}(DR/${e.dr})`).join(", ")}`,
           order_id: body.order_id,
           endpoint: FHIR_BASE,
           http_status: 201,
@@ -236,16 +241,13 @@ Deno.serve(async (req) => {
 
       return new Response(JSON.stringify({
         success: true,
-        message: "Ciclo FHIR completo simulado com sucesso",
+        message: `Ciclo FHIR completo — ${allFhirIds.length} exame(s) processados`,
         fhir_ids: {
           patient: fhirPatient.id,
-          service_request: fhirSR.id,
-          observation: fhirObs.id,
-          diagnostic_report: fhirDR.id,
+          exams: allFhirIds,
         },
         result_imported: !!body.order_id,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
 
     return new Response(JSON.stringify({ error: "Ação inválida. Use: send_order, check_results, simulate_full_cycle" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
