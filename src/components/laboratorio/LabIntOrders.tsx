@@ -164,7 +164,43 @@ export default function LabIntOrders() {
     });
   };
 
-  const filtered = orders?.filter((o: any) => {
+  const handleFhirTest = async (o: any) => {
+    setFhirLoading(true);
+    try {
+      // Get order items to send as exams
+      const { data: items } = await (supabase as any).from("lab_external_order_items")
+        .select("external_code, external_name").eq("order_id", o.id);
+      
+      const exams = items?.map((i: any) => ({ code: i.external_code, name: i.external_name })) || [
+        { code: "HMG", name: "Hemograma Completo" },
+      ];
+
+      const { data, error } = await supabase.functions.invoke("fhir-sandbox", {
+        body: {
+          action: "simulate_full_cycle",
+          order_id: o.id,
+          patient_id: o.patient_id,
+          patient_name: o.requesting_doctor || "Paciente FHIR",
+          exams,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`Ciclo FHIR completo! IDs: Patient/${data.fhir_ids?.patient}, DR/${data.fhir_ids?.diagnostic_report}`);
+        invalidateAll();
+      } else {
+        toast.error(data?.error || "Erro no teste FHIR");
+      }
+    } catch (e: any) {
+      toast.error(`Erro FHIR: ${e.message}`);
+    } finally {
+      setFhirLoading(false);
+    }
+  };
+
+
     const s = search.toLowerCase();
     const matchSearch = !s || o.order_number?.toLowerCase().includes(s) || o.lab_partners?.name?.toLowerCase().includes(s) || o.requesting_doctor?.toLowerCase().includes(s) || o.external_protocol?.toLowerCase().includes(s);
     const matchStatus = statusFilter === "all" || o.internal_status === statusFilter;
