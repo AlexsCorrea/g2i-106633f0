@@ -154,7 +154,7 @@ export default function LabIntMappings() {
             </div>
             <div>
               <Label>Parceiro</Label>
-              <Select value={form.partner_id} onValueChange={v => F("partner_id", v)}>
+              <Select value={form.partner_id || "__none__"} onValueChange={v => F("partner_id", v === "__none__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Nenhum</SelectItem>

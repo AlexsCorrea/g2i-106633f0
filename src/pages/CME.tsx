@@ -1098,7 +1098,7 @@ function ArmazenamentoTab({ search }: { search: string }) {
                 <div><label className="text-xs text-muted-foreground">Esterilização</label><Input type="date" value={form.data_esterilizacao} onChange={(e) => setForm({ ...form, data_esterilizacao: e.target.value })} /></div>
                 <div><label className="text-xs text-muted-foreground">Validade</label><Input type="date" value={form.data_validade} onChange={(e) => setForm({ ...form, data_validade: e.target.value })} /></div>
               </div>
-              <Select value={form.reservado_para} onValueChange={(v) => setForm({ ...form, reservado_para: v })}>
+              <Select value={form.reservado_para || "__none__"} onValueChange={(v) => setForm({ ...form, reservado_para: v === "__none__" ? "" : v })}>
                 <SelectTrigger className="col-span-2"><SelectValue placeholder="Reservar para setor (opcional)" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Sem reserva</SelectItem>
