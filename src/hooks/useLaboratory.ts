@@ -86,19 +86,19 @@ export function useLabDashboardStats() {
 }
 
 // ── Generic CRUD hooks ──
-function useLabTable<T>(table: string, key: string, orderBy = "created_at") {
+function useLabTable(table: string, key: string, orderBy = "created_at") {
   const qc = useQueryClient();
   const list = useQuery({
     queryKey: [key],
     queryFn: async () => {
-      const { data, error } = await supabase.from(table).select("*").order(orderBy, { ascending: false });
+      const { data, error } = await (supabase as any).from(table).select("*").order(orderBy, { ascending: false });
       if (error) throw error;
-      return data as T[];
+      return data as any[];
     },
   });
   const create = useMutation({
-    mutationFn: async (item: Partial<T>) => {
-      const { data, error } = await supabase.from(table).insert(item as any).select().single();
+    mutationFn: async (item: any) => {
+      const { data, error } = await (supabase as any).from(table).insert(item).select().single();
       if (error) throw error;
       return data;
     },
@@ -107,7 +107,7 @@ function useLabTable<T>(table: string, key: string, orderBy = "created_at") {
   });
   const update = useMutation({
     mutationFn: async ({ id, ...rest }: any) => {
-      const { data, error } = await supabase.from(table).update(rest).eq("id", id).select().single();
+      const { data, error } = await (supabase as any).from(table).update(rest).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -116,7 +116,7 @@ function useLabTable<T>(table: string, key: string, orderBy = "created_at") {
   });
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from(table).delete().eq("id", id);
+      const { error } = await (supabase as any).from(table).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: [key] }); toast.success("Registro removido"); },
