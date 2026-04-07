@@ -17,6 +17,47 @@ interface FHIRPayload {
   external_protocol?: string;
 }
 
+async function createQueueRecord(supabase: any, payload: {
+  queue_type: "apoio" | "equipamento" | "envio";
+  direction: "outbound" | "inbound";
+  partner_id?: string | null;
+  equipment_id?: string | null;
+  order_id?: string | null;
+  patient_id?: string | null;
+  status: string;
+  payload_sent?: unknown;
+  payload_received?: unknown;
+  response_status?: number | null;
+  response_time_ms?: number | null;
+  endpoint_url?: string | null;
+  error_message?: string | null;
+}) {
+  const { data } = await supabase
+    .from("lab_integration_queue")
+    .insert({
+      queue_type: payload.queue_type,
+      direction: payload.direction,
+      partner_id: payload.partner_id ?? null,
+      equipment_id: payload.equipment_id ?? null,
+      order_id: payload.order_id ?? null,
+      patient_id: payload.patient_id ?? null,
+      status: payload.status,
+      attempt: 1,
+      max_attempts: 3,
+      payload_sent: payload.payload_sent ?? null,
+      payload_received: payload.payload_received ?? null,
+      response_status: payload.response_status ?? null,
+      response_time_ms: payload.response_time_ms ?? null,
+      endpoint_url: payload.endpoint_url ?? null,
+      error_message: payload.error_message ?? null,
+      processed_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  return data;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -126,6 +167,10 @@ Deno.serve(async (req) => {
     if (body.action === "simulate_full_cycle") {
       // Full cycle: create patient → ServiceRequest → DiagnosticReport → Observation
       const patientName = body.patient_name || "Paciente Teste FHIR";
+      const orderRecord = body.order_id
+        ? await supabase.from("lab_external_orders").select("id, order_number, partner_id, patient_id, external_protocol").eq("id", body.order_id).maybeSingle()
+        : { data: null };
+      const order = orderRecord.data;
 
       // 1. Patient
       const patientResp = await fetch(`${FHIR_BASE}/Patient`, {
@@ -141,7 +186,7 @@ Deno.serve(async (req) => {
 
       // 2-4. Loop over ALL exams
       const exams = body.exams?.length ? body.exams : [{ code: "HMG", name: "Hemograma Completo" }];
-      const allFhirIds: { exam: string; sr: string; obs: string; dr: string }[] = [];
+      const allFhirIds: { exam: string; code: string; sr: string; obs: string; dr: string; result_id?: string }[] = [];
 
       for (const exam of exams) {
         // ServiceRequest
@@ -198,15 +243,14 @@ Deno.serve(async (req) => {
         });
         const fhirDR = await drResp.json();
 
-        allFhirIds.push({ exam: exam.name, sr: fhirSR.id, obs: fhirObs.id, dr: fhirDR.id });
+        let resultId: string | undefined;
 
         // Insert result for THIS exam
         if (body.order_id) {
-          const { data: order } = await supabase.from("lab_external_orders").select("partner_id, patient_id").eq("id", body.order_id).single();
-          await supabase.from("lab_external_results").insert({
+          const { data: insertedResult } = await supabase.from("lab_external_results").insert({
             order_id: body.order_id,
             partner_id: order?.partner_id || null,
-            patient_id: order?.patient_id || null,
+            patient_id: order?.patient_id || body.patient_id || null,
             external_protocol: `FHIR-DR-${fhirDR.id}`,
             exam_code: exam.code,
             exam_name: exam.name,
@@ -217,8 +261,58 @@ Deno.serve(async (req) => {
             conference_status: "pendente",
             raw_payload: JSON.stringify(fhirDR),
             result_type: "texto",
+          }).select("id").single();
+
+          resultId = insertedResult?.id;
+
+          const queue = await createQueueRecord(supabase, {
+            queue_type: "apoio",
+            direction: "inbound",
+            order_id: body.order_id,
+            patient_id: order?.patient_id || body.patient_id || null,
+            partner_id: order?.partner_id || null,
+            status: "sucesso",
+            payload_sent: {
+              order_id: body.order_id,
+              order_number: order?.order_number ?? null,
+              exam_code: exam.code,
+              exam_name: exam.name,
+              service_request_id: fhirSR.id,
+            },
+            payload_received: {
+              patient_id: fhirPatient.id,
+              observation_id: fhirObs.id,
+              diagnostic_report_id: fhirDR.id,
+              result_protocol: `FHIR-DR-${fhirDR.id}`,
+              send_protocol: `FHIR-${fhirPatient.id}`,
+            },
+            response_status: drResp.status,
+            endpoint_url: `${FHIR_BASE}/DiagnosticReport`,
+          });
+
+          await supabase.from("lab_integration_logs").insert({
+            log_level: "info",
+            log_type: "tecnico",
+            action: "fhir_result_received",
+            order_id: body.order_id,
+            partner_id: order?.partner_id || null,
+            queue_id: queue?.id ?? null,
+            entity_type: "lab_external_result",
+            entity_id: resultId ?? null,
+            endpoint: `${FHIR_BASE}/DiagnosticReport`,
+            http_status: drResp.status,
+            message: `Resultado FHIR recebido — pedido: ${order?.order_number ?? body.order_id}, protocolo envio: FHIR-${fhirPatient.id}, protocolo resultado: FHIR-DR-${fhirDR.id}, exame: ${exam.name}`,
+            payload: {
+              order_id: body.order_id,
+              order_number: order?.order_number ?? null,
+              exam_code: exam.code,
+              exam_name: exam.name,
+            },
+            response: fhirDR,
           });
         }
+
+        allFhirIds.push({ exam: exam.name, code: exam.code, sr: fhirSR.id, obs: fhirObs.id, dr: fhirDR.id, result_id: resultId });
       }
 
       // Update order status
@@ -232,10 +326,21 @@ Deno.serve(async (req) => {
           log_level: "info",
           log_type: "tecnico",
           action: "fhir_full_cycle_complete",
-          message: `Ciclo FHIR completo: Patient/${fhirPatient.id} — ${allFhirIds.length} exame(s) processados: ${allFhirIds.map(e => `${e.exam}(DR/${e.dr})`).join(", ")}`,
+          message: `Ciclo FHIR completo — pedido: ${order?.order_number ?? body.order_id}, protocolo envio: FHIR-${fhirPatient.id}, resultados: ${allFhirIds.map(e => `${e.exam} [FHIR-DR-${e.dr}]`).join(", ")}`,
           order_id: body.order_id,
+          partner_id: order?.partner_id || null,
           endpoint: FHIR_BASE,
           http_status: 201,
+          payload: {
+            order_id: body.order_id,
+            order_number: order?.order_number ?? null,
+            send_protocol: `FHIR-${fhirPatient.id}`,
+            exams: allFhirIds.map(({ exam, code, dr, result_id }) => ({ exam, code, result_protocol: `FHIR-DR-${dr}`, result_id })),
+          },
+          response: {
+            patient: fhirPatient.id,
+            exams: allFhirIds,
+          },
         });
       }
 

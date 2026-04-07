@@ -7,12 +7,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useLabExternalResultsWithDetails, useLabExternalResults, useLabPartners, createIntegrationLog } from "@/hooks/useLabIntegration";
+import { useLabExternalResultsWithDetails, useLabExternalResults, useLabPartners, useLabExternalOrders, createIntegrationLog } from "@/hooks/useLabIntegration";
 import { CheckCircle2, XCircle, FileDown, Search, Eye, FileText, ExternalLink, AlertTriangle, Clock, ChevronDown, ChevronRight, Package } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+
+const normalize = (value: unknown) => String(value ?? "").toLowerCase();
+const toSendProtocolFromResult = (value: unknown) => {
+  const normalized = normalize(value);
+  return normalized.startsWith("fhir-dr-") ? normalized.replace("fhir-dr-", "fhir-") : normalized;
+};
 
 const confColors: Record<string, string> = {
   pendente: "bg-amber-100 text-amber-800",
@@ -25,6 +31,7 @@ export default function LabIntResults() {
   const { data: results, isLoading } = useLabExternalResultsWithDetails();
   const { update } = useLabExternalResults();
   const { list: partners } = useLabPartners();
+  const { list: orders } = useLabExternalOrders();
   const { user } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -33,6 +40,29 @@ export default function LabIntResults() {
   const [criticalOnly, setCriticalOnly] = useState(false);
   const [showDetail, setShowDetail] = useState<any>(null);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set(["all"]));
+
+  const resultsWithResolvedOrder = (results ?? []).map((result: any) => {
+    if (result.lab_external_orders?.order_number) return result;
+
+    const derivedSendProtocol = toSendProtocolFromResult(result.external_protocol);
+    const resolvedOrder = orders.data?.find((order: any) => {
+      const samePatient = order.patient_id && result.patient_id
+        ? order.patient_id === result.patient_id
+        : false;
+      const samePartner = order.partner_id && result.partner_id
+        ? order.partner_id === result.partner_id
+        : false;
+      const sameProtocol = order.external_protocol
+        ? normalize(order.external_protocol) === derivedSendProtocol
+        : false;
+
+      return sameProtocol || (samePatient && samePartner);
+    });
+
+    return resolvedOrder
+      ? { ...result, order_id: result.order_id ?? resolvedOrder.id, lab_external_orders: resolvedOrder, resolved_traceability: true }
+      : result;
+  });
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["lab-external-results-details"] });
@@ -48,7 +78,7 @@ export default function LabIntResults() {
           log_level: action === "rejeitado" ? "warn" : "info",
           log_type: "funcional",
           action: action === "conferido" ? "resultado_conferido" : "resultado_rejeitado",
-          message: `Resultado ${r.exam_name} (${r.exam_code}) ${action} — protocolo resultado: ${r.external_protocol ?? "N/A"}, pedido: ${r.lab_external_orders?.order_number ?? "N/A"}`,
+          message: `Resultado ${r.exam_name} (${r.exam_code}) ${action} — pedido: ${r.lab_external_orders?.order_number ?? "N/A"}, protocolo envio: ${r.lab_external_orders?.external_protocol ?? "N/A"}, protocolo resultado: ${r.external_protocol ?? "N/A"}`,
           partner_id: r.partner_id, performed_by: user?.id,
         });
         invalidateAll();
@@ -68,7 +98,7 @@ export default function LabIntResults() {
           log_level: r.is_critical ? "warn" : "info",
           log_type: "funcional",
           action: "resultado_liberado",
-          message: `Resultado ${r.exam_name} liberado${r.is_critical ? " [CRÍTICO]" : ""} — pedido: ${r.lab_external_orders?.order_number ?? "N/A"}`,
+          message: `Resultado ${r.exam_name} liberado${r.is_critical ? " [CRÍTICO]" : ""} — pedido: ${r.lab_external_orders?.order_number ?? "N/A"}, protocolo envio: ${r.lab_external_orders?.external_protocol ?? "N/A"}, protocolo resultado: ${r.external_protocol ?? "N/A"}`,
           partner_id: r.partner_id, performed_by: user?.id,
         });
         invalidateAll();
@@ -82,7 +112,7 @@ export default function LabIntResults() {
       onSuccess: () => {
         createIntegrationLog({
           log_level: "warn", log_type: "funcional", action: "resultado_pendencia",
-          message: `Resultado ${r.exam_name} retornado a pendência — pedido: ${r.lab_external_orders?.order_number ?? "N/A"}`,
+          message: `Resultado ${r.exam_name} retornado a pendência — pedido: ${r.lab_external_orders?.order_number ?? "N/A"}, protocolo envio: ${r.lab_external_orders?.external_protocol ?? "N/A"}, protocolo resultado: ${r.external_protocol ?? "N/A"}`,
           partner_id: r.partner_id, performed_by: user?.id,
         });
         invalidateAll();
@@ -92,18 +122,20 @@ export default function LabIntResults() {
   };
 
   // Search across all relevant fields
-  const filtered = results?.filter((r: any) => {
+  const filtered = resultsWithResolvedOrder.filter((r: any) => {
     const s = search.toLowerCase();
     const orderNum = r.lab_external_orders?.order_number?.toLowerCase() ?? "";
     const sendProtocol = r.lab_external_orders?.external_protocol?.toLowerCase() ?? "";
     const resultProtocol = r.external_protocol?.toLowerCase() ?? "";
+    const patientName = r.patients?.full_name?.toLowerCase() ?? "";
     const matchSearch = !s
       || r.exam_name?.toLowerCase().includes(s)
       || r.exam_code?.toLowerCase().includes(s)
       || r.value?.toLowerCase().includes(s)
       || orderNum.includes(s)
       || sendProtocol.includes(s)
-      || resultProtocol.includes(s);
+      || resultProtocol.includes(s)
+      || patientName.includes(s);
     const matchConf = confFilter === "all" || r.conference_status === confFilter;
     const matchPartner = partnerFilter === "all" || r.partner_id === partnerFilter;
     const matchCritical = !criticalOnly || r.is_critical;
@@ -112,10 +144,11 @@ export default function LabIntResults() {
 
   // Group by ORDER (not by result protocol)
   const grouped = filtered.reduce((acc: Record<string, { order: any; results: any[] }>, r: any) => {
-    const orderId = r.order_id || "sem-pedido";
+    const orderId = r.order_id || r.lab_external_orders?.id || `sem-pedido-${r.partner_id ?? "na"}-${r.patient_id ?? r.id}`;
     if (!acc[orderId]) {
       acc[orderId] = {
         order: r.lab_external_orders ? {
+          id: r.lab_external_orders.id,
           order_number: r.lab_external_orders.order_number,
           external_protocol: r.lab_external_orders.external_protocol,
           internal_status: r.lab_external_orders.internal_status,
@@ -136,8 +169,8 @@ export default function LabIntResults() {
     });
   };
 
-  const pendingCount = results?.filter((r: any) => r.conference_status === "pendente").length ?? 0;
-  const criticalCount = results?.filter((r: any) => r.is_critical && r.conference_status === "pendente").length ?? 0;
+   const pendingCount = resultsWithResolvedOrder.filter((r: any) => r.conference_status === "pendente").length;
+   const criticalCount = resultsWithResolvedOrder.filter((r: any) => r.is_critical && r.conference_status === "pendente").length;
 
   return (
     <div className="space-y-4">
@@ -210,11 +243,16 @@ export default function LabIntResults() {
                     <Package className="h-4 w-4 text-primary" />
                     <span className="text-sm font-semibold">Pedido: <span className="font-mono">{order?.order_number ?? "Sem pedido"}</span></span>
                   </div>
-                  {order?.external_protocol && (
+                   {order?.external_protocol && (
                     <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200">
                       Protocolo envio: {order.external_protocol}
                     </Badge>
                   )}
+                   {!items[0]?.order_id && order?.order_number && (
+                     <Badge variant="secondary" className="text-xs">
+                       vínculo recuperado
+                     </Badge>
+                   )}
                   <Badge variant="outline" className="text-xs">{partnerName}</Badge>
                 </div>
                 <div className="flex gap-2 items-center">
@@ -243,7 +281,7 @@ export default function LabIntResults() {
                     {items.map((r: any) => (
                       <TableRow key={r.id} className={r.is_critical ? "bg-red-50/40" : r.is_abnormal ? "bg-amber-50/30" : ""}>
                         <TableCell className="font-mono text-xs">{r.external_protocol ?? "—"}</TableCell>
-                        <TableCell className="font-medium">{r.exam_name} <span className="text-xs text-muted-foreground">({r.exam_code})</span></TableCell>
+                         <TableCell className="font-medium">{r.exam_name} <span className="text-xs text-muted-foreground">({r.exam_code})</span><div className="text-[11px] text-muted-foreground">{r.patients?.full_name ?? "—"}</div></TableCell>
                         <TableCell className={`font-mono ${r.is_critical ? "text-destructive font-bold" : r.is_abnormal ? "text-amber-700 font-semibold" : ""}`}>{r.value}</TableCell>
                         <TableCell>{r.unit ?? "—"}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{r.reference_text ?? "—"}</TableCell>

@@ -64,6 +64,12 @@ export async function createIntegrationLog(log: {
   http_status?: number | null;
   response_time_ms?: number | null;
   performed_by?: string | null;
+  queue_id?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  payload?: any;
+  response?: any;
+  error_details?: string | null;
 }) {
   await (supabase as any).from("lab_integration_logs").insert(log);
 }
@@ -174,7 +180,7 @@ export function useLabExternalResultsWithDetails() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("lab_external_results")
-        .select("*, lab_partners(name, code), lab_external_orders(order_number, internal_status, external_protocol)")
+        .select("*, patients(full_name), lab_partners(name, code), lab_external_orders(id, order_number, internal_status, external_protocol, patient_id, partner_id, sent_at, created_at)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
