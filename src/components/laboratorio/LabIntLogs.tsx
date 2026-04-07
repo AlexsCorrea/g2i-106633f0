@@ -11,6 +11,8 @@ import { useLabExternalOrders } from "@/hooks/useLabIntegration";
 import { ScrollText, Search, ListFilter, Eye, ChevronDown, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 
+const normalize = (value: unknown) => String(value ?? "").toLowerCase();
+
 const levelColors: Record<string, string> = {
   info: "bg-blue-100 text-blue-800",
   warn: "bg-amber-100 text-amber-800",
