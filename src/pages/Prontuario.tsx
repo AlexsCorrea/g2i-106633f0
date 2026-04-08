@@ -49,6 +49,7 @@ import { QuickActions } from "@/components/prontuario/QuickActions";
 import { AIChatButton } from "@/components/prontuario/AIChatButton";
 import { AIAssistantPanel } from "@/components/prontuario/AIAssistantPanel";
 import { ModuleSection, EmptyModule } from "@/components/prontuario/sections/ModuleSection";
+import { LabResultsForPatient } from "@/components/prontuario/LabResultsForPatient";
 import { ClinicalAnalytics } from "@/components/prontuario/ClinicalAnalytics";
 import { ExamGallery } from "@/components/prontuario/ExamGallery";
 import {
@@ -546,12 +547,18 @@ export default function Prontuario() {
 
   // === RESULTADOS ===
   const renderResultadosExames = () => {
-    const liberados = (examRequests || []).filter(e => e.status === "liberado");
+    // Show both legacy exam_requests with status=liberado AND lab_results with status=validado
+    const liberadosLegacy = (examRequests || []).filter(e => e.status === "liberado");
+
     return (
-      <ModuleSection title="Resultados de Exames" icon={FileText} recordCount={liberados.length}>
-        {liberados.length > 0 ? (
-          <div className="space-y-3">
-            {liberados.map(ex => (
+      <ModuleSection title="Resultados de Exames" icon={FileText} recordCount={liberadosLegacy.length}>
+        {/* Lab results from the lab module */}
+        <LabResultsForPatient patientId={id!} />
+        {/* Legacy exam_requests results */}
+        {liberadosLegacy.length > 0 && (
+          <div className="space-y-3 mt-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Exames (registro legado)</p>
+            {liberadosLegacy.map(ex => (
               <div key={ex.id} className="medical-card p-4">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-semibold">{ex.exam_type}</p>
@@ -562,7 +569,8 @@ export default function Prontuario() {
               </div>
             ))}
           </div>
-        ) : <EmptyModule title="Sem Resultados" description="Nenhum exame com resultado liberado." icon={FileText} />}
+        )}
+        {liberadosLegacy.length === 0 && <div id="lab-results-empty-fallback" />}
       </ModuleSection>
     );
   };
