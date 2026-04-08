@@ -37,6 +37,7 @@ import LabExtShipments from "@/components/laboratorio/LabExtShipments";
 import LabExtWorklist from "@/components/laboratorio/LabExtWorklist";
 import LabExtCriticals from "@/components/laboratorio/LabExtCriticals";
 import LabExtRecollection from "@/components/laboratorio/LabExtRecollection";
+import LabExtReports from "@/components/laboratorio/LabExtReports";
 
 /* ── Abas do Laboratório Interno ── */
 const mainTabs = [
@@ -65,6 +66,7 @@ const extTabs = [
   { value: "ext-orders", label: "Pedidos Enviados", icon: Send },
   { value: "ext-shipments", label: "Remessas", icon: Package },
   { value: "ext-results", label: "Resultados do Apoio", icon: FileDown },
+  { value: "ext-ext-reports", label: "Laudos do Apoio", icon: FileText },
   { value: "ext-criticals", label: "Críticos do Apoio", icon: Siren },
   { value: "ext-recollection", label: "Recoletas do Apoio", icon: RefreshCw },
   { value: "ext-pending", label: "Pendências", icon: AlertTriangle },
@@ -79,6 +81,14 @@ const extTabs = [
 
 export default function Laboratorio() {
   const [section, setSection] = useState<"lab" | "ext">("lab");
+  const [labTab, setLabTab] = useState("dashboard");
+  const [extTab, setExtTab] = useState("ext-dashboard");
+
+  const handleSectionChange = (s: "lab" | "ext") => {
+    setSection(s);
+    if (s === "lab") setLabTab("dashboard");
+    else setExtTab("ext-dashboard");
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -93,13 +103,13 @@ export default function Laboratorio() {
         </div>
         <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
           <button
-            onClick={() => setSection("lab")}
+            onClick={() => handleSectionChange("lab")}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${section === "lab" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
           >
             Interno
           </button>
           <button
-            onClick={() => setSection("ext")}
+            onClick={() => handleSectionChange("ext")}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${section === "ext" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
           >
             Apoio Externo
@@ -108,7 +118,7 @@ export default function Laboratorio() {
       </div>
 
       {section === "lab" ? (
-        <Tabs defaultValue="dashboard" className="space-y-4">
+        <Tabs value={labTab} onValueChange={setLabTab} className="space-y-4">
           <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
             {mainTabs.map(t => (
               <TabsTrigger key={t.value} value={t.value} className="text-xs gap-1.5 data-[state=active]:bg-background">
@@ -135,7 +145,7 @@ export default function Laboratorio() {
           <TabsContent value="settings"><LabSettings /></TabsContent>
         </Tabs>
       ) : (
-        <Tabs defaultValue="ext-dashboard" className="space-y-4">
+        <Tabs value={extTab} onValueChange={setExtTab} className="space-y-4">
           <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
             {extTabs.map(t => (
               <TabsTrigger key={t.value} value={t.value} className="text-xs gap-1.5 data-[state=active]:bg-background">
@@ -149,6 +159,7 @@ export default function Laboratorio() {
           <TabsContent value="ext-orders"><LabIntOrders /></TabsContent>
           <TabsContent value="ext-shipments"><LabExtShipments /></TabsContent>
           <TabsContent value="ext-results"><LabIntResults /></TabsContent>
+          <TabsContent value="ext-ext-reports"><LabExtReports /></TabsContent>
           <TabsContent value="ext-criticals"><LabExtCriticals /></TabsContent>
           <TabsContent value="ext-recollection"><LabExtRecollection /></TabsContent>
           <TabsContent value="ext-pending"><LabIntIssues /></TabsContent>
