@@ -12,10 +12,60 @@ interface FhirExam { exam: string; code: string; sr: string; obs: string; dr: st
 interface FhirResult {
   success: boolean;
   message?: string;
+  endpoint?: string;
   fhir_ids?: { patient: string; exams: FhirExam[] };
+  patient?: string | null;
+  service_request?: string | null;
+  observation?: string | null;
+  diagnostic_report?: string | null;
   result_imported?: boolean;
   error?: string;
 }
+
+const normalizeFhirResult = (input: any): FhirResult => {
+  const payload = input?.data ?? input;
+  const exams = Array.isArray(payload?.fhir_ids?.exams)
+    ? payload.fhir_ids.exams.map((exam: any) => ({
+        exam: exam?.exam ?? exam?.name ?? "Exame",
+        code: exam?.code ?? "-",
+        sr: exam?.sr ?? payload?.service_request ?? "",
+        obs: exam?.obs ?? payload?.observation ?? "",
+        dr: exam?.dr ?? payload?.diagnostic_report ?? "",
+        result_id: exam?.result_id,
+      }))
+    : [];
+
+  const patient = payload?.fhir_ids?.patient ?? payload?.patient ?? null;
+  const hasCompleteIds = Boolean(patient) && exams.length > 0 && exams.every((exam: FhirExam) => exam.sr && exam.obs && exam.dr);
+
+  if (payload?.success && !hasCompleteIds) {
+    return {
+      success: false,
+      endpoint: payload?.endpoint,
+      message: payload?.message,
+      fhir_ids: patient ? { patient, exams } : undefined,
+      patient,
+      service_request: payload?.service_request ?? null,
+      observation: payload?.observation ?? null,
+      diagnostic_report: payload?.diagnostic_report ?? null,
+      result_imported: payload?.result_imported,
+      error: "O sandbox respondeu sem todos os IDs obrigatórios do ciclo FHIR.",
+    };
+  }
+
+  return {
+    success: Boolean(payload?.success),
+    message: payload?.message,
+    endpoint: payload?.endpoint,
+    fhir_ids: patient ? { patient, exams } : undefined,
+    patient,
+    service_request: payload?.service_request ?? null,
+    observation: payload?.observation ?? null,
+    diagnostic_report: payload?.diagnostic_report ?? null,
+    result_imported: payload?.result_imported,
+    error: payload?.error,
+  };
+};
 
 export default function LabIntConfig() {
   const [fhirLoading, setFhirLoading] = useState(false);
@@ -41,15 +91,14 @@ export default function LabIntConfig() {
         },
       });
       if (error) throw error;
-      // supabase.functions.invoke may return nested or flat — normalize
-      const payload: FhirResult = (data as any)?.data ?? data;
+      const payload = normalizeFhirResult(data);
       console.log("[FHIR-SANDBOX] response:", JSON.stringify(payload));
       setFhirResult(payload);
       setExecutedAt(new Date().toISOString());
-      if (data?.success) {
+      if (payload.success) {
         toast.success("Teste FHIR concluído com sucesso!");
       } else {
-        toast.error(data?.error || "Erro no teste FHIR");
+        toast.error(payload.error || "Erro no teste FHIR");
       }
     } catch (e: any) {
       setFhirResult({ success: false, error: e.message });
@@ -201,7 +250,7 @@ export default function LabIntConfig() {
 
               {/* Meta */}
               <div className="flex flex-wrap gap-3 font-mono text-muted-foreground">
-                <span>Endpoint: https://hapi.fhir.org/baseR4</span>
+                <span>Endpoint: {fhirResult.endpoint || "https://hapi.fhir.org/baseR4"}</span>
                 {fhirResult.result_imported && <Badge variant="secondary" className="text-xs">Resultado importado no banco</Badge>}
               </div>
 
