@@ -43,6 +43,7 @@ import Diagnostico from "./pages/Diagnostico";
 import Escalas from "./pages/Escalas";
 import Assistencial from "./pages/Assistencial";
 import Laboratorio from "./pages/Laboratorio";
+import Solicitantes from "./pages/Solicitantes";
 
 const queryClient = new QueryClient();
 
