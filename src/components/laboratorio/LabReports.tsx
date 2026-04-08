@@ -180,7 +180,12 @@ export default function LabReports() {
           <FileText className="h-5 w-5" />
           <span className="text-sm">Emissão e gestão de laudos laboratoriais</span>
         </div>
-        <Badge variant="secondary">{reports?.length ?? 0} laudo(s)</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">{reports?.length ?? 0} laudo(s)</Badge>
+          <Button size="sm" onClick={() => setShowCreate(true)} disabled={!eligibleRequests?.length}>
+            <Plus className="h-4 w-4 mr-1" />Gerar Laudo
+          </Button>
+        </div>
       </div>
 
       <div className="relative max-w-sm">
