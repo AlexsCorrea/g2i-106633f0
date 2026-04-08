@@ -78,7 +78,7 @@ export default function LabReports() {
       const { data: allReqs } = await (supabase as any)
         .from("lab_requests")
         .select("id, request_number, patient_id, patients(full_name), status")
-        .in("status", ["processando", "concluido"])
+        .in("status", ["processando", "concluido", "coletando", "solicitado"])
         .order("created_at", { ascending: false });
       if (!allReqs?.length) return [];
       // Filter out requests that already have reports
