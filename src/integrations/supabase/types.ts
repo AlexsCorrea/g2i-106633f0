@@ -6314,6 +6314,196 @@ export type Database = {
           },
         ]
       }
+      situacao_cadastral: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      solicitante_cbo: {
+        Row: {
+          active: boolean | null
+          codigo: string
+          created_at: string | null
+          descricao: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          codigo: string
+          created_at?: string | null
+          descricao: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          codigo?: string
+          created_at?: string | null
+          descricao?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      solicitantes: {
+        Row: {
+          bairro: string | null
+          cbo_id: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
+          conselho: string
+          cpf: string
+          created_at: string | null
+          endereco: string | null
+          estado: string | null
+          fone1: string | null
+          fone2: string | null
+          id: string
+          login: string | null
+          nome: string
+          numero: string | null
+          produtividade_habilitado: boolean | null
+          produtividade_perc_desconto_vl_caixa: number | null
+          produtividade_perc_desconto_vl_convenio: number | null
+          produtividade_perc_recebe_vl_caixa: number | null
+          produtividade_perc_recebe_vl_convenio: number | null
+          produtividade_percentual: number | null
+          senha: string | null
+          sigla: string
+          situacao_id: string | null
+          tipo_conselho_id: string | null
+          unidade_id: string | null
+          updated_at: string | null
+          user_id: string | null
+          user_modified: string | null
+        }
+        Insert: {
+          bairro?: string | null
+          cbo_id?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          conselho: string
+          cpf: string
+          created_at?: string | null
+          endereco?: string | null
+          estado?: string | null
+          fone1?: string | null
+          fone2?: string | null
+          id?: string
+          login?: string | null
+          nome: string
+          numero?: string | null
+          produtividade_habilitado?: boolean | null
+          produtividade_perc_desconto_vl_caixa?: number | null
+          produtividade_perc_desconto_vl_convenio?: number | null
+          produtividade_perc_recebe_vl_caixa?: number | null
+          produtividade_perc_recebe_vl_convenio?: number | null
+          produtividade_percentual?: number | null
+          senha?: string | null
+          sigla: string
+          situacao_id?: string | null
+          tipo_conselho_id?: string | null
+          unidade_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          user_modified?: string | null
+        }
+        Update: {
+          bairro?: string | null
+          cbo_id?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          conselho?: string
+          cpf?: string
+          created_at?: string | null
+          endereco?: string | null
+          estado?: string | null
+          fone1?: string | null
+          fone2?: string | null
+          id?: string
+          login?: string | null
+          nome?: string
+          numero?: string | null
+          produtividade_habilitado?: boolean | null
+          produtividade_perc_desconto_vl_caixa?: number | null
+          produtividade_perc_desconto_vl_convenio?: number | null
+          produtividade_perc_recebe_vl_caixa?: number | null
+          produtividade_perc_recebe_vl_convenio?: number | null
+          produtividade_percentual?: number | null
+          senha?: string | null
+          sigla?: string
+          situacao_id?: string | null
+          tipo_conselho_id?: string | null
+          unidade_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          user_modified?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitantes_cbo_id_fkey"
+            columns: ["cbo_id"]
+            isOneToOne: false
+            referencedRelation: "solicitante_cbo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitantes_situacao_id_fkey"
+            columns: ["situacao_id"]
+            isOneToOne: false
+            referencedRelation: "situacao_cadastral"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitantes_tipo_conselho_id_fkey"
+            columns: ["tipo_conselho_id"]
+            isOneToOne: false
+            referencedRelation: "tipo_conselho_profissional"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitantes_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitantes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitantes_user_modified_fkey"
+            columns: ["user_modified"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_schedules: {
         Row: {
           created_at: string
@@ -6601,6 +6791,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tipo_conselho_profissional: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+          sigla: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+          sigla: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          sigla?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      unidades: {
+        Row: {
+          active: boolean | null
+          codigo: string | null
+          created_at: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          codigo?: string | null
+          created_at?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          codigo?: string | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       unit_ads: {
         Row: {

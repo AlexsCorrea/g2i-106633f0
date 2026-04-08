@@ -43,6 +43,7 @@ import Diagnostico from "./pages/Diagnostico";
 import Escalas from "./pages/Escalas";
 import Assistencial from "./pages/Assistencial";
 import Laboratorio from "./pages/Laboratorio";
+import Solicitantes from "./pages/Solicitantes";
 
 const queryClient = new QueryClient();
 
@@ -102,6 +103,9 @@ function App() {
 
                 {/* Laboratório */}
                 <Route path="/laboratorio" element={<ProtectedRoute><Laboratorio /></ProtectedRoute>} />
+
+                {/* Cadastros */}
+                <Route path="/cadastros/solicitantes" element={<ProtectedRoute><Solicitantes /></ProtectedRoute>} />
 
                 {/* Assistencial */}
                 <Route path="/assistencial/homecare" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
