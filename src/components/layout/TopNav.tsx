@@ -189,6 +189,18 @@ const menuConfig: MenuItem[] = [
     ],
   },
   {
+    label: "Cadastros",
+    icon: Settings,
+    groups: [
+      {
+        heading: "Profissionais",
+        items: [
+          { label: "Solicitantes", icon: Stethoscope, path: "/cadastros/solicitantes" },
+        ],
+      },
+    ],
+  },
+  {
     label: "CRM",
     icon: Handshake,
     groups: [
