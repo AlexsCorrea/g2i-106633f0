@@ -12,9 +12,183 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import {
   useLabExams, useLabSectors, useLabMaterials, useLabTubes, useLabMethods,
-  useLabEquipment, useLabPanels, useLabRejectionReasons,
+  useLabEquipment, useLabPanels, useLabRejectionReasons, useLabExamComponents,
 } from "@/hooks/useLaboratory";
-import { Plus, Settings2, Search, Pencil } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Plus, Settings2, Search, Pencil, Layers } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+// ── Component Management Dialog ──
+function ExamComponentsDialog({ examId, examName, open, onClose }: { examId: string; examName: string; open: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
+  const { data: components, isLoading } = useQuery({
+    queryKey: ["lab-exam-components-by-exam", examId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("lab_exam_components").select("*").eq("exam_id", examId).order("sort_order", { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: open && !!examId,
+  });
+  const [showAdd, setShowAdd] = useState(false);
+  const [editComp, setEditComp] = useState<any>(null);
+  const [form, setForm] = useState({
+    name: "", code: "", group_name: "", unit: "", sort_order: "0",
+    reference_min: "", reference_max: "", reference_text: "",
+    critical_min: "", critical_max: "", result_type: "numerico",
+  });
+
+  const resetForm = () => {
+    setForm({ name: "", code: "", group_name: "", unit: "", sort_order: "0", reference_min: "", reference_max: "", reference_text: "", critical_min: "", critical_max: "", result_type: "numerico" });
+    setEditComp(null);
+  };
+
+  const openEditComp = (c: any) => {
+    setEditComp(c);
+    setForm({
+      name: c.name || "", code: c.code || "", group_name: c.group_name || "", unit: c.unit || "",
+      sort_order: c.sort_order?.toString() || "0",
+      reference_min: c.reference_min?.toString() || "", reference_max: c.reference_max?.toString() || "",
+      reference_text: c.reference_text || "",
+      critical_min: c.critical_min?.toString() || "", critical_max: c.critical_max?.toString() || "",
+      result_type: c.result_type || "numerico",
+    });
+    setShowAdd(true);
+  };
+
+  const handleSave = async () => {
+    const payload: any = {
+      exam_id: examId, name: form.name, code: form.code || null, group_name: form.group_name || null,
+      unit: form.unit || null, sort_order: parseInt(form.sort_order) || 0,
+      reference_min: form.reference_min ? parseFloat(form.reference_min) : null,
+      reference_max: form.reference_max ? parseFloat(form.reference_max) : null,
+      reference_text: form.reference_text || null,
+      critical_min: form.critical_min ? parseFloat(form.critical_min) : null,
+      critical_max: form.critical_max ? parseFloat(form.critical_max) : null,
+      result_type: form.result_type,
+    };
+    if (editComp) {
+      const { error } = await (supabase as any).from("lab_exam_components").update(payload).eq("id", editComp.id);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Componente atualizado");
+    } else {
+      const { error } = await (supabase as any).from("lab_exam_components").insert(payload);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Componente criado");
+    }
+    qc.invalidateQueries({ queryKey: ["lab-exam-components-by-exam", examId] });
+    setShowAdd(false);
+    resetForm();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Remover componente?")) return;
+    await (supabase as any).from("lab_exam_components").delete().eq("id", id);
+    qc.invalidateQueries({ queryKey: ["lab-exam-components-by-exam", examId] });
+    toast.success("Componente removido");
+  };
+
+  // Group by group_name
+  const groups = new Map<string, any[]>();
+  (components ?? []).forEach((c: any) => {
+    const g = c.group_name || "Geral";
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g)!.push(c);
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Componentes — {examName}</DialogTitle>
+          <DialogDescription>Analitos/parâmetros do exame estruturado</DialogDescription>
+        </DialogHeader>
+
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => { resetForm(); setShowAdd(true); }}><Plus className="h-3.5 w-3.5 mr-1" />Novo Componente</Button>
+        </div>
+
+        {isLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : !components?.length ? (
+          <p className="text-sm text-muted-foreground py-4">Nenhum componente cadastrado. Adicione analitos para ativar o modo estruturado.</p>
+        ) : (
+          <div className="space-y-4">
+            {Array.from(groups.entries()).map(([gName, items]) => (
+              <div key={gName}>
+                <h4 className="text-sm font-semibold text-primary mb-1">{gName}</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Ord.</TableHead><TableHead>Nome</TableHead><TableHead>Código</TableHead>
+                      <TableHead>Unidade</TableHead><TableHead>Ref.</TableHead><TableHead>Crítico</TableHead>
+                      <TableHead>Tipo</TableHead><TableHead className="w-20">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((c: any) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="text-xs">{c.sort_order}</TableCell>
+                        <TableCell className="font-medium text-sm">{c.name}</TableCell>
+                        <TableCell className="font-mono text-xs">{c.code || "—"}</TableCell>
+                        <TableCell className="text-xs">{c.unit || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{c.reference_text || (c.reference_min != null ? `${c.reference_min}-${c.reference_max}` : "—")}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{c.critical_min != null || c.critical_max != null ? `${c.critical_min ?? "—"} / ${c.critical_max ?? "—"}` : "—"}</TableCell>
+                        <TableCell className="text-xs">{c.result_type}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEditComp(c)}><Pencil className="h-3 w-3" /></Button>
+                            <Button size="sm" variant="ghost" className="h-6 px-1 text-destructive" onClick={() => handleDelete(c.id)}>×</Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add/Edit Component Sub-Dialog */}
+        <Dialog open={showAdd} onOpenChange={v => { if (!v) { setShowAdd(false); resetForm(); } }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editComp ? "Editar Componente" : "Novo Componente"}</DialogTitle>
+              <DialogDescription>Parâmetro/analito do exame</DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Nome *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Hemoglobina" /></div>
+              <div><Label>Código</Label><Input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="HGB" /></div>
+              <div><Label>Grupo</Label><Input value={form.group_name} onChange={e => setForm(f => ({ ...f, group_name: e.target.value }))} placeholder="Eritrograma" /></div>
+              <div><Label>Unidade</Label><Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="g/dL" /></div>
+              <div><Label>Ordem</Label><Input type="number" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
+              <div>
+                <Label>Tipo</Label>
+                <Select value={form.result_type} onValueChange={v => setForm(f => ({ ...f, result_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="numerico">Numérico</SelectItem>
+                    <SelectItem value="texto">Texto</SelectItem>
+                    <SelectItem value="opcao">Opção</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Ref. Mín.</Label><Input type="number" value={form.reference_min} onChange={e => setForm(f => ({ ...f, reference_min: e.target.value }))} /></div>
+              <div><Label>Ref. Máx.</Label><Input type="number" value={form.reference_max} onChange={e => setForm(f => ({ ...f, reference_max: e.target.value }))} /></div>
+              <div className="col-span-2"><Label>Texto Referência</Label><Input value={form.reference_text} onChange={e => setForm(f => ({ ...f, reference_text: e.target.value }))} placeholder="4.0 a 5.5 milhões/mm³" /></div>
+              <div><Label>Crítico Mín.</Label><Input type="number" value={form.critical_min} onChange={e => setForm(f => ({ ...f, critical_min: e.target.value }))} /></div>
+              <div><Label>Crítico Máx.</Label><Input type="number" value={form.critical_max} onChange={e => setForm(f => ({ ...f, critical_max: e.target.value }))} /></div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setShowAdd(false); resetForm(); }}>Cancelar</Button>
+              <Button onClick={handleSave} disabled={!form.name}>{editComp ? "Salvar" : "Criar"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // ── Exam CRUD ──
 function ExamsTable() {
@@ -25,12 +199,14 @@ function ExamsTable() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [compDialog, setCompDialog] = useState<{ id: string; name: string } | null>(null);
   const [form, setForm] = useState({
     code: "", name: "", unit: "", criticality: "normal", active: true,
     reference_min: "", reference_max: "", reference_text: "",
     material_id: "", method_id: "", sector_id: "",
     result_type: "numerico", processing_time_min: "",
     critical_min: "", critical_max: "", notes: "",
+    result_mode: "simples",
   });
 
   const resetForm = () => {
@@ -40,6 +216,7 @@ function ExamsTable() {
       material_id: "", method_id: "", sector_id: "",
       result_type: "numerico", processing_time_min: "",
       critical_min: "", critical_max: "", notes: "",
+      result_mode: "simples",
     });
     setEditing(null);
   };
@@ -56,6 +233,7 @@ function ExamsTable() {
       processing_time_min: item.processing_time_min?.toString() || "",
       critical_min: item.critical_min?.toString() || "", critical_max: item.critical_max?.toString() || "",
       notes: item.notes || "",
+      result_mode: item.result_mode || "simples",
     });
     setShowForm(true);
   };
@@ -73,6 +251,7 @@ function ExamsTable() {
       critical_min: form.critical_min ? parseFloat(form.critical_min) : null,
       critical_max: form.critical_max ? parseFloat(form.critical_max) : null,
       notes: form.notes || null,
+      result_mode: form.result_mode,
     };
     if (editing) {
       update.mutate({ id: editing.id, ...payload }, { onSuccess: () => { setShowForm(false); resetForm(); } });
@@ -85,6 +264,8 @@ function ExamsTable() {
     const q = search.toLowerCase();
     return !q || e.name?.toLowerCase().includes(q) || e.code?.toLowerCase().includes(q);
   }) ?? [];
+
+  const modeLabels: Record<string, string> = { simples: "Simples", estruturado: "Estruturado", texto_livre: "Texto Livre", tabelado: "Tabelado" };
 
   return (
     <div className="space-y-3">
@@ -102,38 +283,41 @@ function ExamsTable() {
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Nome</TableHead>
+                <TableHead>Modo</TableHead>
                 <TableHead>Unidade</TableHead>
                 <TableHead>Referência</TableHead>
-                <TableHead>Criticidade</TableHead>
-                <TableHead>Tipo Resultado</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-24">Ações</TableHead>
+                <TableHead className="w-28">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {list.isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !filtered.length ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Nenhum exame</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Nenhum exame</TableCell></TableRow>
               ) : filtered.map((item: any) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-mono text-sm">{item.code}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[10px]">{modeLabels[item.result_mode] || "Simples"}</Badge>
+                  </TableCell>
                   <TableCell>{item.unit || "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {item.reference_text || (item.reference_min != null && item.reference_max != null ? `${item.reference_min} - ${item.reference_max}` : "—")}
                   </TableCell>
-                  <TableCell>
-                    <Badge variant={item.criticality === "alto" ? "destructive" : "secondary"} className="text-xs">{item.criticality}</Badge>
-                  </TableCell>
-                  <TableCell className="text-xs">{item.result_type || "numerico"}</TableCell>
                   <TableCell>
                     <Badge variant={item.active ? "default" : "secondary"} className="text-xs">{item.active ? "Ativo" : "Inativo"}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(item)}><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button size="sm" variant="ghost" className="h-7 px-2 text-red-500" onClick={() => { if (confirm("Remover exame?")) remove.mutate(item.id); }}>×</Button>
+                      {(item.result_mode === "estruturado") && (
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-primary" onClick={() => setCompDialog({ id: item.id, name: item.name })} title="Gerenciar componentes">
+                          <Layers className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => { if (confirm("Remover exame?")) remove.mutate(item.id); }}>×</Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -152,6 +336,18 @@ function ExamsTable() {
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Código *</Label><Input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="HEM001" /></div>
             <div><Label>Nome *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Hemograma Completo" /></div>
+            <div>
+              <Label>Modo de Resultado</Label>
+              <Select value={form.result_mode} onValueChange={v => setForm(f => ({ ...f, result_mode: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="simples">Simples</SelectItem>
+                  <SelectItem value="estruturado">Estruturado (com analitos)</SelectItem>
+                  <SelectItem value="texto_livre">Texto Livre</SelectItem>
+                  <SelectItem value="tabelado">Tabelado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label>Unidade</Label><Input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="mg/dL, U/L, etc." /></div>
             <div>
               <Label>Tipo de Resultado</Label>
@@ -218,12 +414,23 @@ function ExamsTable() {
             </div>
             <div className="col-span-2"><Label>Observações</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
           </div>
+          {form.result_mode === "estruturado" && editing && (
+            <div className="border-t pt-3 mt-3">
+              <Button size="sm" variant="outline" onClick={() => { setShowForm(false); setCompDialog({ id: editing.id, name: form.name }); }} className="gap-1">
+                <Layers className="h-3.5 w-3.5" />Gerenciar Componentes/Analitos
+              </Button>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>Cancelar</Button>
             <Button onClick={handleSave} disabled={!form.code || !form.name}>{editing ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {compDialog && (
+        <ExamComponentsDialog examId={compDialog.id} examName={compDialog.name} open={!!compDialog} onClose={() => setCompDialog(null)} />
+      )}
     </div>
   );
 }
