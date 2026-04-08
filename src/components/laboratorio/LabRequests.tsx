@@ -98,6 +98,8 @@ export default function LabRequests() {
   }
 
   return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex gap-2 flex-1">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
