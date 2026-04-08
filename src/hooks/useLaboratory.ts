@@ -228,7 +228,7 @@ export function useLabResultsWithDetails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lab_results")
-        .select("*, lab_request_items(*, lab_exams(name, code, unit), lab_requests(request_number, patients(full_name)))")
+        .select("*, lab_request_items(*, lab_exams(id, name, code, unit, result_mode), lab_requests(request_number, patients(full_name)))")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
