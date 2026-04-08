@@ -48,12 +48,27 @@ function useReportResults(requestId: string | null) {
       if (!requestId) return [];
       const { data, error } = await (supabase as any)
         .from("lab_results")
-        .select("*, lab_request_items(*, lab_exams(name, code, unit))")
+        .select("*, lab_request_items(*, lab_exams(id, name, code, unit, result_mode))")
         .eq("lab_request_items.request_id", requestId)
         .in("status", ["validado", "aguardando_conferencia"])
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data ?? []).filter((r: any) => r.lab_request_items !== null);
+      const results = (data ?? []).filter((r: any) => r.lab_request_items !== null);
+
+      // For structured exams, fetch their components
+      for (const r of results) {
+        if (r.lab_request_items?.lab_exams?.result_mode === "estruturado") {
+          const { data: comps } = await (supabase as any)
+            .from("lab_result_components")
+            .select("*, lab_exam_components(name, code, group_name, unit, reference_text, sort_order)")
+            .eq("result_id", r.id)
+            .order("created_at", { ascending: true });
+          r._components = (comps ?? []).sort((a: any, b: any) =>
+            (a.lab_exam_components?.sort_order ?? 0) - (b.lab_exam_components?.sort_order ?? 0)
+          );
+        }
+      }
+      return results;
     },
     enabled: !!requestId,
   });
@@ -334,19 +349,57 @@ export default function LabReports() {
                   <th style={{ background: "#1a5276", color: "white", padding: "6px 8px", textAlign: "left", fontSize: 10 }}>FLAGS</th>
                 </tr>
               </thead>
-              <tbody>
-                {printResults?.length ? printResults.map((r: any, i: number) => (
-                  <tr key={r.id} style={{ background: i % 2 === 0 ? "white" : "#f8f9fa" }}>
-                    <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0" }}>{r.lab_request_items?.lab_exams?.name ?? "—"}</td>
-                    <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0", fontWeight: r.is_critical ? "bold" : "normal", color: r.is_critical ? "#c0392b" : r.is_abnormal ? "#e67e22" : "#1a1a1a" }}>{r.value ?? "—"}</td>
-                    <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0" }}>{r.unit ?? r.lab_request_items?.lab_exams?.unit ?? "—"}</td>
-                    <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0", color: "#666" }}>{r.reference_text ?? "—"}</td>
-                    <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0" }}>
-                      {r.is_critical && <span style={{ color: "#c0392b", fontWeight: "bold" }}>⚠ CRÍTICO</span>}
-                      {r.is_abnormal && !r.is_critical && <span style={{ color: "#e67e22" }}>↑ Alterado</span>}
-                    </td>
-                  </tr>
-                )) : (
+               <tbody>
+                {printResults?.length ? printResults.map((r: any, i: number) => {
+                  const isStructured = r.lab_request_items?.lab_exams?.result_mode === "estruturado" && r._components?.length;
+                  if (isStructured) {
+                    // Group components by group_name
+                    const groups = new Map<string, any[]>();
+                    r._components.forEach((c: any) => {
+                      const g = c.lab_exam_components?.group_name || "Geral";
+                      if (!groups.has(g)) groups.set(g, []);
+                      groups.get(g)!.push(c);
+                    });
+                    return [
+                      <tr key={`${r.id}-header`} style={{ background: "#e8f0fe" }}>
+                        <td colSpan={5} style={{ padding: "6px 8px", fontWeight: "bold", fontSize: 11, borderBottom: "1px solid #c0c0c0" }}>
+                          {r.lab_request_items?.lab_exams?.name ?? "—"}
+                          {r.is_critical && <span style={{ color: "#c0392b", marginLeft: 8 }}>⚠ CRÍTICO</span>}
+                        </td>
+                      </tr>,
+                      ...Array.from(groups.entries()).flatMap(([gName, comps]) => [
+                        <tr key={`${r.id}-g-${gName}`} style={{ background: "#f0f4f8" }}>
+                          <td colSpan={5} style={{ padding: "4px 8px", fontSize: 10, fontWeight: 600, color: "#1a5276", borderBottom: "1px solid #e0e0e0" }}>{gName}</td>
+                        </tr>,
+                        ...comps.map((c: any, ci: number) => (
+                          <tr key={c.id} style={{ background: ci % 2 === 0 ? "white" : "#f8f9fa" }}>
+                            <td style={{ padding: "4px 8px 4px 16px", borderBottom: "1px solid #e0e0e0", fontSize: 10 }}>{c.lab_exam_components?.name ?? "—"}</td>
+                            <td style={{ padding: "4px 8px", borderBottom: "1px solid #e0e0e0", fontWeight: c.is_critical ? "bold" : "normal", color: c.is_critical ? "#c0392b" : c.is_abnormal ? "#e67e22" : "#1a1a1a" }}>{c.value ?? "—"}</td>
+                            <td style={{ padding: "4px 8px", borderBottom: "1px solid #e0e0e0", fontSize: 10 }}>{c.lab_exam_components?.unit ?? "—"}</td>
+                            <td style={{ padding: "4px 8px", borderBottom: "1px solid #e0e0e0", color: "#666", fontSize: 10 }}>{c.lab_exam_components?.reference_text ?? "—"}</td>
+                            <td style={{ padding: "4px 8px", borderBottom: "1px solid #e0e0e0" }}>
+                              {c.is_critical && <span style={{ color: "#c0392b", fontWeight: "bold", fontSize: 10 }}>⚠ CRÍTICO</span>}
+                              {c.is_abnormal && !c.is_critical && <span style={{ color: "#e67e22", fontSize: 10 }}>↑ Alterado</span>}
+                            </td>
+                          </tr>
+                        )),
+                      ]),
+                    ];
+                  }
+                  // Simple exam
+                  return (
+                    <tr key={r.id} style={{ background: i % 2 === 0 ? "white" : "#f8f9fa" }}>
+                      <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0" }}>{r.lab_request_items?.lab_exams?.name ?? "—"}</td>
+                      <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0", fontWeight: r.is_critical ? "bold" : "normal", color: r.is_critical ? "#c0392b" : r.is_abnormal ? "#e67e22" : "#1a1a1a" }}>{r.value ?? "—"}</td>
+                      <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0" }}>{r.unit ?? r.lab_request_items?.lab_exams?.unit ?? "—"}</td>
+                      <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0", color: "#666" }}>{r.reference_text ?? "—"}</td>
+                      <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0" }}>
+                        {r.is_critical && <span style={{ color: "#c0392b", fontWeight: "bold" }}>⚠ CRÍTICO</span>}
+                        {r.is_abnormal && !r.is_critical && <span style={{ color: "#e67e22" }}>↑ Alterado</span>}
+                      </td>
+                    </tr>
+                  );
+                }) : (
                   <tr><td colSpan={5} style={{ padding: "12px 8px", textAlign: "center", color: "#999" }}>Nenhum resultado vinculado a esta solicitação</td></tr>
                 )}
               </tbody>
