@@ -104,6 +104,9 @@ function App() {
                 {/* Laboratório */}
                 <Route path="/laboratorio" element={<ProtectedRoute><Laboratorio /></ProtectedRoute>} />
 
+                {/* Cadastros */}
+                <Route path="/cadastros/solicitantes" element={<ProtectedRoute><Solicitantes /></ProtectedRoute>} />
+
                 {/* Assistencial */}
                 <Route path="/assistencial/homecare" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
                 <Route path="/assistencial/internados" element={<ProtectedRoute><Assistencial /></ProtectedRoute>} />
