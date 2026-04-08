@@ -6,9 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { createLabLog } from "@/hooks/useLaboratory";
-import { FileText, Printer, CheckCircle2, Eye, Search } from "lucide-react";
+import { createLabLog, generateLabReportNumber } from "@/hooks/useLaboratory";
+import { FileText, Printer, CheckCircle2, Eye, Search, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -64,8 +66,53 @@ export default function LabReports() {
   const [showDetail, setShowDetail] = useState<any>(null);
   const [showPrint, setShowPrint] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState("");
   const printRef = useRef<HTMLDivElement>(null);
   const { data: printResults } = useReportResults(showPrint?.request_id);
+
+  // Requests that have results but no report yet
+  const { data: eligibleRequests } = useQuery({
+    queryKey: ["lab-requests-eligible-report"],
+    queryFn: async () => {
+      const { data: allReqs } = await (supabase as any)
+        .from("lab_requests")
+        .select("id, request_number, patient_id, patients(full_name), status")
+        .in("status", ["processando", "concluido"])
+        .order("created_at", { ascending: false });
+      if (!allReqs?.length) return [];
+      // Filter out requests that already have reports
+      const { data: existingReports } = await (supabase as any)
+        .from("lab_reports").select("request_id");
+      const reportedIds = new Set((existingReports ?? []).map((r: any) => r.request_id));
+      return allReqs.filter((r: any) => !reportedIds.has(r.id));
+    },
+  });
+
+  const handleCreateReport = async () => {
+    if (!selectedRequestId) return;
+    try {
+      const req = eligibleRequests?.find((r: any) => r.id === selectedRequestId);
+      if (!req) return;
+      const num = await generateLabReportNumber();
+      const { data, error } = await (supabase as any).from("lab_reports").insert({
+        report_number: num,
+        patient_id: req.patient_id,
+        request_id: req.id,
+        status: "rascunho",
+        version: 1,
+      }).select("id").single();
+      if (error) throw error;
+      await createLabLog("lab_reports", data.id, "laudo_criado", user?.id);
+      qc.invalidateQueries({ queryKey: ["lab-reports-details"] });
+      qc.invalidateQueries({ queryKey: ["lab-requests-eligible-report"] });
+      toast.success(`Laudo ${num} criado`);
+      setShowCreate(false);
+      setSelectedRequestId("");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
 
   const handleEmit = async (r: any) => {
     const { error } = await supabase.from("lab_reports").update({
@@ -133,7 +180,12 @@ export default function LabReports() {
           <FileText className="h-5 w-5" />
           <span className="text-sm">Emissão e gestão de laudos laboratoriais</span>
         </div>
-        <Badge variant="secondary">{reports?.length ?? 0} laudo(s)</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">{reports?.length ?? 0} laudo(s)</Badge>
+          <Button size="sm" onClick={() => setShowCreate(true)} disabled={!eligibleRequests?.length}>
+            <Plus className="h-4 w-4 mr-1" />Gerar Laudo
+          </Button>
+        </div>
       </div>
 
       <div className="relative max-w-sm">
@@ -288,6 +340,33 @@ export default function LabReports() {
             <div style={{ marginTop: 20, paddingTop: 10, borderTop: "1px solid #ccc", textAlign: "center", fontSize: 9, color: "#888" }}>
               Documento emitido eletronicamente pelo Sistema Zurich 2.0 — {format(new Date(), "dd/MM/yyyy HH:mm")}
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Report Dialog */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gerar Novo Laudo</DialogTitle>
+            <DialogDescription>Selecione a solicitação para gerar o laudo</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Solicitação</Label>
+            <Select value={selectedRequestId} onValueChange={setSelectedRequestId}>
+              <SelectTrigger><SelectValue placeholder="Selecione a solicitação" /></SelectTrigger>
+              <SelectContent>
+                {(eligibleRequests ?? []).map((r: any) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.request_number} — {r.patients?.full_name ?? "Paciente"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
+            <Button onClick={handleCreateReport} disabled={!selectedRequestId}>Gerar Laudo</Button>
           </div>
         </DialogContent>
       </Dialog>
