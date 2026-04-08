@@ -17,6 +17,26 @@ interface FHIRPayload {
   external_protocol?: string;
 }
 
+function ensureResourceId(resource: any, label: string) {
+  if (!resource?.id) {
+    const details = typeof resource === "object" ? JSON.stringify(resource) : String(resource);
+    throw new Error(`${label} não retornou ID válido no sandbox FHIR: ${details}`);
+  }
+
+  return resource.id as string;
+}
+
+function buildRunIdentifiers(body: FHIRPayload) {
+  const runId = crypto.randomUUID();
+
+  return {
+    patientIdentifier: body.order_id
+      ? (body.patient_id || body.order_id)
+      : `${body.patient_id || "sim-patient"}-${runId}`,
+    orderIdentifier: body.order_id || `sim-order-${runId}`,
+  };
+}
+
 async function createQueueRecord(supabase: any, payload: {
   queue_type: "apoio" | "equipamento" | "envio";
   direction: "outbound" | "inbound";
@@ -71,11 +91,13 @@ Deno.serve(async (req) => {
     const body: FHIRPayload = await req.json();
 
     if (body.action === "send_order") {
+      const identifiers = buildRunIdentifiers(body);
+
       // 1. Create FHIR Patient
       const patientResource = {
         resourceType: "Patient",
         name: [{ family: body.patient_name?.split(" ").pop() || "Teste", given: [body.patient_name?.split(" ")[0] || "Paciente"] }],
-        identifier: [{ system: "urn:zurich:patient", value: body.patient_id || "unknown" }],
+        identifier: [{ system: "urn:zurich:patient", value: identifiers.patientIdentifier }],
       };
 
       const patientResp = await fetch(`${FHIR_BASE}/Patient`, {
@@ -84,7 +106,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify(patientResource),
       });
       const fhirPatient = await patientResp.json();
-      const fhirPatientId = fhirPatient.id;
+      const fhirPatientId = ensureResourceId(fhirPatient, "Patient");
 
       // 2. Create FHIR ServiceRequest for each exam
       const serviceRequests = [];
@@ -96,7 +118,7 @@ Deno.serve(async (req) => {
           category: [{ coding: [{ system: "http://snomed.info/sct", code: "108252007", display: "Laboratory procedure" }] }],
           code: { coding: [{ system: "urn:zurich:lab", code: exam.code, display: exam.name }], text: exam.name },
           subject: { reference: `Patient/${fhirPatientId}` },
-          identifier: [{ system: "urn:zurich:order", value: body.order_id || "unknown" }],
+          identifier: [{ system: "urn:zurich:order", value: identifiers.orderIdentifier }],
           priority: "routine",
           authoredOn: new Date().toISOString(),
         };
@@ -107,7 +129,8 @@ Deno.serve(async (req) => {
           body: JSON.stringify(sr),
         });
         const fhirSR = await srResp.json();
-        serviceRequests.push({ exam_code: exam.code, exam_name: exam.name, fhir_id: fhirSR.id, status: srResp.status });
+        const fhirSRId = ensureResourceId(fhirSR, `ServiceRequest ${exam.code}`);
+        serviceRequests.push({ exam_code: exam.code, exam_name: exam.name, fhir_id: fhirSRId, status: srResp.status });
       }
 
       // 3. Log integration
@@ -165,6 +188,8 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "simulate_full_cycle") {
+      const identifiers = buildRunIdentifiers(body);
+
       // Full cycle: create patient → ServiceRequest → DiagnosticReport → Observation
       const patientName = body.patient_name || "Paciente Teste FHIR";
       const orderRecord = body.order_id
@@ -179,10 +204,11 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           resourceType: "Patient",
           name: [{ family: patientName.split(" ").pop(), given: [patientName.split(" ")[0]] }],
-          identifier: [{ system: "urn:zurich:patient", value: body.patient_id || "sim-patient" }],
+            identifier: [{ system: "urn:zurich:patient", value: identifiers.patientIdentifier }],
         }),
       });
       const fhirPatient = await patientResp.json();
+      const fhirPatientId = ensureResourceId(fhirPatient, "Patient");
 
       // 2-4. Loop over ALL exams
       const exams = body.exams?.length ? body.exams : [{ code: "HMG", name: "Hemograma Completo" }];
@@ -198,12 +224,13 @@ Deno.serve(async (req) => {
             status: "completed",
             intent: "order",
             code: { coding: [{ system: "urn:zurich:lab", code: exam.code, display: exam.name }], text: exam.name },
-            subject: { reference: `Patient/${fhirPatient.id}` },
-            identifier: [{ system: "urn:zurich:order", value: body.order_id || "sim-order" }],
+            subject: { reference: `Patient/${fhirPatientId}` },
+            identifier: [{ system: "urn:zurich:order", value: identifiers.orderIdentifier }],
             authoredOn: new Date().toISOString(),
           }),
         });
         const fhirSR = await srResp.json();
+        const fhirSRId = ensureResourceId(fhirSR, `ServiceRequest ${exam.code}`);
 
         // Observation
         const obsResp = await fetch(`${FHIR_BASE}/Observation`, {
@@ -214,14 +241,15 @@ Deno.serve(async (req) => {
             status: "final",
             category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "laboratory" }] }],
             code: { coding: [{ system: "urn:zurich:lab", code: exam.code, display: exam.name }], text: exam.name },
-            subject: { reference: `Patient/${fhirPatient.id}` },
-            basedOn: [{ reference: `ServiceRequest/${fhirSR.id}` }],
+            subject: { reference: `Patient/${fhirPatientId}` },
+            basedOn: [{ reference: `ServiceRequest/${fhirSRId}` }],
             valueString: "Valores dentro da normalidade",
             effectiveDateTime: new Date().toISOString(),
             referenceRange: [{ text: "Ref: normal" }],
           }),
         });
         const fhirObs = await obsResp.json();
+        const fhirObsId = ensureResourceId(fhirObs, `Observation ${exam.code}`);
 
         // DiagnosticReport
         const drResp = await fetch(`${FHIR_BASE}/DiagnosticReport`, {
@@ -232,16 +260,17 @@ Deno.serve(async (req) => {
             status: "final",
             category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/v2-0074", code: "LAB" }] }],
             code: { coding: [{ system: "urn:zurich:lab", code: exam.code, display: exam.name }], text: exam.name },
-            subject: { reference: `Patient/${fhirPatient.id}` },
-            basedOn: [{ reference: `ServiceRequest/${fhirSR.id}` }],
-            result: [{ reference: `Observation/${fhirObs.id}` }],
+            subject: { reference: `Patient/${fhirPatientId}` },
+            basedOn: [{ reference: `ServiceRequest/${fhirSRId}` }],
+            result: [{ reference: `Observation/${fhirObsId}` }],
             effectiveDateTime: new Date().toISOString(),
             issued: new Date().toISOString(),
-            identifier: [{ system: "urn:zurich:order", value: body.order_id || "sim-order" }],
+            identifier: [{ system: "urn:zurich:order", value: identifiers.orderIdentifier }],
             conclusion: "Resultados dentro dos parâmetros de normalidade.",
           }),
         });
         const fhirDR = await drResp.json();
+        const fhirDRId = ensureResourceId(fhirDR, `DiagnosticReport ${exam.code}`);
 
         let resultId: string | undefined;
 
@@ -251,7 +280,7 @@ Deno.serve(async (req) => {
             order_id: body.order_id,
             partner_id: order?.partner_id || null,
             patient_id: order?.patient_id || body.patient_id || null,
-            external_protocol: `FHIR-DR-${fhirDR.id}`,
+            external_protocol: `FHIR-DR-${fhirDRId}`,
             exam_code: exam.code,
             exam_name: exam.name,
             value: "Valores dentro da normalidade",
@@ -277,14 +306,14 @@ Deno.serve(async (req) => {
               order_number: order?.order_number ?? null,
               exam_code: exam.code,
               exam_name: exam.name,
-              service_request_id: fhirSR.id,
+               service_request_id: fhirSRId,
             },
             payload_received: {
-              patient_id: fhirPatient.id,
-              observation_id: fhirObs.id,
-              diagnostic_report_id: fhirDR.id,
-              result_protocol: `FHIR-DR-${fhirDR.id}`,
-              send_protocol: `FHIR-${fhirPatient.id}`,
+               patient_id: fhirPatientId,
+               observation_id: fhirObsId,
+               diagnostic_report_id: fhirDRId,
+               result_protocol: `FHIR-DR-${fhirDRId}`,
+               send_protocol: `FHIR-${fhirPatientId}`,
             },
             response_status: drResp.status,
             endpoint_url: `${FHIR_BASE}/DiagnosticReport`,
@@ -301,7 +330,7 @@ Deno.serve(async (req) => {
             entity_id: resultId ?? null,
             endpoint: `${FHIR_BASE}/DiagnosticReport`,
             http_status: drResp.status,
-            message: `Resultado FHIR recebido — pedido: ${order?.order_number ?? body.order_id}, protocolo envio: FHIR-${fhirPatient.id}, protocolo resultado: FHIR-DR-${fhirDR.id}, exame: ${exam.name}`,
+             message: `Resultado FHIR recebido — pedido: ${order?.order_number ?? body.order_id}, protocolo envio: FHIR-${fhirPatientId}, protocolo resultado: FHIR-DR-${fhirDRId}, exame: ${exam.name}`,
             payload: {
               order_id: body.order_id,
               order_number: order?.order_number ?? null,
@@ -312,21 +341,21 @@ Deno.serve(async (req) => {
           });
         }
 
-        allFhirIds.push({ exam: exam.name, code: exam.code, sr: fhirSR.id, obs: fhirObs.id, dr: fhirDR.id, result_id: resultId });
+        allFhirIds.push({ exam: exam.name, code: exam.code, sr: fhirSRId, obs: fhirObsId, dr: fhirDRId, result_id: resultId });
       }
 
       // Update order status
       if (body.order_id) {
         await supabase.from("lab_external_orders").update({
           internal_status: "resultado_final",
-          external_protocol: `FHIR-${fhirPatient.id}`,
+          external_protocol: `FHIR-${fhirPatientId}`,
         }).eq("id", body.order_id);
 
         await supabase.from("lab_integration_logs").insert({
           log_level: "info",
           log_type: "tecnico",
           action: "fhir_full_cycle_complete",
-          message: `Ciclo FHIR completo — pedido: ${order?.order_number ?? body.order_id}, protocolo envio: FHIR-${fhirPatient.id}, resultados: ${allFhirIds.map(e => `${e.exam} [FHIR-DR-${e.dr}]`).join(", ")}`,
+          message: `Ciclo FHIR completo — pedido: ${order?.order_number ?? body.order_id}, protocolo envio: FHIR-${fhirPatientId}, resultados: ${allFhirIds.map(e => `${e.exam} [FHIR-DR-${e.dr}]`).join(", ")}`,
           order_id: body.order_id,
           partner_id: order?.partner_id || null,
           endpoint: FHIR_BASE,
@@ -334,23 +363,36 @@ Deno.serve(async (req) => {
           payload: {
             order_id: body.order_id,
             order_number: order?.order_number ?? null,
-            send_protocol: `FHIR-${fhirPatient.id}`,
+            send_protocol: `FHIR-${fhirPatientId}`,
             exams: allFhirIds.map(({ exam, code, dr, result_id }) => ({ exam, code, result_protocol: `FHIR-DR-${dr}`, result_id })),
           },
           response: {
-            patient: fhirPatient.id,
+            patient: fhirPatientId,
             exams: allFhirIds,
           },
         });
       }
 
+      const hasCompleteIds = allFhirIds.length > 0 && allFhirIds.every((item) => item.sr && item.obs && item.dr);
+
+      if (!fhirPatientId || !hasCompleteIds) {
+        throw new Error("Ciclo FHIR retornou sucesso parcial sem todos os IDs obrigatórios.");
+      }
+
+      const singleExam = allFhirIds.length === 1 ? allFhirIds[0] : null;
+
       return new Response(JSON.stringify({
         success: true,
         message: `Ciclo FHIR completo — ${allFhirIds.length} exame(s) processados`,
+        endpoint: FHIR_BASE,
         fhir_ids: {
-          patient: fhirPatient.id,
+          patient: fhirPatientId,
           exams: allFhirIds,
         },
+        patient: fhirPatientId,
+        service_request: singleExam?.sr ?? null,
+        observation: singleExam?.obs ?? null,
+        diagnostic_report: singleExam?.dr ?? null,
         result_imported: !!body.order_id,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
