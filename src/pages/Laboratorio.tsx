@@ -4,7 +4,7 @@ import {
   BarChart3, ClipboardList, Droplets, FlaskConical, TestTubes,
   Activity, FileCheck, FileText, Cable, Clock, FileBarChart, Settings2,
   Building2, ArrowLeftRight, Send, FileDown, ScrollText, AlertTriangle, Gauge,
-  ListFilter, Tag, ListChecks, RefreshCw, Siren,
+  ListFilter, Tag, ListChecks, RefreshCw, Siren, Package,
 } from "lucide-react";
 import LabDashboard from "@/components/laboratorio/LabDashboard";
 import LabRequests from "@/components/laboratorio/LabRequests";
@@ -33,6 +33,10 @@ import LabIntIssues from "@/components/laboratorio/LabIntIssues";
 import LabIntReports from "@/components/laboratorio/LabIntReports";
 import LabIntConfig from "@/components/laboratorio/LabIntConfig";
 import LabIntEquipment from "@/components/laboratorio/LabIntEquipment";
+import LabExtShipments from "@/components/laboratorio/LabExtShipments";
+import LabExtWorklist from "@/components/laboratorio/LabExtWorklist";
+import LabExtCriticals from "@/components/laboratorio/LabExtCriticals";
+import LabExtRecollection from "@/components/laboratorio/LabExtRecollection";
 
 const mainTabs = [
   { value: "dashboard", label: "Dashboard", icon: BarChart3 },
@@ -55,12 +59,16 @@ const mainTabs = [
 
 const intTabs = [
   { value: "int-dashboard", label: "Dashboard", icon: Gauge },
+  { value: "int-worklist", label: "Worklist Ext.", icon: ListChecks },
   { value: "int-partners", label: "Parceiros", icon: Building2 },
   { value: "int-equipment", label: "Equipamentos", icon: Cable },
   { value: "int-mappings", label: "Mapeamento", icon: ArrowLeftRight },
   { value: "int-queue", label: "Fila", icon: ListFilter },
   { value: "int-orders", label: "Protocolos Ext.", icon: Send },
+  { value: "int-shipments", label: "Remessas", icon: Package },
   { value: "int-results", label: "Resultados Ext.", icon: FileDown },
+  { value: "int-criticals", label: "Críticos Ext.", icon: Siren },
+  { value: "int-recollection", label: "Recoleta Ext.", icon: RefreshCw },
   { value: "int-logs", label: "Logs", icon: ScrollText },
   { value: "int-issues", label: "Pendências Int.", icon: AlertTriangle },
   { value: "int-reports", label: "Relatórios Int.", icon: FileBarChart },
@@ -135,12 +143,16 @@ export default function Laboratorio() {
             ))}
           </TabsList>
           <TabsContent value="int-dashboard"><LabIntDashboard /></TabsContent>
+          <TabsContent value="int-worklist"><LabExtWorklist /></TabsContent>
           <TabsContent value="int-partners"><LabIntPartners /></TabsContent>
           <TabsContent value="int-equipment"><LabIntEquipment /></TabsContent>
           <TabsContent value="int-mappings"><LabIntMappings /></TabsContent>
           <TabsContent value="int-queue"><LabIntQueue /></TabsContent>
           <TabsContent value="int-orders"><LabIntOrders /></TabsContent>
+          <TabsContent value="int-shipments"><LabExtShipments /></TabsContent>
           <TabsContent value="int-results"><LabIntResults /></TabsContent>
+          <TabsContent value="int-criticals"><LabExtCriticals /></TabsContent>
+          <TabsContent value="int-recollection"><LabExtRecollection /></TabsContent>
           <TabsContent value="int-logs"><LabIntLogs /></TabsContent>
           <TabsContent value="int-issues"><LabIntIssues /></TabsContent>
           <TabsContent value="int-reports"><LabIntReports /></TabsContent>
