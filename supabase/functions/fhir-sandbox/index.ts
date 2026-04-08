@@ -26,6 +26,17 @@ function ensureResourceId(resource: any, label: string) {
   return resource.id as string;
 }
 
+function buildRunIdentifiers(body: FHIRPayload) {
+  const runId = crypto.randomUUID();
+
+  return {
+    patientIdentifier: body.order_id
+      ? (body.patient_id || body.order_id)
+      : `${body.patient_id || "sim-patient"}-${runId}`,
+    orderIdentifier: body.order_id || `sim-order-${runId}`,
+  };
+}
+
 async function createQueueRecord(supabase: any, payload: {
   queue_type: "apoio" | "equipamento" | "envio";
   direction: "outbound" | "inbound";
@@ -80,11 +91,13 @@ Deno.serve(async (req) => {
     const body: FHIRPayload = await req.json();
 
     if (body.action === "send_order") {
+      const identifiers = buildRunIdentifiers(body);
+
       // 1. Create FHIR Patient
       const patientResource = {
         resourceType: "Patient",
         name: [{ family: body.patient_name?.split(" ").pop() || "Teste", given: [body.patient_name?.split(" ")[0] || "Paciente"] }],
-        identifier: [{ system: "urn:zurich:patient", value: body.patient_id || "unknown" }],
+        identifier: [{ system: "urn:zurich:patient", value: identifiers.patientIdentifier }],
       };
 
       const patientResp = await fetch(`${FHIR_BASE}/Patient`, {
@@ -105,7 +118,7 @@ Deno.serve(async (req) => {
           category: [{ coding: [{ system: "http://snomed.info/sct", code: "108252007", display: "Laboratory procedure" }] }],
           code: { coding: [{ system: "urn:zurich:lab", code: exam.code, display: exam.name }], text: exam.name },
           subject: { reference: `Patient/${fhirPatientId}` },
-          identifier: [{ system: "urn:zurich:order", value: body.order_id || "unknown" }],
+          identifier: [{ system: "urn:zurich:order", value: identifiers.orderIdentifier }],
           priority: "routine",
           authoredOn: new Date().toISOString(),
         };
@@ -175,6 +188,8 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "simulate_full_cycle") {
+      const identifiers = buildRunIdentifiers(body);
+
       // Full cycle: create patient → ServiceRequest → DiagnosticReport → Observation
       const patientName = body.patient_name || "Paciente Teste FHIR";
       const orderRecord = body.order_id
@@ -189,7 +204,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           resourceType: "Patient",
           name: [{ family: patientName.split(" ").pop(), given: [patientName.split(" ")[0]] }],
-          identifier: [{ system: "urn:zurich:patient", value: body.patient_id || "sim-patient" }],
+            identifier: [{ system: "urn:zurich:patient", value: identifiers.patientIdentifier }],
         }),
       });
       const fhirPatient = await patientResp.json();
@@ -210,7 +225,7 @@ Deno.serve(async (req) => {
             intent: "order",
             code: { coding: [{ system: "urn:zurich:lab", code: exam.code, display: exam.name }], text: exam.name },
             subject: { reference: `Patient/${fhirPatientId}` },
-            identifier: [{ system: "urn:zurich:order", value: body.order_id || "sim-order" }],
+            identifier: [{ system: "urn:zurich:order", value: identifiers.orderIdentifier }],
             authoredOn: new Date().toISOString(),
           }),
         });
@@ -250,7 +265,7 @@ Deno.serve(async (req) => {
             result: [{ reference: `Observation/${fhirObsId}` }],
             effectiveDateTime: new Date().toISOString(),
             issued: new Date().toISOString(),
-            identifier: [{ system: "urn:zurich:order", value: body.order_id || "sim-order" }],
+            identifier: [{ system: "urn:zurich:order", value: identifiers.orderIdentifier }],
             conclusion: "Resultados dentro dos parâmetros de normalidade.",
           }),
         });
