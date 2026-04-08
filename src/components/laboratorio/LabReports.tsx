@@ -129,8 +129,35 @@ export default function LabReports() {
       status: "liberado", released_at: new Date().toISOString(), released_by: user?.id,
     } as any).eq("id", r.id);
     if (error) { toast.error(error.message); return; }
+
+    // Update lab_requests status to concluido
+    if (r.request_id) {
+      await (supabase as any).from("lab_requests").update({ status: "concluido" }).eq("id", r.request_id);
+    }
+
+    // Sync back to exam_requests: find matching exam_request by patient_id and update to liberado
+    if (r.patient_id && r.request_id) {
+      const { data: labReq } = await (supabase as any).from("lab_requests").select("request_number, clinical_notes").eq("id", r.request_id).single();
+      // Find exam_request with matching patient and exam info
+      const { data: examReqs } = await supabase.from("exam_requests")
+        .select("id, status")
+        .eq("patient_id", r.patient_id)
+        .neq("status", "liberado")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      // Update the most recent matching one to liberado with result info
+      if (examReqs?.length) {
+        await supabase.from("exam_requests").update({
+          status: "liberado",
+          result_date: new Date().toISOString(),
+          result_text: `Laudo ${r.report_number} liberado. Requisição: ${labReq?.request_number || "—"}`,
+        } as any).eq("id", examReqs[0].id);
+      }
+    }
+
     await createLabLog("lab_reports", r.id, "laudo_liberado", user?.id);
     qc.invalidateQueries({ queryKey: ["lab-reports-details"] });
+    qc.invalidateQueries({ queryKey: ["lab-requests-details"] });
     toast.success("Laudo liberado");
   };
 
