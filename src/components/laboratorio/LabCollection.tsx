@@ -70,27 +70,44 @@ export default function LabCollection() {
   const handleCollect = async () => {
     if (!selectedItems.length) return;
     try {
+      const now = new Date().toISOString();
       for (const itemId of selectedItems) {
         const item = pendingItems?.find((i: any) => i.id === itemId);
         if (!item) continue;
+        const patientId = item.lab_requests?.patient_id;
         // Create collection record
-        await (supabase as any).from("lab_collections").insert({
+        const { data: colData } = await (supabase as any).from("lab_collections").insert({
           request_item_id: itemId,
-          patient_id: item.lab_requests?.patient_id,
+          patient_id: patientId,
           collector_id: user?.id,
-          collected_at: new Date().toISOString(),
+          collected_at: now,
           collection_site: collectForm.collection_site,
           status: "coletado",
           notes: collectForm.notes || null,
+        }).select("id").single();
+        // Auto-create sample with barcode
+        const seq = Date.now().toString().slice(-6);
+        const barcode = `SMP-${new Date().getFullYear()}-${seq}`;
+        const materialId = item.lab_exams?.material_id || null;
+        await (supabase as any).from("lab_samples").insert({
+          barcode,
+          collection_id: colData?.id || null,
+          request_item_id: itemId,
+          patient_id: patientId,
+          material_id: materialId,
+          status: "coletada",
+          condition: "adequada",
+          collected_at: now,
         });
         // Update request_item status
         await (supabase as any).from("lab_request_items").update({ status: "coletado" }).eq("id", itemId);
-        await createLabLog("lab_request_items", itemId, "coleta_realizada", user?.id, { site: collectForm.collection_site });
+        await createLabLog("lab_request_items", itemId, "coleta_realizada", user?.id, { site: collectForm.collection_site, barcode });
       }
       qc.invalidateQueries({ queryKey: ["lab-collections-details"] });
       qc.invalidateQueries({ queryKey: ["lab-pending-collection-items"] });
       qc.invalidateQueries({ queryKey: ["lab-processing-items"] });
-      toast.success(`${selectedItems.length} exame(s) coletado(s)`);
+      qc.invalidateQueries({ queryKey: ["lab-samples-details"] });
+      toast.success(`${selectedItems.length} exame(s) coletado(s) — amostras criadas`);
       setShowCollect(false);
       setSelectedItems([]);
       setCollectForm({ collection_site: "Sala de Coleta 1", notes: "" });

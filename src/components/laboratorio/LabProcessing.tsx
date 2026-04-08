@@ -58,10 +58,26 @@ export default function LabProcessing() {
   const handleComplete = async (item: any) => {
     const { error } = await (supabase as any).from("lab_request_items").update({ status: "concluido" }).eq("id", item.id);
     if (error) { toast.error(error.message); return; }
+    // Auto-create result record for this item
+    const { data: existingResult } = await (supabase as any)
+      .from("lab_results").select("id").eq("request_item_id", item.id).limit(1);
+    if (!existingResult?.length) {
+      // Find sample linked to this item
+      const { data: sampleData } = await (supabase as any)
+        .from("lab_samples").select("id").eq("request_item_id", item.id).limit(1);
+      await (supabase as any).from("lab_results").insert({
+        request_item_id: item.id,
+        sample_id: sampleData?.[0]?.id || null,
+        status: "em_processamento",
+        result_source: "manual",
+        performed_by: user?.id,
+      });
+    }
     await createLabLog("lab_request_items", item.id, "processamento_concluido", user?.id);
     qc.invalidateQueries({ queryKey: ["lab-processing-items"] });
     qc.invalidateQueries({ queryKey: ["lab-request-items"] });
-    toast.success("Processamento concluído");
+    qc.invalidateQueries({ queryKey: ["lab-results-details"] });
+    toast.success("Processamento concluído — resultado criado para digitação");
   };
 
   const filtered = items?.filter((i: any) => {
