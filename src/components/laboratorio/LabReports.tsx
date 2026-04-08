@@ -343,6 +343,33 @@ export default function LabReports() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Create Report Dialog */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gerar Novo Laudo</DialogTitle>
+            <DialogDescription>Selecione a solicitação para gerar o laudo</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Solicitação</Label>
+            <Select value={selectedRequestId} onValueChange={setSelectedRequestId}>
+              <SelectTrigger><SelectValue placeholder="Selecione a solicitação" /></SelectTrigger>
+              <SelectContent>
+                {(eligibleRequests ?? []).map((r: any) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.request_number} — {r.patients?.full_name ?? "Paciente"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
+            <Button onClick={handleCreateReport} disabled={!selectedRequestId}>Gerar Laudo</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
