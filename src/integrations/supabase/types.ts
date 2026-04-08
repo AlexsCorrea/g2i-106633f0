@@ -3072,6 +3072,83 @@ export type Database = {
           },
         ]
       }
+      lab_exam_components: {
+        Row: {
+          active: boolean | null
+          code: string | null
+          created_at: string | null
+          critical_max: number | null
+          critical_min: number | null
+          exam_id: string
+          group_name: string | null
+          id: string
+          name: string
+          options: string[] | null
+          ref_age_max: number | null
+          ref_age_min: number | null
+          ref_gender: string | null
+          ref_method: string | null
+          reference_max: number | null
+          reference_min: number | null
+          reference_text: string | null
+          result_type: string | null
+          sort_order: number | null
+          unit: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          code?: string | null
+          created_at?: string | null
+          critical_max?: number | null
+          critical_min?: number | null
+          exam_id: string
+          group_name?: string | null
+          id?: string
+          name: string
+          options?: string[] | null
+          ref_age_max?: number | null
+          ref_age_min?: number | null
+          ref_gender?: string | null
+          ref_method?: string | null
+          reference_max?: number | null
+          reference_min?: number | null
+          reference_text?: string | null
+          result_type?: string | null
+          sort_order?: number | null
+          unit?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          code?: string | null
+          created_at?: string | null
+          critical_max?: number | null
+          critical_min?: number | null
+          exam_id?: string
+          group_name?: string | null
+          id?: string
+          name?: string
+          options?: string[] | null
+          ref_age_max?: number | null
+          ref_age_min?: number | null
+          ref_gender?: string | null
+          ref_method?: string | null
+          reference_max?: number | null
+          reference_min?: number | null
+          reference_text?: string | null
+          result_type?: string | null
+          sort_order?: number | null
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_exam_components_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "lab_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lab_exam_mappings: {
         Row: {
           active: boolean
@@ -3174,6 +3251,7 @@ export type Database = {
           reference_min: number | null
           reference_text: string | null
           requires_fasting: boolean
+          result_mode: string | null
           result_type: string | null
           sector_id: string | null
           sla_minutes: number | null
@@ -3201,6 +3279,7 @@ export type Database = {
           reference_min?: number | null
           reference_text?: string | null
           requires_fasting?: boolean
+          result_mode?: string | null
           result_type?: string | null
           sector_id?: string | null
           sla_minutes?: number | null
@@ -3228,6 +3307,7 @@ export type Database = {
           reference_min?: number | null
           reference_text?: string | null
           requires_fasting?: boolean
+          result_mode?: string | null
           result_type?: string | null
           sector_id?: string | null
           sla_minutes?: number | null
@@ -4824,6 +4904,54 @@ export type Database = {
             columns: ["requesting_doctor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_result_components: {
+        Row: {
+          component_id: string
+          created_at: string | null
+          id: string
+          is_abnormal: boolean | null
+          is_critical: boolean | null
+          numeric_value: number | null
+          result_id: string
+          value: string | null
+        }
+        Insert: {
+          component_id: string
+          created_at?: string | null
+          id?: string
+          is_abnormal?: boolean | null
+          is_critical?: boolean | null
+          numeric_value?: number | null
+          result_id: string
+          value?: string | null
+        }
+        Update: {
+          component_id?: string
+          created_at?: string | null
+          id?: string
+          is_abnormal?: boolean | null
+          is_critical?: boolean | null
+          numeric_value?: number | null
+          result_id?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_result_components_component_id_fkey"
+            columns: ["component_id"]
+            isOneToOne: false
+            referencedRelation: "lab_exam_components"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_result_components_result_id_fkey"
+            columns: ["result_id"]
+            isOneToOne: false
+            referencedRelation: "lab_results"
             referencedColumns: ["id"]
           },
         ]
