@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useLabResults, useLabResultsWithDetails, createLabLog } from "@/hooks/useLaboratory";
+import { useLabResults, useLabResultsWithDetails, createLabLog, useExamComponentsByExamId } from "@/hooks/useLaboratory";
+import { supabase } from "@/integrations/supabase/client";
 import { Search, AlertTriangle, CheckCircle2, FileCheck } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 const statusColors: Record<string, string> = {
   em_processamento: "bg-purple-100 text-purple-800",
@@ -23,14 +25,56 @@ const statusLabels: Record<string, string> = {
   em_processamento: "Processando", aguardando_conferencia: "Aguard. Conferência", validado: "Validado",
 };
 
+function checkFlag(val: number | null, min: number | null, max: number | null): boolean {
+  if (val == null) return false;
+  if (min != null && val < min) return true;
+  if (max != null && val > max) return true;
+  return false;
+}
+
 export default function LabResults() {
   const { data: results, isLoading } = useLabResultsWithDetails();
   const { update } = useLabResults();
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [editing, setEditing] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ value: "", technical_notes: "", is_critical: false, is_abnormal: false });
+
+  // Simple mode state
+  const [simpleForm, setSimpleForm] = useState({ value: "", technical_notes: "", is_critical: false, is_abnormal: false });
+
+  // Structured mode state
+  const [componentValues, setComponentValues] = useState<Record<string, { value: string; numeric_value: number | null }>>({});
+
+  // Get exam info for the editing result
+  const examId = editing?.lab_request_items?.lab_exams?.id || null;
+  const resultMode = editing?.lab_request_items?.lab_exams?.result_mode || "simples";
+  const { data: examComponents } = useExamComponentsByExamId(
+    resultMode === "estruturado" ? examId : null
+  );
+
+  const isStructured = resultMode === "estruturado" && examComponents && examComponents.length > 0;
+
+  // Load existing component values when editing
+  useEffect(() => {
+    if (!editing || !isStructured) return;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("lab_result_components")
+        .select("component_id, value, numeric_value")
+        .eq("result_id", editing.id);
+      if (data?.length) {
+        const vals: Record<string, { value: string; numeric_value: number | null }> = {};
+        data.forEach((d: any) => {
+          vals[d.component_id] = { value: d.value || "", numeric_value: d.numeric_value };
+        });
+        setComponentValues(vals);
+      } else {
+        setComponentValues({});
+      }
+    })();
+  }, [editing?.id, isStructured]);
 
   const filtered = results?.filter((r: any) => {
     const q = search.toLowerCase();
@@ -44,27 +88,131 @@ export default function LabResults() {
 
   const openEdit = (r: any) => {
     setEditing(r);
-    setEditForm({ value: r.value || "", technical_notes: r.technical_notes || "", is_critical: r.is_critical, is_abnormal: r.is_abnormal });
+    setSimpleForm({ value: r.value || "", technical_notes: r.technical_notes || "", is_critical: r.is_critical, is_abnormal: r.is_abnormal });
+    setComponentValues({});
   };
 
-  const saveResult = () => {
-    if (!editing) return;
-    update.mutate({
-      id: editing.id,
-      value: editForm.value,
-      numeric_value: parseFloat(editForm.value) || null,
-      technical_notes: editForm.technical_notes || null,
-      is_critical: editForm.is_critical,
-      is_abnormal: editForm.is_abnormal,
-      status: "aguardando_conferencia",
-      performed_by: user?.id,
-      performed_at: new Date().toISOString(),
-    } as any, {
-      onSuccess: () => {
-        createLabLog("lab_results", editing.id, "resultado_digitado", user?.id);
-        setEditing(null);
-      },
+  // Group components by group_name
+  const groupedComponents = useMemo(() => {
+    if (!examComponents) return [];
+    const groups: { name: string; items: any[] }[] = [];
+    const map = new Map<string, any[]>();
+    examComponents.forEach((c: any) => {
+      const g = c.group_name || "Geral";
+      if (!map.has(g)) { map.set(g, []); groups.push({ name: g, items: map.get(g)! }); }
+      map.get(g)!.push(c);
     });
+    return groups;
+  }, [examComponents]);
+
+  const setCompValue = (compId: string, val: string) => {
+    const numVal = parseFloat(val);
+    setComponentValues(prev => ({
+      ...prev,
+      [compId]: { value: val, numeric_value: isNaN(numVal) ? null : numVal },
+    }));
+  };
+
+  const getCompFlag = (comp: any) => {
+    const v = componentValues[comp.id];
+    if (!v || v.numeric_value == null) return { abnormal: false, critical: false };
+    return {
+      abnormal: checkFlag(v.numeric_value, comp.reference_min, comp.reference_max),
+      critical: checkFlag(v.numeric_value, comp.critical_min, comp.critical_max),
+    };
+  };
+
+  const saveResult = async () => {
+    if (!editing) return;
+
+    if (isStructured) {
+      // Save structured components
+      const anyCritical = examComponents!.some((c: any) => getCompFlag(c).critical);
+      const anyAbnormal = examComponents!.some((c: any) => getCompFlag(c).abnormal || getCompFlag(c).critical);
+
+      // Build summary value
+      const summaryParts = examComponents!.map((c: any) => {
+        const v = componentValues[c.id];
+        return `${c.name}: ${v?.value || "—"} ${c.unit || ""}`.trim();
+      });
+
+      // Update parent result
+      update.mutate({
+        id: editing.id,
+        value: summaryParts.join("; "),
+        is_critical: anyCritical,
+        is_abnormal: anyAbnormal,
+        status: "aguardando_conferencia",
+        performed_by: user?.id,
+        performed_at: new Date().toISOString(),
+        technical_notes: simpleForm.technical_notes || null,
+      } as any, {
+        onSuccess: async () => {
+          // Upsert component values
+          for (const comp of examComponents!) {
+            const v = componentValues[comp.id];
+            const flags = getCompFlag(comp);
+            const existing = await (supabase as any)
+              .from("lab_result_components")
+              .select("id")
+              .eq("result_id", editing.id)
+              .eq("component_id", comp.id)
+              .maybeSingle();
+
+            if (existing.data) {
+              await (supabase as any).from("lab_result_components").update({
+                value: v?.value || null,
+                numeric_value: v?.numeric_value ?? null,
+                is_abnormal: flags.abnormal,
+                is_critical: flags.critical,
+              }).eq("id", existing.data.id);
+            } else if (v?.value) {
+              await (supabase as any).from("lab_result_components").insert({
+                result_id: editing.id,
+                component_id: comp.id,
+                value: v.value,
+                numeric_value: v.numeric_value,
+                is_abnormal: flags.abnormal,
+                is_critical: flags.critical,
+              });
+            }
+
+            // Audit log per component
+            if (v?.value) {
+              await createLabLog("result_component", comp.id, "resultado_componente_preenchido", user?.id, {
+                result_id: editing.id,
+                component_name: comp.name,
+                value: v.value,
+                origin: "manual",
+                is_abnormal: flags.abnormal,
+                is_critical: flags.critical,
+              });
+            }
+          }
+          await createLabLog("lab_results", editing.id, "resultado_estruturado_digitado", user?.id);
+          qc.invalidateQueries({ queryKey: ["lab-results-details"] });
+          setEditing(null);
+        },
+      });
+    } else {
+      // Simple mode
+      update.mutate({
+        id: editing.id,
+        value: simpleForm.value,
+        numeric_value: parseFloat(simpleForm.value) || null,
+        technical_notes: simpleForm.technical_notes || null,
+        is_critical: simpleForm.is_critical,
+        is_abnormal: simpleForm.is_abnormal,
+        status: "aguardando_conferencia",
+        performed_by: user?.id,
+        performed_at: new Date().toISOString(),
+      } as any, {
+        onSuccess: () => {
+          createLabLog("lab_results", editing.id, "resultado_digitado", user?.id);
+          setEditing(null);
+        },
+      });
+    }
   };
 
   const validateResult = (r: any) => {
@@ -117,10 +265,9 @@ export default function LabResults() {
               <TableRow>
                 <TableHead>Solicitação</TableHead>
                 <TableHead>Exame</TableHead>
+                <TableHead>Modo</TableHead>
                 <TableHead>Paciente</TableHead>
                 <TableHead>Valor</TableHead>
-                <TableHead>Unidade</TableHead>
-                <TableHead>Referência</TableHead>
                 <TableHead>Flags</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
@@ -128,17 +275,20 @@ export default function LabResults() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !filtered.length ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhum resultado encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum resultado encontrado</TableCell></TableRow>
               ) : filtered.map((r: any) => (
-                <TableRow key={r.id} className={r.is_critical ? "bg-red-50/50" : ""}>
+                <TableRow key={r.id} className={r.is_critical ? "bg-destructive/5" : ""}>
                   <TableCell className="font-mono text-sm">{r.lab_request_items?.lab_requests?.request_number ?? "—"}</TableCell>
                   <TableCell className="font-medium">{r.lab_request_items?.lab_exams?.name ?? "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[10px]">
+                      {r.lab_request_items?.lab_exams?.result_mode === "estruturado" ? "Estruturado" : "Simples"}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{r.lab_request_items?.lab_requests?.patients?.full_name ?? "—"}</TableCell>
-                  <TableCell className="font-mono">{r.value ?? <span className="text-muted-foreground italic">pendente</span>}</TableCell>
-                  <TableCell>{r.unit ?? r.lab_request_items?.lab_exams?.unit ?? "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{r.reference_text ?? "—"}</TableCell>
+                  <TableCell className="font-mono max-w-[200px] truncate">{r.value ?? <span className="text-muted-foreground italic">pendente</span>}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       {r.is_critical && <Badge variant="destructive" className="text-xs">Crítico</Badge>}
@@ -167,31 +317,90 @@ export default function LabResults() {
         </CardContent>
       </Card>
 
+      {/* Result Dialog — Dynamic by result_mode */}
       <Dialog open={!!editing} onOpenChange={() => setEditing(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={isStructured ? "max-w-3xl max-h-[90vh] overflow-y-auto" : "max-w-md"}>
           <DialogHeader>
-            <DialogTitle>Digitar / Editar Resultado</DialogTitle>
+            <DialogTitle>
+              {isStructured ? "Resultado Estruturado" : "Digitar / Editar Resultado"}
+            </DialogTitle>
             <DialogDescription>
               {editing?.lab_request_items?.lab_exams?.name} — {editing?.lab_request_items?.lab_requests?.patients?.full_name}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Valor / Resultado *</Label><Textarea value={editForm.value} onChange={e => setEditForm(f => ({ ...f, value: e.target.value }))} rows={3} placeholder="Ex: 25000 ou texto descritivo" /></div>
-            <div><Label>Observação Técnica</Label><Textarea value={editForm.technical_notes} onChange={e => setEditForm(f => ({ ...f, technical_notes: e.target.value }))} rows={2} /></div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch checked={editForm.is_critical} onCheckedChange={v => setEditForm(f => ({ ...f, is_critical: v }))} />
-                <Label className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-red-500" />Crítico</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={editForm.is_abnormal} onCheckedChange={v => setEditForm(f => ({ ...f, is_abnormal: v }))} />
-                <Label>Alterado</Label>
+
+          {isStructured ? (
+            <div className="space-y-4">
+              {groupedComponents.map(group => (
+                <div key={group.name}>
+                  <h4 className="text-sm font-semibold text-primary mb-2 border-b border-border pb-1">{group.name}</h4>
+                  <div className="space-y-1">
+                    <div className="grid grid-cols-[1fr_100px_60px_120px_60px] gap-2 text-xs text-muted-foreground font-medium px-1">
+                      <span>Parâmetro</span>
+                      <span>Resultado</span>
+                      <span>Unidade</span>
+                      <span>Referência</span>
+                      <span>Flag</span>
+                    </div>
+                    {group.items.map((comp: any) => {
+                      const v = componentValues[comp.id];
+                      const flags = getCompFlag(comp);
+                      return (
+                        <div key={comp.id} className={`grid grid-cols-[1fr_100px_60px_120px_60px] gap-2 items-center px-1 py-1 rounded ${
+                          flags.critical ? "bg-destructive/10 border border-destructive/30" :
+                          flags.abnormal ? "bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700" :
+                          "hover:bg-muted/30"
+                        }`}>
+                          <span className="text-sm font-medium">{comp.name}</span>
+                          <Input
+                            className="h-7 text-sm font-mono"
+                            value={v?.value || ""}
+                            onChange={e => setCompValue(comp.id, e.target.value)}
+                            placeholder="—"
+                          />
+                          <span className="text-xs text-muted-foreground">{comp.unit || ""}</span>
+                          <span className="text-xs text-muted-foreground">{comp.reference_text || ""}</span>
+                          <div className="flex gap-0.5">
+                            {flags.critical && <AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
+                            {flags.abnormal && !flags.critical && <span className="text-amber-500 text-xs font-bold">↑</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              <div>
+                <Label>Observação Técnica</Label>
+                <Textarea value={simpleForm.technical_notes} onChange={e => setSimpleForm(f => ({ ...f, technical_notes: e.target.value }))} rows={2} />
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <Label>Valor / Resultado *</Label>
+                <Textarea value={simpleForm.value} onChange={e => setSimpleForm(f => ({ ...f, value: e.target.value }))} rows={3} placeholder="Ex: 25000 ou texto descritivo" />
+              </div>
+              <div>
+                <Label>Observação Técnica</Label>
+                <Textarea value={simpleForm.technical_notes} onChange={e => setSimpleForm(f => ({ ...f, technical_notes: e.target.value }))} rows={2} />
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch checked={simpleForm.is_critical} onCheckedChange={v => setSimpleForm(f => ({ ...f, is_critical: v }))} />
+                  <Label className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-destructive" />Crítico</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={simpleForm.is_abnormal} onCheckedChange={v => setSimpleForm(f => ({ ...f, is_abnormal: v }))} />
+                  <Label>Alterado</Label>
+                </div>
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
-            <Button onClick={saveResult} disabled={!editForm.value.trim()}>Salvar Resultado</Button>
+            <Button onClick={saveResult} disabled={!isStructured && !simpleForm.value.trim()}>Salvar Resultado</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

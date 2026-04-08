@@ -126,6 +126,8 @@ function useLabTable(table: string, key: string, orderBy = "created_at") {
 }
 
 // ── Exported hooks ──
+export const useLabExamComponents = () => useLabTable("lab_exam_components", "lab-exam-components", "sort_order");
+export const useLabResultComponents = () => useLabTable("lab_result_components", "lab-result-components");
 export const useLabSectors = () => useLabTable("lab_sectors", "lab-sectors");
 export const useLabMaterials = () => useLabTable("lab_materials", "lab-materials");
 export const useLabTubes = () => useLabTable("lab_tubes", "lab-tubes");
@@ -182,6 +184,43 @@ export function useLabSamplesWithDetails() {
   });
 }
 
+// ── Exam components by exam ID ──
+export function useExamComponentsByExamId(examId: string | null) {
+  return useQuery({
+    queryKey: ["lab-exam-components-by-exam", examId],
+    queryFn: async () => {
+      if (!examId) return [];
+      const { data, error } = await (supabase as any)
+        .from("lab_exam_components")
+        .select("*")
+        .eq("exam_id", examId)
+        .eq("active", true)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!examId,
+  });
+}
+
+// ── Result components by result ID ──
+export function useResultComponentsByResultId(resultId: string | null) {
+  return useQuery({
+    queryKey: ["lab-result-components-by-result", resultId],
+    queryFn: async () => {
+      if (!resultId) return [];
+      const { data, error } = await (supabase as any)
+        .from("lab_result_components")
+        .select("*, lab_exam_components(name, code, group_name, unit, reference_min, reference_max, reference_text, critical_min, critical_max, sort_order)")
+        .eq("result_id", resultId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!resultId,
+  });
+}
+
 // ── Results with details ──
 export function useLabResultsWithDetails() {
   return useQuery({
@@ -189,7 +228,7 @@ export function useLabResultsWithDetails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lab_results")
-        .select("*, lab_request_items(*, lab_exams(name, code, unit), lab_requests(request_number, patients(full_name)))")
+        .select("*, lab_request_items(*, lab_exams(id, name, code, unit, result_mode), lab_requests(request_number, patients(full_name)))")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
