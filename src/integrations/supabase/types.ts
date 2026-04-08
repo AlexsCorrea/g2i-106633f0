@@ -3267,6 +3267,44 @@ export type Database = {
           },
         ]
       }
+      lab_external_critical_comms: {
+        Row: {
+          channel: string | null
+          communicated_at: string | null
+          communicated_by: string | null
+          communicated_to: string
+          id: string
+          notes: string | null
+          result_id: string
+        }
+        Insert: {
+          channel?: string | null
+          communicated_at?: string | null
+          communicated_by?: string | null
+          communicated_to: string
+          id?: string
+          notes?: string | null
+          result_id: string
+        }
+        Update: {
+          channel?: string | null
+          communicated_at?: string | null
+          communicated_by?: string | null
+          communicated_to?: string
+          id?: string
+          notes?: string | null
+          result_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_external_critical_comms_result_id_fkey"
+            columns: ["result_id"]
+            isOneToOne: false
+            referencedRelation: "lab_external_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lab_external_order_items: {
         Row: {
           attachment_url: string | null
@@ -3387,6 +3425,7 @@ export type Database = {
           result_at: string | null
           sent_at: string | null
           sent_by: string | null
+          shipment_id: string | null
           unit: string | null
           updated_at: string
         }
@@ -3414,6 +3453,7 @@ export type Database = {
           result_at?: string | null
           sent_at?: string | null
           sent_by?: string | null
+          shipment_id?: string | null
           unit?: string | null
           updated_at?: string
         }
@@ -3441,6 +3481,7 @@ export type Database = {
           result_at?: string | null
           sent_at?: string | null
           sent_by?: string | null
+          shipment_id?: string | null
           unit?: string | null
           updated_at?: string
         }
@@ -3478,6 +3519,71 @@ export type Database = {
             columns: ["sent_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_external_orders_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "lab_external_shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_external_recollections: {
+        Row: {
+          created_at: string | null
+          id: string
+          new_order_id: string | null
+          notes: string | null
+          order_id: string | null
+          reason: string
+          requested_by: string | null
+          result_id: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          new_order_id?: string | null
+          notes?: string | null
+          order_id?: string | null
+          reason: string
+          requested_by?: string | null
+          result_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          new_order_id?: string | null
+          notes?: string | null
+          order_id?: string | null
+          reason?: string
+          requested_by?: string | null
+          result_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_external_recollections_new_order_id_fkey"
+            columns: ["new_order_id"]
+            isOneToOne: false
+            referencedRelation: "lab_external_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_external_recollections_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "lab_external_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_external_recollections_result_id_fkey"
+            columns: ["result_id"]
+            isOneToOne: false
+            referencedRelation: "lab_external_results"
             referencedColumns: ["id"]
           },
         ]
@@ -3618,6 +3724,56 @@ export type Database = {
             columns: ["released_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_external_shipments: {
+        Row: {
+          channel: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          notes: string | null
+          partner_id: string | null
+          received_at: string | null
+          sent_at: string | null
+          shipment_number: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          partner_id?: string | null
+          received_at?: string | null
+          sent_at?: string | null
+          shipment_number: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          partner_id?: string | null
+          received_at?: string | null
+          sent_at?: string | null
+          shipment_number?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_external_shipments_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "lab_partners"
             referencedColumns: ["id"]
           },
         ]
