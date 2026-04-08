@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Search, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import LabRequestDetail from "./LabRequestDetail";
 
 const statusColors: Record<string, string> = {
   solicitado: "bg-blue-100 text-blue-800",
