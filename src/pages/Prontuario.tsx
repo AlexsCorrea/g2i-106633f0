@@ -49,6 +49,7 @@ import { QuickActions } from "@/components/prontuario/QuickActions";
 import { AIChatButton } from "@/components/prontuario/AIChatButton";
 import { AIAssistantPanel } from "@/components/prontuario/AIAssistantPanel";
 import { ModuleSection, EmptyModule } from "@/components/prontuario/sections/ModuleSection";
+import { LabResultsForPatient } from "@/components/prontuario/LabResultsForPatient";
 import { ClinicalAnalytics } from "@/components/prontuario/ClinicalAnalytics";
 import { ExamGallery } from "@/components/prontuario/ExamGallery";
 import {

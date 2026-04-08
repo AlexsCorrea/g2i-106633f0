@@ -51,7 +51,7 @@ export function LabResultsForPatient({ patientId }: Props) {
       const itemMap = new Map(items.map((i: any) => [i.id, i]));
 
       return labResults.map((res: any) => {
-        const item = itemMap.get(res.request_item_id);
+        const item: any = itemMap.get(res.request_item_id);
         const req = item ? requestMap.get(item.request_id) : null;
         return { ...res, exam: item?.lab_exams, request: req };
       });
