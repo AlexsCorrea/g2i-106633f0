@@ -38,6 +38,7 @@ import LabExtWorklist from "@/components/laboratorio/LabExtWorklist";
 import LabExtCriticals from "@/components/laboratorio/LabExtCriticals";
 import LabExtRecollection from "@/components/laboratorio/LabExtRecollection";
 
+/* ── Abas do Laboratório Interno ── */
 const mainTabs = [
   { value: "dashboard", label: "Dashboard", icon: BarChart3 },
   { value: "worklist", label: "Worklist", icon: ListChecks },
@@ -46,37 +47,38 @@ const mainTabs = [
   { value: "triage", label: "Triagem", icon: FlaskConical },
   { value: "samples", label: "Amostras", icon: TestTubes },
   { value: "labels", label: "Etiquetas", icon: Tag },
-  { value: "processing", label: "Processamento", icon: Activity },
+  { value: "processing", label: "Bancada", icon: Activity },
   { value: "results", label: "Resultados", icon: FileCheck },
   { value: "criticals", label: "Críticos", icon: Siren },
   { value: "recollection", label: "Recoleta", icon: RefreshCw },
   { value: "reports", label: "Laudos", icon: FileText },
-  { value: "interface", label: "Interfaceamento", icon: Cable },
+  { value: "interface", label: "Equipamentos", icon: Cable },
   { value: "pending", label: "Pendências", icon: Clock },
   { value: "module-reports", label: "Relatórios", icon: FileBarChart },
   { value: "settings", label: "Cadastros", icon: Settings2 },
 ];
 
-const intTabs = [
-  { value: "int-dashboard", label: "Dashboard", icon: Gauge },
-  { value: "int-worklist", label: "Worklist Ext.", icon: ListChecks },
-  { value: "int-partners", label: "Parceiros", icon: Building2 },
-  { value: "int-equipment", label: "Equipamentos", icon: Cable },
-  { value: "int-mappings", label: "Mapeamento", icon: ArrowLeftRight },
-  { value: "int-queue", label: "Fila", icon: ListFilter },
-  { value: "int-orders", label: "Protocolos Ext.", icon: Send },
-  { value: "int-shipments", label: "Remessas", icon: Package },
-  { value: "int-results", label: "Resultados Ext.", icon: FileDown },
-  { value: "int-criticals", label: "Críticos Ext.", icon: Siren },
-  { value: "int-recollection", label: "Recoleta Ext.", icon: RefreshCw },
-  { value: "int-logs", label: "Logs", icon: ScrollText },
-  { value: "int-issues", label: "Pendências Int.", icon: AlertTriangle },
-  { value: "int-reports", label: "Relatórios Int.", icon: FileBarChart },
-  { value: "int-config", label: "Configurações", icon: Settings2 },
+/* ── Abas do Apoio Externo ── */
+const extTabs = [
+  { value: "ext-dashboard", label: "Dashboard", icon: Gauge },
+  { value: "ext-worklist", label: "Worklist Apoio", icon: ListChecks },
+  { value: "ext-orders", label: "Pedidos Enviados", icon: Send },
+  { value: "ext-shipments", label: "Remessas", icon: Package },
+  { value: "ext-results", label: "Resultados do Apoio", icon: FileDown },
+  { value: "ext-criticals", label: "Críticos do Apoio", icon: Siren },
+  { value: "ext-recollection", label: "Recoletas do Apoio", icon: RefreshCw },
+  { value: "ext-pending", label: "Pendências", icon: AlertTriangle },
+  { value: "ext-queue", label: "Fila de Integração", icon: ListFilter },
+  { value: "ext-logs", label: "Logs", icon: ScrollText },
+  { value: "ext-reports", label: "Relatórios", icon: FileBarChart },
+  { value: "ext-partners", label: "Parceiros", icon: Building2 },
+  { value: "ext-equipment", label: "Equipamentos", icon: Cable },
+  { value: "ext-mappings", label: "Mapeamentos", icon: ArrowLeftRight },
+  { value: "ext-config", label: "Configurações", icon: Settings2 },
 ];
 
 export default function Laboratorio() {
-  const [section, setSection] = useState<"lab" | "integration">("lab");
+  const [section, setSection] = useState<"lab" | "ext">("lab");
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -85,8 +87,8 @@ export default function Laboratorio() {
           <h1 className="text-2xl font-bold tracking-tight">Laboratório</h1>
           <p className="text-sm text-muted-foreground">
             {section === "lab"
-              ? "Gestão completa do laboratório clínico — fases pré-analítica, analítica e pós-analítica"
-              : "Interfaceamento e Laboratórios de Apoio — integração com parceiros e equipamentos"}
+              ? "Fluxo interno — fases pré-analítica, analítica e pós-analítica"
+              : "Apoio externo — laboratórios parceiros, remessas e integração"}
           </p>
         </div>
         <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
@@ -94,13 +96,13 @@ export default function Laboratorio() {
             onClick={() => setSection("lab")}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${section === "lab" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
           >
-            Laboratório
+            Interno
           </button>
           <button
-            onClick={() => setSection("integration")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${section === "integration" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            onClick={() => setSection("ext")}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${section === "ext" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
           >
-            Integrações
+            Apoio Externo
           </button>
         </div>
       </div>
@@ -133,30 +135,30 @@ export default function Laboratorio() {
           <TabsContent value="settings"><LabSettings /></TabsContent>
         </Tabs>
       ) : (
-        <Tabs defaultValue="int-dashboard" className="space-y-4">
+        <Tabs defaultValue="ext-dashboard" className="space-y-4">
           <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
-            {intTabs.map(t => (
+            {extTabs.map(t => (
               <TabsTrigger key={t.value} value={t.value} className="text-xs gap-1.5 data-[state=active]:bg-background">
                 <t.icon className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t.label}</span>
               </TabsTrigger>
             ))}
           </TabsList>
-          <TabsContent value="int-dashboard"><LabIntDashboard /></TabsContent>
-          <TabsContent value="int-worklist"><LabExtWorklist /></TabsContent>
-          <TabsContent value="int-partners"><LabIntPartners /></TabsContent>
-          <TabsContent value="int-equipment"><LabIntEquipment /></TabsContent>
-          <TabsContent value="int-mappings"><LabIntMappings /></TabsContent>
-          <TabsContent value="int-queue"><LabIntQueue /></TabsContent>
-          <TabsContent value="int-orders"><LabIntOrders /></TabsContent>
-          <TabsContent value="int-shipments"><LabExtShipments /></TabsContent>
-          <TabsContent value="int-results"><LabIntResults /></TabsContent>
-          <TabsContent value="int-criticals"><LabExtCriticals /></TabsContent>
-          <TabsContent value="int-recollection"><LabExtRecollection /></TabsContent>
-          <TabsContent value="int-logs"><LabIntLogs /></TabsContent>
-          <TabsContent value="int-issues"><LabIntIssues /></TabsContent>
-          <TabsContent value="int-reports"><LabIntReports /></TabsContent>
-          <TabsContent value="int-config"><LabIntConfig /></TabsContent>
+          <TabsContent value="ext-dashboard"><LabIntDashboard /></TabsContent>
+          <TabsContent value="ext-worklist"><LabExtWorklist /></TabsContent>
+          <TabsContent value="ext-orders"><LabIntOrders /></TabsContent>
+          <TabsContent value="ext-shipments"><LabExtShipments /></TabsContent>
+          <TabsContent value="ext-results"><LabIntResults /></TabsContent>
+          <TabsContent value="ext-criticals"><LabExtCriticals /></TabsContent>
+          <TabsContent value="ext-recollection"><LabExtRecollection /></TabsContent>
+          <TabsContent value="ext-pending"><LabIntIssues /></TabsContent>
+          <TabsContent value="ext-queue"><LabIntQueue /></TabsContent>
+          <TabsContent value="ext-logs"><LabIntLogs /></TabsContent>
+          <TabsContent value="ext-reports"><LabIntReports /></TabsContent>
+          <TabsContent value="ext-partners"><LabIntPartners /></TabsContent>
+          <TabsContent value="ext-equipment"><LabIntEquipment /></TabsContent>
+          <TabsContent value="ext-mappings"><LabIntMappings /></TabsContent>
+          <TabsContent value="ext-config"><LabIntConfig /></TabsContent>
         </Tabs>
       )}
     </div>

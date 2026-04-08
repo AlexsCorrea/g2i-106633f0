@@ -4,70 +4,172 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Settings2, Globe, Shield, Clock, FlaskConical, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronRight, Copy } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Settings2, Globe, Shield, Clock, FlaskConical, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronRight, Copy, Building2, Cable } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLabPartners } from "@/hooks/useLabIntegration";
 import { toast } from "sonner";
 
 interface FhirExam { exam: string; code: string; sr: string; obs: string; dr: string; result_id?: string }
 interface FhirResult {
-  success: boolean;
-  message?: string;
-  endpoint?: string;
+  success: boolean; message?: string; endpoint?: string;
   fhir_ids?: { patient: string; exams: FhirExam[] };
-  patient?: string | null;
-  service_request?: string | null;
-  observation?: string | null;
-  diagnostic_report?: string | null;
-  result_imported?: boolean;
-  error?: string;
+  patient?: string | null; service_request?: string | null;
+  observation?: string | null; diagnostic_report?: string | null;
+  result_imported?: boolean; error?: string;
 }
 
 const normalizeFhirResult = (input: any): FhirResult => {
   const payload = input?.data ?? input;
   const exams = Array.isArray(payload?.fhir_ids?.exams)
     ? payload.fhir_ids.exams.map((exam: any) => ({
-        exam: exam?.exam ?? exam?.name ?? "Exame",
-        code: exam?.code ?? "-",
+        exam: exam?.exam ?? exam?.name ?? "Exame", code: exam?.code ?? "-",
         sr: exam?.sr ?? payload?.service_request ?? "",
         obs: exam?.obs ?? payload?.observation ?? "",
         dr: exam?.dr ?? payload?.diagnostic_report ?? "",
         result_id: exam?.result_id,
       }))
     : [];
-
   const patient = payload?.fhir_ids?.patient ?? payload?.patient ?? null;
-  const hasCompleteIds = Boolean(patient) && exams.length > 0 && exams.every((exam: FhirExam) => exam.sr && exam.obs && exam.dr);
-
+  const hasCompleteIds = Boolean(patient) && exams.length > 0 && exams.every((e: FhirExam) => e.sr && e.obs && e.dr);
   if (payload?.success && !hasCompleteIds) {
-    return {
-      success: false,
-      endpoint: payload?.endpoint,
-      message: payload?.message,
-      fhir_ids: patient ? { patient, exams } : undefined,
-      patient,
-      service_request: payload?.service_request ?? null,
-      observation: payload?.observation ?? null,
-      diagnostic_report: payload?.diagnostic_report ?? null,
-      result_imported: payload?.result_imported,
-      error: "O sandbox respondeu sem todos os IDs obrigatórios do ciclo FHIR.",
-    };
+    return { success: false, endpoint: payload?.endpoint, message: payload?.message,
+      fhir_ids: patient ? { patient, exams } : undefined, patient,
+      service_request: payload?.service_request ?? null, observation: payload?.observation ?? null,
+      diagnostic_report: payload?.diagnostic_report ?? null, result_imported: payload?.result_imported,
+      error: "O sandbox respondeu sem todos os IDs obrigatórios do ciclo FHIR." };
   }
-
-  return {
-    success: Boolean(payload?.success),
-    message: payload?.message,
-    endpoint: payload?.endpoint,
-    fhir_ids: patient ? { patient, exams } : undefined,
-    patient,
-    service_request: payload?.service_request ?? null,
-    observation: payload?.observation ?? null,
-    diagnostic_report: payload?.diagnostic_report ?? null,
-    result_imported: payload?.result_imported,
-    error: payload?.error,
-  };
+  return { success: Boolean(payload?.success), message: payload?.message, endpoint: payload?.endpoint,
+    fhir_ids: patient ? { patient, exams } : undefined, patient,
+    service_request: payload?.service_request ?? null, observation: payload?.observation ?? null,
+    diagnostic_report: payload?.diagnostic_report ?? null, result_imported: payload?.result_imported,
+    error: payload?.error };
 };
 
-export default function LabIntConfig() {
+/* ── Partner config section ── */
+function PartnerConfigPanel() {
+  const { list } = useLabPartners();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const partner = list.data?.find((p: any) => p.id === selectedId);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Label className="text-xs shrink-0">Parceiro</Label>
+        <Select value={selectedId ?? ""} onValueChange={v => setSelectedId(v)}>
+          <SelectTrigger className="h-8 text-sm w-64"><SelectValue placeholder="Selecione um parceiro" /></SelectTrigger>
+          <SelectContent>
+            {list.data?.map((p: any) => (
+              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {partner ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Building2 className="h-4 w-4" />Dados do Parceiro</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label className="text-xs">Nome</Label><p className="font-medium">{partner.name}</p></div>
+                <div><Label className="text-xs">Status</Label><Badge className={partner.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>{partner.active ? "Ativo" : "Inativo"}</Badge></div>
+                <div><Label className="text-xs">Canal Principal</Label><p>{partner.integration_channel ?? "—"}</p></div>
+                <div><Label className="text-xs">Formato de Resultado</Label><p>{partner.result_format ?? "json"}</p></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Cable className="h-4 w-4" />Conexão</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div><Label className="text-xs">Endpoint / Host</Label><Input className="h-8 text-sm" defaultValue={partner.api_endpoint ?? ""} readOnly /></div>
+              <div className="grid grid-cols-3 gap-2">
+                <div><Label className="text-xs">Timeout (s)</Label><Input className="h-8 text-sm" defaultValue="30" readOnly /></div>
+                <div><Label className="text-xs">Retries</Label><Input className="h-8 text-sm" defaultValue="3" readOnly /></div>
+                <div><Label className="text-xs">Intervalo (s)</Label><Input className="h-8 text-sm" defaultValue="60" readOnly /></div>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Para editar, acesse a aba Parceiros e clique no registro.</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Shield className="h-4 w-4" />Segurança</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs">Token / API Key configurada</span>
+                <Badge variant="secondary" className="text-xs">{partner.api_endpoint ? "Sim" : "Não"}</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs">Credenciais criptografadas</span>
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs">Logs de acesso</span>
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Clock className="h-4 w-4" />Interoperabilidade</CardTitle></CardHeader>
+            <CardContent className="space-y-1 text-sm">
+              <p className="text-xs">• Mapeamento LOINC: verificar aba Mapeamentos</p>
+              <p className="text-xs">• Mapeamento TUSS/TISS: verificar aba Mapeamentos</p>
+              <p className="text-xs">• Payload bruto armazenado nos Logs</p>
+              <p className="text-xs">• Dados normalizados para uso interno</p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <Card className="border-dashed">
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Selecione um parceiro para visualizar e configurar os parâmetros técnicos de integração.
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ── Protocols overview ── */
+function ProtocolsOverview() {
+  const protocols = [
+    { name: "FHIR R4", status: "ativo", desc: "REST/JSON — interoperabilidade HL7 FHIR" },
+    { name: "REST / JSON", status: "ativo", desc: "API RESTful genérica" },
+    { name: "Arquivo / CSV", status: "ativo", desc: "Importação e exportação via arquivo" },
+    { name: "HL7 v2.x", status: "planejado", desc: "Mensageria HL7 v2 — padrão legado" },
+    { name: "SFTP", status: "planejado", desc: "Transferência segura de arquivos" },
+    { name: "E-mail", status: "planejado", desc: "Envio/recebimento por e-mail" },
+  ];
+  const statusColor: Record<string, string> = { ativo: "bg-green-100 text-green-800", planejado: "bg-muted text-muted-foreground" };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {protocols.map(p => (
+        <div key={p.name} className="flex items-start gap-3 border rounded-lg p-3">
+          <div className="mt-0.5">
+            {p.status === "ativo"
+              ? <CheckCircle2 className="h-4 w-4 text-green-500" />
+              : <Clock className="h-4 w-4 text-muted-foreground" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{p.name}</span>
+              <Badge className={`text-[10px] ${statusColor[p.status] ?? "bg-muted"}`}>{p.status === "ativo" ? "Ativo" : "Planejado"}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">{p.desc}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── FHIR Sandbox ── */
+function FhirSandbox() {
   const [fhirLoading, setFhirLoading] = useState(false);
   const [fhirResult, setFhirResult] = useState<FhirResult | null>(null);
   const [patientName, setPatientName] = useState("Maria Helena Santos");
@@ -77,202 +179,132 @@ export default function LabIntConfig() {
   const [executedAt, setExecutedAt] = useState<string | null>(null);
 
   const runFhirTest = async () => {
-    setFhirLoading(true);
-    setFhirResult(null);
-    setShowRawJson(false);
-    setExecutedAt(null);
+    setFhirLoading(true); setFhirResult(null); setShowRawJson(false); setExecutedAt(null);
     try {
       const { data, error } = await supabase.functions.invoke("fhir-sandbox", {
-        body: {
-          action: "simulate_full_cycle",
-          patient_name: patientName,
-          patient_id: "test-patient-fhir",
-          exams: [{ code: examCode, name: examName }],
-        },
+        body: { action: "simulate_full_cycle", patient_name: patientName, patient_id: "test-patient-fhir", exams: [{ code: examCode, name: examName }] },
       });
       if (error) throw error;
       const payload = normalizeFhirResult(data);
-      console.log("[FHIR-SANDBOX] response:", JSON.stringify(payload));
-      setFhirResult(payload);
-      setExecutedAt(new Date().toISOString());
-      if (payload.success) {
-        toast.success("Teste FHIR concluído com sucesso!");
-      } else {
-        toast.error(payload.error || "Erro no teste FHIR");
-      }
+      setFhirResult(payload); setExecutedAt(new Date().toISOString());
+      payload.success ? toast.success("Teste FHIR concluído!") : toast.error(payload.error || "Erro no teste FHIR");
     } catch (e: any) {
-      setFhirResult({ success: false, error: e.message });
-      toast.error(`Erro: ${e.message}`);
-    } finally {
-      setFhirLoading(false);
-    }
+      setFhirResult({ success: false, error: e.message }); toast.error(`Erro: ${e.message}`);
+    } finally { setFhirLoading(false); }
   };
 
+  return (
+    <Card className="border-teal-200 bg-teal-50/30">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <FlaskConical className="h-4 w-4 text-teal-600" />Teste FHIR R4 Sandbox
+          <Badge className="bg-teal-100 text-teal-700 text-xs ml-2">hapi.fhir.org</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Simula o ciclo completo: Patient → ServiceRequest → Observation → DiagnosticReport.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div><Label className="text-xs">Nome do Paciente</Label><Input value={patientName} onChange={e => setPatientName(e.target.value)} className="h-8 text-sm" /></div>
+          <div><Label className="text-xs">Código do Exame</Label><Input value={examCode} onChange={e => setExamCode(e.target.value)} className="h-8 text-sm" /></div>
+          <div><Label className="text-xs">Nome do Exame</Label><Input value={examName} onChange={e => setExamName(e.target.value)} className="h-8 text-sm" /></div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button size="sm" onClick={runFhirTest} disabled={fhirLoading} className="bg-teal-600 hover:bg-teal-700">
+            {fhirLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Globe className="h-4 w-4 mr-2" />}Executar Ciclo Completo
+          </Button>
+          {fhirResult && (
+            <div className="flex items-center gap-2 text-sm">
+              {fhirResult.success ? (<><CheckCircle2 className="h-4 w-4 text-green-600" /><span className="text-green-700">Sucesso</span></>)
+                : (<><XCircle className="h-4 w-4 text-red-600" /><span className="text-red-700">{fhirResult.error}</span></>)}
+            </div>
+          )}
+        </div>
+        {fhirResult?.success && (
+          <div className="bg-background rounded border p-3 text-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">{fhirResult.message}</span>
+              {executedAt && <span className="text-muted-foreground">{new Date(executedAt).toLocaleString("pt-BR")}</span>}
+            </div>
+            {fhirResult.fhir_ids?.patient && (
+              <div className="font-mono"><span className="text-muted-foreground">Patient ID:</span>{" "}
+                <a href={`https://hapi.fhir.org/baseR4/Patient/${fhirResult.fhir_ids.patient}`} target="_blank" rel="noreferrer" className="text-primary underline">{fhirResult.fhir_ids.patient}</a>
+              </div>
+            )}
+            {fhirResult.fhir_ids?.exams?.length ? (
+              <div className="border rounded overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50"><tr>
+                    <th className="text-left px-2 py-1 font-medium">Exame</th>
+                    <th className="text-left px-2 py-1 font-medium">ServiceRequest</th>
+                    <th className="text-left px-2 py-1 font-medium">Observation</th>
+                    <th className="text-left px-2 py-1 font-medium">DiagnosticReport</th>
+                  </tr></thead>
+                  <tbody>
+                    {fhirResult.fhir_ids.exams.map((e, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-2 py-1 font-medium">{e.exam} <span className="text-muted-foreground">({e.code})</span></td>
+                        <td className="px-2 py-1 font-mono"><a href={`https://hapi.fhir.org/baseR4/ServiceRequest/${e.sr}`} target="_blank" rel="noreferrer" className="text-primary underline">{e.sr}</a></td>
+                        <td className="px-2 py-1 font-mono"><a href={`https://hapi.fhir.org/baseR4/Observation/${e.obs}`} target="_blank" rel="noreferrer" className="text-primary underline">{e.obs}</a></td>
+                        <td className="px-2 py-1 font-mono"><a href={`https://hapi.fhir.org/baseR4/DiagnosticReport/${e.dr}`} target="_blank" rel="noreferrer" className="text-primary underline">{e.dr}</a></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-3 font-mono text-muted-foreground">
+              <span>Endpoint: {fhirResult.endpoint || "https://hapi.fhir.org/baseR4"}</span>
+              {fhirResult.result_imported && <Badge variant="secondary" className="text-xs">Resultado importado</Badge>}
+            </div>
+            <div>
+              <button onClick={() => setShowRawJson(!showRawJson)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                {showRawJson ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                {showRawJson ? "Ocultar JSON" : "Ver JSON completo"}
+              </button>
+              {showRawJson && (
+                <div className="relative mt-1">
+                  <pre className="bg-muted/50 p-3 rounded text-[11px] overflow-auto max-h-64 font-mono whitespace-pre-wrap break-words">{JSON.stringify(fhirResult, null, 2)}</pre>
+                  <Button size="sm" variant="ghost" className="absolute top-1 right-1 h-6 w-6 p-0" onClick={() => { navigator.clipboard.writeText(JSON.stringify(fhirResult, null, 2)); toast.success("JSON copiado"); }}>
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Main component ── */
+export default function LabIntConfig() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-muted-foreground">
         <Settings2 className="h-5 w-5" />
-        <span className="text-sm">Configurações da camada de integração</span>
+        <span className="text-sm">Central de configuração técnica — parceiros, protocolos e sandbox</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Globe className="h-4 w-4" />Protocolos Suportados</CardTitle></CardHeader>
-          <CardContent className="text-sm space-y-1">
-            <p>• API REST (JSON)</p>
-            <p>• SFTP (arquivos)</p>
-            <p>• E-mail (resultados)</p>
-            <p>• HL7 v2 (preparado)</p>
-            <p>• <strong>FHIR R4 (ativo — sandbox conectado)</strong></p>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="partner-config" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="partner-config" className="text-xs gap-1.5">
+            <Building2 className="h-3.5 w-3.5" />Configuração por Parceiro
+          </TabsTrigger>
+          <TabsTrigger value="protocols" className="text-xs gap-1.5">
+            <Globe className="h-3.5 w-3.5" />Protocolos Suportados
+          </TabsTrigger>
+          <TabsTrigger value="sandbox" className="text-xs gap-1.5">
+            <FlaskConical className="h-3.5 w-3.5" />Sandbox FHIR
+          </TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Shield className="h-4 w-4" />Segurança</CardTitle></CardHeader>
-          <CardContent className="text-sm space-y-1">
-            <p>• Credenciais armazenadas com criptografia</p>
-            <p>• Tokens e senhas não exibidos na tela</p>
-            <p>• Logs de acesso por parceiro</p>
-            <p>• Auditoria completa de toda operação</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Clock className="h-4 w-4" />Retry e Timeout</CardTitle></CardHeader>
-          <CardContent className="text-sm space-y-1">
-            <p>• Timeout padrão: 30 segundos</p>
-            <p>• Tentativas padrão: 3</p>
-            <p>• Intervalo entre retries: 60 segundos</p>
-            <p>• Configurável por parceiro</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Globe className="h-4 w-4" />Interoperabilidade</CardTitle></CardHeader>
-          <CardContent className="text-sm space-y-1">
-            <p>• Suporte a LOINC no mapeamento</p>
-            <p>• Suporte a TUSS/TISS no mapeamento</p>
-            <p>• Payload bruto armazenado separadamente</p>
-            <p>• Dados normalizados para uso interno</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* FHIR Sandbox Test Panel */}
-      <Card className="border-teal-200 bg-teal-50/30">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <FlaskConical className="h-4 w-4 text-teal-600" />
-            Teste FHIR R4 Sandbox
-            <Badge className="bg-teal-100 text-teal-700 text-xs ml-2">hapi.fhir.org</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-xs text-muted-foreground">
-            Simula o ciclo completo de integração usando o FHIR público da HL7: Patient → ServiceRequest → Observation → DiagnosticReport.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs">Nome do Paciente</Label>
-              <Input value={patientName} onChange={e => setPatientName(e.target.value)} className="h-8 text-sm" />
-            </div>
-            <div>
-              <Label className="text-xs">Código do Exame</Label>
-              <Input value={examCode} onChange={e => setExamCode(e.target.value)} className="h-8 text-sm" />
-            </div>
-            <div>
-              <Label className="text-xs">Nome do Exame</Label>
-              <Input value={examName} onChange={e => setExamName(e.target.value)} className="h-8 text-sm" />
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button size="sm" onClick={runFhirTest} disabled={fhirLoading} className="bg-teal-600 hover:bg-teal-700">
-              {fhirLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Globe className="h-4 w-4 mr-2" />}
-              Executar Ciclo Completo
-            </Button>
-            {fhirResult && (
-              <div className="flex items-center gap-2 text-sm">
-                {fhirResult.success ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span className="text-green-700">Sucesso</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-4 w-4 text-red-600" />
-                    <span className="text-red-700">{fhirResult.error}</span>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          {fhirResult?.success && (
-            <div className="bg-background rounded border p-3 text-xs space-y-3">
-              {/* Summary */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">{fhirResult.message}</span>
-                {executedAt && <span className="text-muted-foreground">{new Date(executedAt).toLocaleString("pt-BR")}</span>}
-              </div>
-
-              {/* Patient */}
-              {fhirResult.fhir_ids?.patient && (
-                <div className="font-mono">
-                  <span className="text-muted-foreground">Patient ID:</span>{" "}
-                  <a href={`https://hapi.fhir.org/baseR4/Patient/${fhirResult.fhir_ids.patient}`} target="_blank" rel="noreferrer" className="text-primary underline">{fhirResult.fhir_ids.patient}</a>
-                </div>
-              )}
-
-              {/* Exams table */}
-              {fhirResult.fhir_ids?.exams?.length ? (
-                <div className="border rounded overflow-hidden">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left px-2 py-1 font-medium">Exame</th>
-                        <th className="text-left px-2 py-1 font-medium">ServiceRequest</th>
-                        <th className="text-left px-2 py-1 font-medium">Observation</th>
-                        <th className="text-left px-2 py-1 font-medium">DiagnosticReport</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {fhirResult.fhir_ids.exams.map((e, i) => (
-                        <tr key={i} className="border-t">
-                          <td className="px-2 py-1 font-medium">{e.exam} <span className="text-muted-foreground">({e.code})</span></td>
-                          <td className="px-2 py-1 font-mono"><a href={`https://hapi.fhir.org/baseR4/ServiceRequest/${e.sr}`} target="_blank" rel="noreferrer" className="text-primary underline">{e.sr}</a></td>
-                          <td className="px-2 py-1 font-mono"><a href={`https://hapi.fhir.org/baseR4/Observation/${e.obs}`} target="_blank" rel="noreferrer" className="text-primary underline">{e.obs}</a></td>
-                          <td className="px-2 py-1 font-mono"><a href={`https://hapi.fhir.org/baseR4/DiagnosticReport/${e.dr}`} target="_blank" rel="noreferrer" className="text-primary underline">{e.dr}</a></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
-
-              {/* Meta */}
-              <div className="flex flex-wrap gap-3 font-mono text-muted-foreground">
-                <span>Endpoint: {fhirResult.endpoint || "https://hapi.fhir.org/baseR4"}</span>
-                {fhirResult.result_imported && <Badge variant="secondary" className="text-xs">Resultado importado no banco</Badge>}
-              </div>
-
-              {/* Raw JSON toggle */}
-              <div>
-                <button onClick={() => setShowRawJson(!showRawJson)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                  {showRawJson ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                  {showRawJson ? "Ocultar JSON" : "Ver JSON completo"}
-                </button>
-                {showRawJson && (
-                  <div className="relative mt-1">
-                    <pre className="bg-muted/50 p-3 rounded text-[11px] overflow-auto max-h-64 font-mono whitespace-pre-wrap break-words">{JSON.stringify(fhirResult, null, 2)}</pre>
-                    <Button size="sm" variant="ghost" className="absolute top-1 right-1 h-6 w-6 p-0" onClick={() => { navigator.clipboard.writeText(JSON.stringify(fhirResult, null, 2)); toast.success("JSON copiado"); }}>
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="partner-config"><PartnerConfigPanel /></TabsContent>
+        <TabsContent value="protocols"><ProtocolsOverview /></TabsContent>
+        <TabsContent value="sandbox"><FhirSandbox /></TabsContent>
+      </Tabs>
     </div>
   );
 }
