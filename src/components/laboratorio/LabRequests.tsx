@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Search, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import LabRequestDetail from "./LabRequestDetail";
 
 const statusColors: Record<string, string> = {
   solicitado: "bg-blue-100 text-blue-800",
@@ -36,6 +37,7 @@ export default function LabRequests() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [showNew, setShowNew] = useState(false);
   const [showDetail, setShowDetail] = useState<any>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [patientSearch, setPatientSearch] = useState("");
   const [form, setForm] = useState({ patient_id: "", priority: "rotina", clinical_notes: "", insurance_name: "", specialty: "" });
 
@@ -89,6 +91,11 @@ export default function LabRequests() {
       onSuccess: () => createLabLog("lab_requests", r.id, "cancelamento", user?.id),
     });
   };
+
+  // If viewing detail panel, show it
+  if (detailId) {
+    return <LabRequestDetail requestId={detailId} onBack={() => setDetailId(null)} />;
+  }
 
   return (
     <div className="space-y-4">
@@ -148,7 +155,7 @@ export default function LabRequests() {
                   <TableCell className="text-sm text-muted-foreground">{format(new Date(r.created_at), "dd/MM/yy HH:mm")}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setShowDetail(r)}><Eye className="h-3.5 w-3.5" /></Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setDetailId(r.id)}><Eye className="h-3.5 w-3.5" /></Button>
                       {r.status === "solicitado" && (
                         <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive" onClick={() => handleCancel(r)}>Cancelar</Button>
                       )}
