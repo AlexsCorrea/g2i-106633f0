@@ -43,7 +43,7 @@ const LAB_RESULT_FIELDS: ReportField[] = [
   { key: "performed_at", label: "Data", visible: true, width: "100px" },
 ];
 
-type ReportType = "requests" | "results" | "critical" | "pending" | "released" | "by_sector" | "productivity";
+type ReportType = "requests" | "results" | "critical" | "pending" | "released" | "by_sector" | "productivity" | "collections" | "recollections" | "rejected" | "cancelled" | "bench_map";
 
 const reportOptions: { value: ReportType; label: string; description: string }[] = [
   { value: "requests", label: "Requisições por Período", description: "Todas as solicitações laboratoriais com filtros" },
@@ -53,6 +53,11 @@ const reportOptions: { value: ReportType; label: string; description: string }[]
   { value: "released", label: "Laudos Liberados", description: "Laudos liberados por período" },
   { value: "by_sector", label: "Exames por Setor", description: "Volume de exames agrupado por setor técnico" },
   { value: "productivity", label: "Produtividade", description: "Volume por profissional responsável" },
+  { value: "collections", label: "Coletas Realizadas", description: "Registro de coletas com local e responsável" },
+  { value: "recollections", label: "Recoletas", description: "Amostras que necessitaram recoleta com motivo" },
+  { value: "rejected", label: "Amostras Rejeitadas", description: "Amostras recusadas na triagem" },
+  { value: "cancelled", label: "Cancelamentos", description: "Solicitações e exames cancelados" },
+  { value: "bench_map", label: "Mapa de Bancada", description: "Exames pendentes agrupados por setor/bancada" },
 ];
 
 const priorityLabels: Record<string, string> = { rotina: "Rotina", urgente: "Urgente", emergencia: "Emergência" };
