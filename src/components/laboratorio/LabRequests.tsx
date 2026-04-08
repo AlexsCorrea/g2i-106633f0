@@ -37,6 +37,7 @@ export default function LabRequests() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [showNew, setShowNew] = useState(false);
   const [showDetail, setShowDetail] = useState<any>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [patientSearch, setPatientSearch] = useState("");
   const [form, setForm] = useState({ patient_id: "", priority: "rotina", clinical_notes: "", insurance_name: "", specialty: "" });
 
