@@ -3159,14 +3159,22 @@ export type Database = {
           active: boolean
           code: string | null
           created_at: string
+          critical_max: number | null
+          critical_min: number | null
           criticality: string
           fasting_hours: number | null
           id: string
           material_id: string | null
           method_id: string | null
           name: string
+          notes: string | null
           preparation_instructions: string | null
+          processing_time_min: number | null
+          reference_max: number | null
+          reference_min: number | null
+          reference_text: string | null
           requires_fasting: boolean
+          result_type: string | null
           sector_id: string | null
           sla_minutes: number | null
           tube_id: string | null
@@ -3178,14 +3186,22 @@ export type Database = {
           active?: boolean
           code?: string | null
           created_at?: string
+          critical_max?: number | null
+          critical_min?: number | null
           criticality?: string
           fasting_hours?: number | null
           id?: string
           material_id?: string | null
           method_id?: string | null
           name: string
+          notes?: string | null
           preparation_instructions?: string | null
+          processing_time_min?: number | null
+          reference_max?: number | null
+          reference_min?: number | null
+          reference_text?: string | null
           requires_fasting?: boolean
+          result_type?: string | null
           sector_id?: string | null
           sla_minutes?: number | null
           tube_id?: string | null
@@ -3197,14 +3213,22 @@ export type Database = {
           active?: boolean
           code?: string | null
           created_at?: string
+          critical_max?: number | null
+          critical_min?: number | null
           criticality?: string
           fasting_hours?: number | null
           id?: string
           material_id?: string | null
           method_id?: string | null
           name?: string
+          notes?: string | null
           preparation_instructions?: string | null
+          processing_time_min?: number | null
+          reference_max?: number | null
+          reference_min?: number | null
+          reference_text?: string | null
           requires_fasting?: boolean
+          result_type?: string | null
           sector_id?: string | null
           sla_minutes?: number | null
           tube_id?: string | null

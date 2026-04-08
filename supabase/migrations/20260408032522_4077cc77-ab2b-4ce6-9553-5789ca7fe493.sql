@@ -1,0 +1,10 @@
+
+ALTER TABLE public.lab_exams
+  ADD COLUMN IF NOT EXISTS reference_min NUMERIC,
+  ADD COLUMN IF NOT EXISTS reference_max NUMERIC,
+  ADD COLUMN IF NOT EXISTS reference_text TEXT,
+  ADD COLUMN IF NOT EXISTS critical_min NUMERIC,
+  ADD COLUMN IF NOT EXISTS critical_max NUMERIC,
+  ADD COLUMN IF NOT EXISTS result_type TEXT DEFAULT 'numerico',
+  ADD COLUMN IF NOT EXISTS processing_time_min INTEGER,
+  ADD COLUMN IF NOT EXISTS notes TEXT;
