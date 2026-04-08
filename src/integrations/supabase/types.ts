@@ -2937,6 +2937,67 @@ export type Database = {
           },
         ]
       }
+      lab_critical_communications: {
+        Row: {
+          communicated_at: string
+          communicated_by: string | null
+          communicated_to: string
+          communication_method: string
+          created_at: string
+          id: string
+          notes: string | null
+          patient_id: string | null
+          request_item_id: string | null
+          result_id: string | null
+        }
+        Insert: {
+          communicated_at?: string
+          communicated_by?: string | null
+          communicated_to: string
+          communication_method?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          request_item_id?: string | null
+          result_id?: string | null
+        }
+        Update: {
+          communicated_at?: string
+          communicated_by?: string | null
+          communicated_to?: string
+          communication_method?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          request_item_id?: string | null
+          result_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_critical_communications_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_critical_communications_request_item_id_fkey"
+            columns: ["request_item_id"]
+            isOneToOne: false
+            referencedRelation: "lab_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_critical_communications_result_id_fkey"
+            columns: ["result_id"]
+            isOneToOne: false
+            referencedRelation: "lab_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lab_equipment: {
         Row: {
           active: boolean | null
@@ -3098,14 +3159,22 @@ export type Database = {
           active: boolean
           code: string | null
           created_at: string
+          critical_max: number | null
+          critical_min: number | null
           criticality: string
           fasting_hours: number | null
           id: string
           material_id: string | null
           method_id: string | null
           name: string
+          notes: string | null
           preparation_instructions: string | null
+          processing_time_min: number | null
+          reference_max: number | null
+          reference_min: number | null
+          reference_text: string | null
           requires_fasting: boolean
+          result_type: string | null
           sector_id: string | null
           sla_minutes: number | null
           tube_id: string | null
@@ -3117,14 +3186,22 @@ export type Database = {
           active?: boolean
           code?: string | null
           created_at?: string
+          critical_max?: number | null
+          critical_min?: number | null
           criticality?: string
           fasting_hours?: number | null
           id?: string
           material_id?: string | null
           method_id?: string | null
           name: string
+          notes?: string | null
           preparation_instructions?: string | null
+          processing_time_min?: number | null
+          reference_max?: number | null
+          reference_min?: number | null
+          reference_text?: string | null
           requires_fasting?: boolean
+          result_type?: string | null
           sector_id?: string | null
           sla_minutes?: number | null
           tube_id?: string | null
@@ -3136,14 +3213,22 @@ export type Database = {
           active?: boolean
           code?: string | null
           created_at?: string
+          critical_max?: number | null
+          critical_min?: number | null
           criticality?: string
           fasting_hours?: number | null
           id?: string
           material_id?: string | null
           method_id?: string | null
           name?: string
+          notes?: string | null
           preparation_instructions?: string | null
+          processing_time_min?: number | null
+          reference_max?: number | null
+          reference_min?: number | null
+          reference_text?: string | null
           requires_fasting?: boolean
+          result_type?: string | null
           sector_id?: string | null
           sla_minutes?: number | null
           tube_id?: string | null
@@ -4170,6 +4255,71 @@ export type Database = {
             columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_recollections: {
+        Row: {
+          created_at: string
+          id: string
+          new_sample_id: string | null
+          notes: string | null
+          original_sample_id: string | null
+          patient_id: string | null
+          reason: string
+          request_item_id: string | null
+          requested_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_sample_id?: string | null
+          notes?: string | null
+          original_sample_id?: string | null
+          patient_id?: string | null
+          reason: string
+          request_item_id?: string | null
+          requested_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_sample_id?: string | null
+          notes?: string | null
+          original_sample_id?: string | null
+          patient_id?: string | null
+          reason?: string
+          request_item_id?: string | null
+          requested_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_recollections_new_sample_id_fkey"
+            columns: ["new_sample_id"]
+            isOneToOne: false
+            referencedRelation: "lab_samples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_recollections_original_sample_id_fkey"
+            columns: ["original_sample_id"]
+            isOneToOne: false
+            referencedRelation: "lab_samples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_recollections_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_recollections_request_item_id_fkey"
+            columns: ["request_item_id"]
+            isOneToOne: false
+            referencedRelation: "lab_request_items"
             referencedColumns: ["id"]
           },
         ]

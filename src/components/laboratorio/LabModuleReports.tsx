@@ -43,7 +43,7 @@ const LAB_RESULT_FIELDS: ReportField[] = [
   { key: "performed_at", label: "Data", visible: true, width: "100px" },
 ];
 
-type ReportType = "requests" | "results" | "critical" | "pending" | "released" | "by_sector" | "productivity";
+type ReportType = "requests" | "results" | "critical" | "pending" | "released" | "by_sector" | "productivity" | "collections" | "recollections" | "rejected" | "cancelled" | "bench_map";
 
 const reportOptions: { value: ReportType; label: string; description: string }[] = [
   { value: "requests", label: "Requisições por Período", description: "Todas as solicitações laboratoriais com filtros" },
@@ -53,6 +53,11 @@ const reportOptions: { value: ReportType; label: string; description: string }[]
   { value: "released", label: "Laudos Liberados", description: "Laudos liberados por período" },
   { value: "by_sector", label: "Exames por Setor", description: "Volume de exames agrupado por setor técnico" },
   { value: "productivity", label: "Produtividade", description: "Volume por profissional responsável" },
+  { value: "collections", label: "Coletas Realizadas", description: "Registro de coletas com local e responsável" },
+  { value: "recollections", label: "Recoletas", description: "Amostras que necessitaram recoleta com motivo" },
+  { value: "rejected", label: "Amostras Rejeitadas", description: "Amostras recusadas na triagem" },
+  { value: "cancelled", label: "Cancelamentos", description: "Solicitações e exames cancelados" },
+  { value: "bench_map", label: "Mapa de Bancada", description: "Exames pendentes agrupados por setor/bancada" },
 ];
 
 const priorityLabels: Record<string, string> = { rotina: "Rotina", urgente: "Urgente", emergencia: "Emergência" };
@@ -182,6 +187,95 @@ export default function LabModuleReports() {
             is_critical: "", performed_at: format(new Date(item.created_at), "dd/MM/yy HH:mm"),
           }));
         }
+        case "collections": {
+          const { data } = await (supabase as any)
+            .from("lab_collections")
+            .select("*, patients(full_name), lab_request_items(*, lab_exams(name, code), lab_requests(request_number))")
+            .gte("created_at", start).lte("created_at", end)
+            .order("created_at", { ascending: false });
+          return (data ?? []).map((c: any) => ({
+            id: c.id,
+            request_number: c.lab_request_items?.lab_requests?.request_number || "—",
+            patient_name: c.patients?.full_name || "—",
+            exam_name: c.lab_request_items?.lab_exams?.name || "—",
+            exam_code: c.lab_request_items?.lab_exams?.code || "—",
+            sector: c.collection_site || "—",
+            value: c.status, unit: "—", reference: "—",
+            status: c.status === "coletado" ? "Coletado" : c.status,
+            is_critical: "", performed_at: c.collected_at ? format(new Date(c.collected_at), "dd/MM/yy HH:mm") : "—",
+          }));
+        }
+        case "recollections": {
+          const { data } = await (supabase as any)
+            .from("lab_recollections")
+            .select("*, patients(full_name), lab_request_items(*, lab_exams(name, code), lab_requests(request_number))")
+            .gte("created_at", start).lte("created_at", end)
+            .order("created_at", { ascending: false });
+          return (data ?? []).map((r: any) => ({
+            id: r.id,
+            request_number: r.lab_request_items?.lab_requests?.request_number || "—",
+            patient_name: r.patients?.full_name || "—",
+            exam_name: r.lab_request_items?.lab_exams?.name || "—",
+            exam_code: r.lab_request_items?.lab_exams?.code || "—",
+            sector: "—", value: r.reason, unit: "—", reference: "—",
+            status: "Recoleta", is_critical: "", performed_at: format(new Date(r.created_at), "dd/MM/yy HH:mm"),
+          }));
+        }
+        case "rejected": {
+          const { data } = await (supabase as any)
+            .from("lab_samples")
+            .select("*, patients(full_name), lab_materials(name)")
+            .eq("status", "recusada")
+            .gte("created_at", start).lte("created_at", end)
+            .order("created_at", { ascending: false });
+          return (data ?? []).map((s: any) => ({
+            id: s.id,
+            request_number: s.barcode || "—",
+            patient_name: s.patients?.full_name || "—",
+            exam_name: s.lab_materials?.name || "—",
+            exam_code: "—", sector: "—",
+            value: s.condition || "—", unit: "—", reference: "—",
+            status: "Recusada", is_critical: "", performed_at: format(new Date(s.created_at), "dd/MM/yy HH:mm"),
+          }));
+        }
+        case "cancelled": {
+          const { data } = await (supabase as any)
+            .from("lab_requests")
+            .select("*, patients(full_name, cpf)")
+            .eq("status", "cancelado")
+            .gte("created_at", start).lte("created_at", end)
+            .order("created_at", { ascending: false });
+          return (data ?? []).map((r: any) => ({
+            id: r.id, request_number: r.request_number,
+            patient_name: r.patients?.full_name || "—",
+            patient_cpf: r.patients?.cpf || "—",
+            doctor_name: "—", insurance: r.insurance_name || "—",
+            priority: r.priority, status: "Cancelado",
+            exam_count: "—",
+            created_at: format(new Date(r.created_at), "dd/MM/yy HH:mm"),
+            specialty: "—", clinical_notes: "—",
+          }));
+        }
+        case "bench_map": {
+          const { data } = await (supabase as any)
+            .from("lab_request_items")
+            .select("*, lab_exams(name, code, sector_id, lab_sectors(name), material_id, lab_materials(name)), lab_requests(request_number, patients(full_name), priority)")
+            .in("status", ["coletado", "em_processamento"])
+            .order("created_at", { ascending: true });
+          return (data ?? []).map((item: any) => ({
+            id: item.id,
+            request_number: item.lab_requests?.request_number || "—",
+            patient_name: item.lab_requests?.patients?.full_name || "—",
+            exam_name: item.lab_exams?.name || "—",
+            exam_code: item.lab_exams?.code || "—",
+            sector: item.lab_exams?.lab_sectors?.name || "Sem setor",
+            value: item.lab_exams?.lab_materials?.name || "—",
+            unit: "—", reference: "—",
+            status: statusLabels[item.status] || item.status,
+            is_critical: item.lab_requests?.priority === "emergencia" ? "URGENTE" : "",
+            performed_at: format(new Date(item.created_at), "dd/MM/yy HH:mm"),
+          }));
+        }
         default:
           return [];
       }
@@ -189,7 +283,7 @@ export default function LabModuleReports() {
     enabled: !!reportType,
   });
 
-  const isResultReport = ["results", "critical", "pending", "by_sector", "productivity"].includes(reportType);
+  const isResultReport = ["results", "critical", "pending", "by_sector", "productivity", "collections", "recollections", "rejected", "bench_map"].includes(reportType);
   const fields = isResultReport ? LAB_RESULT_FIELDS : LAB_FIELDS;
 
   const template: ReportTemplate = useMemo(() => ({

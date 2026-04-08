@@ -4,7 +4,7 @@ import {
   BarChart3, ClipboardList, Droplets, FlaskConical, TestTubes,
   Activity, FileCheck, FileText, Cable, Clock, FileBarChart, Settings2,
   Building2, ArrowLeftRight, Send, FileDown, ScrollText, AlertTriangle, Gauge,
-  ListFilter,
+  ListFilter, Tag, ListChecks, RefreshCw, Siren,
 } from "lucide-react";
 import LabDashboard from "@/components/laboratorio/LabDashboard";
 import LabRequests from "@/components/laboratorio/LabRequests";
@@ -18,6 +18,10 @@ import LabInterface from "@/components/laboratorio/LabInterface";
 import LabPending from "@/components/laboratorio/LabPending";
 import LabModuleReports from "@/components/laboratorio/LabModuleReports";
 import LabSettings from "@/components/laboratorio/LabSettings";
+import LabLabels from "@/components/laboratorio/LabLabels";
+import LabWorklist from "@/components/laboratorio/LabWorklist";
+import LabCriticals from "@/components/laboratorio/LabCriticals";
+import LabRecollection from "@/components/laboratorio/LabRecollection";
 import LabIntDashboard from "@/components/laboratorio/LabIntDashboard";
 import LabIntPartners from "@/components/laboratorio/LabIntPartners";
 import LabIntMappings from "@/components/laboratorio/LabIntMappings";
@@ -32,12 +36,16 @@ import LabIntEquipment from "@/components/laboratorio/LabIntEquipment";
 
 const mainTabs = [
   { value: "dashboard", label: "Dashboard", icon: BarChart3 },
+  { value: "worklist", label: "Worklist", icon: ListChecks },
   { value: "requests", label: "Solicitações", icon: ClipboardList },
   { value: "collection", label: "Coleta", icon: Droplets },
   { value: "triage", label: "Triagem", icon: FlaskConical },
   { value: "samples", label: "Amostras", icon: TestTubes },
+  { value: "labels", label: "Etiquetas", icon: Tag },
   { value: "processing", label: "Processamento", icon: Activity },
   { value: "results", label: "Resultados", icon: FileCheck },
+  { value: "criticals", label: "Críticos", icon: Siren },
+  { value: "recollection", label: "Recoleta", icon: RefreshCw },
   { value: "reports", label: "Laudos", icon: FileText },
   { value: "interface", label: "Interfaceamento", icon: Cable },
   { value: "pending", label: "Pendências", icon: Clock },
@@ -100,12 +108,16 @@ export default function Laboratorio() {
             ))}
           </TabsList>
           <TabsContent value="dashboard"><LabDashboard /></TabsContent>
+          <TabsContent value="worklist"><LabWorklist /></TabsContent>
           <TabsContent value="requests"><LabRequests /></TabsContent>
           <TabsContent value="collection"><LabCollection /></TabsContent>
           <TabsContent value="triage"><LabTriage /></TabsContent>
           <TabsContent value="samples"><LabSamples /></TabsContent>
+          <TabsContent value="labels"><LabLabels /></TabsContent>
           <TabsContent value="processing"><LabProcessing /></TabsContent>
           <TabsContent value="results"><LabResults /></TabsContent>
+          <TabsContent value="criticals"><LabCriticals /></TabsContent>
+          <TabsContent value="recollection"><LabRecollection /></TabsContent>
           <TabsContent value="reports"><LabReports /></TabsContent>
           <TabsContent value="interface"><LabInterface /></TabsContent>
           <TabsContent value="pending"><LabPending /></TabsContent>
