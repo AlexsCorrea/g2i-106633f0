@@ -1,135 +1,135 @@
 
 
-# Plano Consolidado: Resultados Estruturados + Laudos do Apoio Externo + Navegacao
+# Plano: Módulo Financeiro Completo — Zurich 2.0
 
-Execucao dos dois planos aprovados em uma unica entrega.
+## Situação Atual
+O módulo financeiro possui apenas duas tabelas operacionais (accounts_payable, accounts_receivable) e uma tela simples com duas abas. O pedido exige um módulo ERP financeiro completo com plano de contas, partida dobrada, fornecedores, fluxo de caixa, conciliação, despesas recorrentes, centros de custo e relatórios.
 
 ---
 
-## Parte 1 — Migracao SQL
+## Entrega em 3 Blocos
 
-Uma unica migracao cobrindo:
+### Bloco 1 — Schema e Dados Base
 
-**1.1 Adicionar `result_mode` em `lab_exams`**
-```sql
-ALTER TABLE lab_exams ADD COLUMN IF NOT EXISTS result_mode text DEFAULT 'simples';
--- valores: simples, estruturado, texto_livre, tabelado
+**Migração SQL** criando as tabelas de configuração e operação:
+
+| Tabela | Finalidade |
+|--------|-----------|
+| `fin_chart_of_accounts` | Plano de contas hierárquico (parent_id, tipo: ativo/passivo/receita/despesa/patrimonio, código, nível) |
+| `fin_cost_centers` | Centros de custo |
+| `fin_cost_center_groups` | Agrupamento de centros de custo |
+| `fin_companies` | Empresas |
+| `fin_company_groups` | Grupos de empresas |
+| `fin_banks` | Bancos / contas correntes / caixas |
+| `fin_payment_methods` | Formas de pagamento (dinheiro, pix, cartão, boleto, transferência) |
+| `fin_document_types` | Tipos de documento (NF, recibo, boleto, OP) |
+| `fin_classifications` | Classificações de receita/despesa |
+| `fin_suppliers` | Fornecedores (CNPJ, dados bancários, condições pgto) |
+| `fin_customers` | Clientes (vinculado a patients quando aplicável) |
+| `fin_journal_entries` | Lançamentos contábeis (partida dobrada) |
+| `fin_journal_lines` | Linhas do lançamento (conta, débito, crédito) |
+| `fin_cash_movements` | Movimentações de caixa/banco |
+| `fin_bank_statements` | Extratos bancários importados |
+| `fin_reconciliations` | Conciliações bancárias |
+| `fin_recurring_expenses` | Despesas recorrentes |
+| `fin_budgets` | Orçamentos por conta/centro de custo |
+| `fin_audit_log` | Log de auditoria financeiro |
+
+Alterações nas tabelas existentes:
+- `accounts_payable` — adicionar `supplier_id`, `document_type_id`, `classification_id`, `chart_account_id`, `installment_number`, `installment_total`, `discount`, `interest`, `penalty`
+- `accounts_receivable` — adicionar `customer_id`, `document_type_id`, `classification_id`, `chart_account_id`, `installment_number`, `installment_total`, `discount`, `interest`, `penalty`
+
+Seed com dados iniciais: plano de contas padrão hospitalar, formas de pagamento, tipos de documento, classificações básicas.
+
+RLS habilitada em todas as tabelas, com políticas para `authenticated`.
+
+### Bloco 2 — Hooks e Lógica
+
+**Arquivo: `src/hooks/useFinancial.ts`** — Refatorar e expandir com:
+- `useChartOfAccounts` — CRUD plano de contas
+- `useCostCenters` / `useCostCenterGroups`
+- `useCompanies` / `useCompanyGroups`
+- `useBanks` — contas correntes e caixas
+- `usePaymentMethods` / `useDocumentTypes` / `useClassifications`
+- `useSuppliers` / `useCustomers`
+- `useJournalEntries` — lançamentos em partida dobrada (validar débito = crédito)
+- `useCashMovements` — entradas/saídas
+- `useRecurringExpenses` — com geração automática de títulos
+- `useBudgets` — orçado vs realizado
+- `useReconciliation` — conciliação bancária
+- Expandir hooks existentes de contas a pagar/receber com campos novos (juros, multa, desconto, parcelas, quitação parcial)
+
+### Bloco 3 — Interface (Financeiro.tsx reescrito)
+
+**Navegação principal por abas laterais** (sidebar interna), substituindo as duas abas atuais:
+
+```text
+┌─────────────────────┬──────────────────────────────────┐
+│ Dashboard           │                                  │
+│ Fluxo de Caixa      │   Conteúdo da aba selecionada    │
+│ Fornecedores        │                                  │
+│ Clientes            │                                  │
+│ Contas a Pagar      │                                  │
+│ Contas a Receber    │                                  │
+│ Movimentos          │                                  │
+│ Resultados          │                                  │
+│ Dados Base          │                                  │
+└─────────────────────┴──────────────────────────────────┘
 ```
 
-**1.2 Criar tabela `lab_exam_components`**
-Analitos/parametros por exame, com agrupamento por `group_name` e preparacao para referencia por sexo/idade/metodo:
-- `exam_id`, `name`, `code`, `group_name`, `unit`, `sort_order`
-- `reference_min/max`, `reference_text`, `critical_min/max`
-- `result_type` (numerico/texto/opcao), `options text[]`
-- `ref_gender`, `ref_age_min`, `ref_age_max`, `ref_method` (campos futuros)
+**Sub-telas:**
 
-**1.3 Criar tabela `lab_result_components`**
-Valores individuais por analito vinculados a um resultado:
-- `result_id`, `component_id`, `value`, `numeric_value`
-- `is_abnormal`, `is_critical` (auto-calculados)
+1. **Dashboard** — Cards: saldo total, a pagar (30d), a receber (30d), inadimplência, fluxo projetado. Gráficos de receita x despesa (últimos 6 meses).
 
-**1.4 Seed de componentes**
-- Hemograma Completo: 15 componentes em 3 grupos (Eritrograma, Leucograma, Plaquetas)
-- Gasometria Arterial: 7 componentes
-- Coagulograma: 4 componentes
-- EAS/Urinalise: 10 componentes em 2 grupos
-- Atualizar `result_mode = 'estruturado'` nesses exames
+2. **Fluxo de Caixa** — Visão diária/mensal de entradas e saídas por banco/caixa. Projeção futura baseada em títulos e recorrentes.
 
-**1.5 RLS** — politicas basicas para as duas novas tabelas
+3. **Fornecedores** — CRUD completo com CNPJ, dados bancários, condições de pagamento, saldo em aberto.
 
----
+4. **Clientes** — CRUD, saldos, aging list.
 
-## Parte 2 — Hooks (`useLaboratory.ts`)
+5. **Contas a Pagar** — Lista com filtros (status, vencimento, fornecedor, classificação). Ações: novo, editar, quitar (total/parcial com juros/multa/desconto), anexar comprovante. Sub-aba "Despesas Recorrentes".
 
-Adicionar:
-- `useLabExamComponents()` — CRUD generico via `useLabTable`
-- `useLabResultComponents()` — CRUD generico via `useLabTable`
-- `useExamComponentsByExamId(examId)` — query filtrada por exame
-- `useResultComponentsByResultId(resultId)` — query filtrada por resultado
+6. **Contas a Receber** — Lista com filtros. Ações: novo, editar, quitar, parcelar, gerar boleto/recibo. Sub-aba "Novo C. Receber" com parcelamento.
+
+7. **Movimentos** — Sub-abas: Movimentação Geral, Conciliação Bancária, Abertura/Encerramento de Caixa.
+
+8. **Resultados** — DRE, Balancete, análise por centro de custo. Filtros por período e empresa.
+
+9. **Dados Base** — Accordion/tabs com: Plano de Contas (árvore hierárquica), Bancos, Classificações, Empresas/Grupos, Tipos de Documento, Formas de Pagamento, Centros de Custo.
+
+**Navegação (TopNav.tsx):**
+Expandir o grupo "Financeiro" dentro de Gerenciamento com sub-itens diretos para as principais seções.
 
 ---
 
-## Parte 3 — Navegacao (`Laboratorio.tsx`)
+## Detalhes Técnicos
 
-- Usar estado controlado (`value`/`onValueChange`) nos dois `<Tabs>` para forcar Dashboard ao trocar secao
-- Adicionar aba "Laudos do Apoio" (`ext-ext-reports`) no array `extTabs` com icone `FileText`
-- Import e render do novo `LabExtReports`
+- Partida dobrada: toda inserção em `fin_journal_entries` valida que sum(debito) = sum(credito) nas `fin_journal_lines`
+- Quitação parcial: campo `amount_paid` + `remaining_balance` calculados
+- Despesas recorrentes: função que gera títulos automaticamente (trigger ou chamada do front)
+- Conciliação: importação de CSV de extrato e match automático por valor/data
+- Relatórios no padrão Zurich 2.0 (usando reportEngine.ts existente)
+- Paginação de 30 registros por página em todas as listagens
+- Auditoria: toda operação financeira registra em `fin_audit_log`
 
----
+## Arquivos Impactados
 
-## Parte 4 — Cadastro de Componentes (`LabSettings.tsx`)
-
-Dentro do formulario de exame:
-- Adicionar campo `result_mode` (select: simples/estruturado/texto_livre/tabelado)
-- Quando `result_mode === 'estruturado'`, exibir sub-secao para gerenciar componentes/analitos
-- CRUD inline de componentes: nome, codigo, grupo, unidade, ref min/max, critico min/max, ordem, tipo
-- Agrupamento visual por `group_name`
-
----
-
-## Parte 5 — Dialog de Resultado Inteligente (`LabResults.tsx`)
-
-O dialog de edicao passa a ter comportamento dinamico:
-
-1. **Simples** (sem componentes): formulario atual com campo unico
-2. **Estruturado**: tabela agrupada por `group_name`, cada linha com: nome, valor, unidade, referencia, flag auto-calculada
-3. **Texto livre**: textarea expandido
-4. **Tabelado**: grid configuravel (fallback para texto livre inicialmente)
-
-**Auto-deteccao de criticos**: ao digitar valor numerico, comparar em tempo real com `critical_min/max` e `reference_min/max`. Flags visuais imediatas (vermelho = critico, amarelo = alterado). Se qualquer componente for critico, marcar resultado pai como `is_critical`.
-
-**Auditoria**: ao salvar, gerar `lab_logs` com `entity_type: 'result_component'`, incluindo `origin: 'manual'`, flag status e valores.
-
----
-
-## Parte 6 — Reflexo no Laudo (`LabReports.tsx`)
-
-Na visualizacao/impressao do laudo:
-- Buscar `lab_result_components` com join em `lab_exam_components`
-- Se exame estruturado, renderizar tabela agrupada por `group_name` (parametro | resultado | unidade | referencia | flag)
-- Se simples, manter exibicao atual
-
----
-
-## Parte 7 — Reflexo no Prontuario (`LabResultsForPatient.tsx`)
-
-Ao exibir resultados do paciente:
-- Se exame estruturado, mostrar tabela resumida dos componentes com flags visuais
-- Se simples, manter card atual
-
----
-
-## Parte 8 — Laudos do Apoio Externo (`LabExtReports.tsx`)
-
-Novo componente para gerenciar documentos/PDFs retornados por parceiros:
-- Listar resultados externos com `attachment_url` ou status `liberado`
-- Exibir: pedido interno, parceiro, exame, protocolo, data, anexo/PDF, conferencia
-- Botao visualizar/baixar PDF
-- Botao liberar laudo externo (marca `released_at`, `released_by`)
-
----
-
-## Ordem de Execucao
-
-1. Migracao SQL (tabelas + seed)
-2. Hooks para novas tabelas
-3. Navegacao controlada + aba Laudos do Apoio
-4. LabExtReports (novo componente)
-5. LabSettings (cadastro de componentes)
-6. LabResults (dialog inteligente + auto-critico)
-7. LabReports (reflexo no laudo)
-8. LabResultsForPatient (reflexo no prontuario)
-
-## Arquivos
-
-| Acao | Arquivo |
+| Ação | Arquivo |
 |------|---------|
-| Migracao | 1 arquivo SQL |
-| Criar | `src/components/laboratorio/LabExtReports.tsx` |
-| Editar | `src/hooks/useLaboratory.ts` |
-| Editar | `src/pages/Laboratorio.tsx` |
-| Editar | `src/components/laboratorio/LabSettings.tsx` |
-| Editar | `src/components/laboratorio/LabResults.tsx` |
-| Editar | `src/components/laboratorio/LabReports.tsx` |
-| Editar | `src/components/prontuario/LabResultsForPatient.tsx` |
+| Migração | 1 arquivo SQL grande |
+| Reescrever | `src/pages/Financeiro.tsx` |
+| Reescrever | `src/hooks/useFinancial.ts` |
+| Editar | `src/components/layout/TopNav.tsx` |
+| Editar | `src/App.tsx` (rotas) |
+
+## Massa de Testes
+
+Inserir via migration seed:
+- 15 fornecedores fictícios
+- 10 clientes
+- 50 contas a pagar (variados status/vencimentos)
+- 40 contas a receber
+- 20 movimentações de caixa
+- 5 despesas recorrentes
+- Plano de contas completo hospitalar (~40 contas)
 
