@@ -298,7 +298,7 @@ export default function ProtocolNewSend() {
       .eq("id", protocolId)
       .maybeSingle();
     if (!error && data) {
-      setDetailProtocol(data as DocProtocolSummary);
+      setDetailProtocol(data as unknown as DocProtocolSummary);
       return;
     }
 
@@ -315,7 +315,7 @@ export default function ProtocolNewSend() {
       .eq("id", protocolId)
       .maybeSingle();
 
-    if (fallback.data) setDetailProtocol(fallback.data as DocProtocolSummary);
+    if (fallback.data) setDetailProtocol(fallback.data as unknown as DocProtocolSummary);
   };
 
   const handleSubmit = async () => {
