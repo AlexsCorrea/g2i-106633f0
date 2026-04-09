@@ -165,9 +165,9 @@ export default function SolicitantesPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-                ) : filtered.length === 0 ? (
+                ) : paginatedData.length === 0 ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum solicitante encontrado</TableCell></TableRow>
-                ) : filtered.map(s => (
+                ) : paginatedData.map(s => (
                   <TableRow key={s.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openEdit(s)}>
                     <TableCell className="font-medium">{s.nome}</TableCell>
                     <TableCell>{s.conselho}</TableCell>
@@ -185,6 +185,38 @@ export default function SolicitantesPage() {
               </TableBody>
             </Table>
           </div>
+          {/* Pagination */}
+          {filtered.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between pt-4">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {((safePage - 1) * PAGE_SIZE) + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} de {filtered.length}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage <= 1} onClick={() => setCurrentPage(p => p - 1)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+                  .reduce<(number | 'ellipsis')[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && p - (arr[idx - 1]) > 1) acc.push('ellipsis');
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, i) =>
+                    p === 'ellipsis' ? (
+                      <span key={`e${i}`} className="px-1 text-muted-foreground">…</span>
+                    ) : (
+                      <Button key={p} variant={p === safePage ? 'default' : 'outline'} size="icon" className="h-8 w-8 text-xs" onClick={() => setCurrentPage(p)}>
+                        {p}
+                      </Button>
+                    )
+                  )}
+                <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
