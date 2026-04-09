@@ -123,16 +123,16 @@ export default function SolicitantesPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar por nome, CPF, conselho ou sigla..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+              <Input placeholder="Buscar por nome, CPF, conselho ou sigla..." value={search} onChange={e => handleSearch(e.target.value)} className="pl-9" />
             </div>
-            <Select value={filterSituacao} onValueChange={setFilterSituacao}>
+            <Select value={filterSituacao} onValueChange={handleFilterSituacao}>
               <SelectTrigger><SelectValue placeholder="Situação" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas situações</SelectItem>
                 {situacoes.data?.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={filterUnidade} onValueChange={setFilterUnidade}>
+            <Select value={filterUnidade} onValueChange={handleFilterUnidade}>
               <SelectTrigger><SelectValue placeholder="Unidade" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas unidades</SelectItem>
