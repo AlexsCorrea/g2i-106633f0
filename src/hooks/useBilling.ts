@@ -18,13 +18,19 @@ export interface BillingAccount {
   patients?: { full_name: string } | null;
 }
 
-export function useBillingAccounts(filters?: { status?: string; competence?: string }) {
+export function useBillingAccounts(
+  filters?: { status?: string; competence?: string; limit?: number },
+  options?: { enabled?: boolean; staleTime?: number },
+) {
   return useQuery({
     queryKey: ["billing_accounts", filters],
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 60_000,
     queryFn: async () => {
       let q = supabase.from("billing_accounts").select("*, patients(full_name)").order("created_at", { ascending: false });
       if (filters?.status && filters.status !== "todos") q = q.eq("status", filters.status);
       if (filters?.competence) q = q.eq("competence", filters.competence);
+      if (filters?.limit) q = q.limit(filters.limit);
       const { data, error } = await q;
       if (error) throw error;
       return data as BillingAccount[];

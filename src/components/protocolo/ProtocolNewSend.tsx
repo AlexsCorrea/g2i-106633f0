@@ -1,37 +1,86 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { format } from "date-fns";
+import { Search, Plus, Trash2, Send, Loader2, Pencil, UserRoundPlus, FolderInput } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { BillingAccount, useBillingAccounts } from "@/hooks/useBilling";
+import { Attendance, useAttendances } from "@/hooks/useAttendances";
+import { Patient, usePatients } from "@/hooks/usePatients";
+import {
+  DocProtocolCreateItemPayload,
+  DocProtocolSummary,
+  useCreateProtocol,
+  useDocReasons,
+  useDocSectors,
+  useDocTypes,
+} from "@/hooks/useDocProtocol";
+import { getProtocolSessionMetadata, ITEM_TYPE_LABELS, PRIORITY_LABELS } from "@/lib/docProtocol";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { useDocSectors, useDocReasons, useDocTypes, useCreateDocProtocol, useCreateDocProtocolItem, useCreateDocMovement, generateProtocolNumber } from "@/hooks/useDocProtocol";
-import { useBillingAccounts } from "@/hooks/useBilling";
-import { Send, Plus, Trash2, Search, Loader2, FileText, AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import ProtocolDetail from "./ProtocolDetail";
 
-interface SelectedItem {
-  billing_account_id: string;
-  patient_name: string;
-  insurance_name: string;
-  amount: number;
-  competence: string | null;
-  status: string;
-  document_type_id?: string;
-  notes?: string;
+type SourceTab = "contas" | "atendimentos" | "pacientes" | "manual";
+
+interface SelectedProtocolItem extends DocProtocolCreateItemPayload {
+  tempId: string;
+  patient_name?: string | null;
+  item_reason_name?: string | null;
+  document_type_name?: string | null;
+  sourceLabel: string;
+}
+
+const MOVEMENT_TYPES = [
+  { value: "envio", label: "Envio" },
+  { value: "remessa", label: "Remessa" },
+  { value: "devolucao", label: "Devolução" },
+  { value: "reenvio", label: "Reenvio" },
+  { value: "protocolo_interno", label: "Protocolo interno" },
+  { value: "recebimento_manual", label: "Recebimento manual" },
+];
+
+const PRIORITIES = ["normal", "urgente", "alta", "alta_prioridade"];
+
+const EMPTY_MANUAL = {
+  item_type: "manual",
+  manual_title: "",
+  patient_name: "",
+  account_number: "",
+  insurance_name: "",
+  document_reference: "",
+  protocol_reference: "",
+  competence: "",
+  medical_record: "",
+  notes: "",
+};
+
+function normalize(text?: string | null) {
+  return (text || "").toLowerCase();
+}
+
+function nextTempId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export default function ProtocolNewSend() {
-  const { data: sectors } = useDocSectors();
-  const { data: reasons } = useDocReasons();
-  const { data: docTypes } = useDocTypes();
-  const { data: billingAccounts } = useBillingAccounts();
-  const createProtocol = useCreateDocProtocol();
-  const createItem = useCreateDocProtocolItem();
-  const createMovement = useCreateDocMovement();
-
+  const { session } = useAuth();
+  const [detailProtocol, setDetailProtocol] = useState<DocProtocolSummary | null>(null);
+  const [sourceTab, setSourceTab] = useState<SourceTab>("contas");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterInsurance, setFilterInsurance] = useState("todos");
+  const [filterCompetence, setFilterCompetence] = useState("todos");
+  const [filterDocType, setFilterDocType] = useState("todos");
+  const [editingItem, setEditingItem] = useState<SelectedProtocolItem | null>(null);
+  const [manualItem, setManualItem] = useState(EMPTY_MANUAL);
+  const [selectedItems, setSelectedItems] = useState<SelectedProtocolItem[]>([]);
   const [form, setForm] = useState({
     protocol_type: "envio",
     sector_origin_id: "",
@@ -43,301 +92,681 @@ export default function ProtocolNewSend() {
     notes: "",
   });
 
-  const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDocType, setSelectedDocType] = useState("");
-  const [filterInsurance, setFilterInsurance] = useState("");
-  const [filterCompetence, setFilterCompetence] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const isBillingTab = sourceTab === "contas";
+  const isAttendanceTab = sourceTab === "atendimentos";
+  const isPatientTab = sourceTab === "pacientes";
 
-  const activeSectors = (sectors || []).filter((s: any) => s.active && s.participates_flow);
-  const activeReasons = (reasons || []).filter((r: any) => r.active && r.type === "envio");
+  const { data: sectors } = useDocSectors();
+  const { data: reasons } = useDocReasons();
+  const { data: docTypes } = useDocTypes();
+  const billingQuery = useBillingAccounts(undefined, { enabled: isBillingTab, staleTime: 120_000 });
+  const attendanceQuery = useAttendances(undefined, { enabled: isAttendanceTab, staleTime: 120_000 });
+  const patientQuery = usePatients(undefined, { enabled: isPatientTab, staleTime: 120_000 });
+  const createProtocol = useCreateProtocol();
 
-  // Get allowed destinations based on origin
-  const originSector = activeSectors.find((s: any) => s.id === form.sector_origin_id);
-  const allowedDestinations = originSector?.allowed_destinations as string[] | undefined;
-  const destinationSectors = allowedDestinations && allowedDestinations.length > 0
-    ? activeSectors.filter((s: any) => allowedDestinations.includes(s.id))
-    : activeSectors;
+  const billingAccounts = useMemo(() => billingQuery.data ?? [], [billingQuery.data]);
+  const attendances = useMemo(() => attendanceQuery.data ?? [], [attendanceQuery.data]);
+  const patients = useMemo(() => patientQuery.data ?? [], [patientQuery.data]);
 
-  const insurances = [...new Set((billingAccounts || []).map((a: any) => a.insurance_name).filter(Boolean))];
-  const competences = [...new Set((billingAccounts || []).map((a: any) => a.competence).filter(Boolean))];
+  const activeSectors = (sectors || []).filter((sector) => sector.active && sector.participates_flow);
+  const activeReasons = (reasons || []).filter((reason) => reason.active);
+  const activeDocTypes = (docTypes || []).filter((type) => type.active);
+  const insurances = Array.from(new Set(billingAccounts.map((account) => account.insurance_name).filter(Boolean)));
+  const competences = Array.from(new Set(billingAccounts.map((account) => account.competence).filter(Boolean)));
 
-  const filteredAccounts = (billingAccounts || []).filter((a: any) => {
-    if (selectedItems.find(si => si.billing_account_id === a.id)) return false;
-    if (filterInsurance && a.insurance_name !== filterInsurance) return false;
-    if (filterCompetence && a.competence !== filterCompetence) return false;
-    if (filterStatus && a.status !== filterStatus) return false;
-    if (!searchTerm) return true;
-    const s = searchTerm.toLowerCase();
-    return a.patients?.full_name?.toLowerCase().includes(s) ||
-      a.insurance_name?.toLowerCase().includes(s) ||
-      a.notes?.toLowerCase().includes(s);
-  });
+  const filteredBilling = useMemo(() => {
+    return billingAccounts.filter((account) => {
+      if (selectedItems.some((item) => item.billing_account_id === account.id)) return false;
+      if (filterInsurance !== "todos" && account.insurance_name !== filterInsurance) return false;
+      if (filterCompetence !== "todos" && account.competence !== filterCompetence) return false;
+      const text = normalize(searchTerm);
+      if (!text) return true;
+      return [
+        account.patients?.full_name,
+        account.insurance_name,
+        account.notes,
+        account.id,
+        account.competence,
+      ].some((value) => normalize(value).includes(text));
+    });
+  }, [billingAccounts, selectedItems, filterInsurance, filterCompetence, searchTerm]);
 
-  const addItem = (account: any) => {
-    setSelectedItems(prev => [...prev, {
+  const filteredAttendances = useMemo(() => {
+    const text = normalize(searchTerm);
+    return attendances.filter((attendance) => {
+      if (selectedItems.some((item) => item.attendance_id === attendance.id)) return false;
+      if (!text) return true;
+      return [
+        attendance.id,
+        attendance.patients?.full_name,
+        attendance.insurance_name,
+        attendance.sector,
+      ].some((value) => normalize(value).includes(text));
+    });
+  }, [attendances, selectedItems, searchTerm]);
+
+  const filteredPatients = useMemo(() => {
+    const text = normalize(searchTerm);
+    return patients.filter((patient) => {
+      if (selectedItems.some((item) => item.patient_id === patient.id && item.item_type === "patient_document")) return false;
+      if (!text) return true;
+      return [
+        patient.full_name,
+        patient.health_insurance,
+        patient.health_insurance_number,
+        patient.cpf,
+      ].some((value) => normalize(value).includes(text));
+    });
+  }, [patients, selectedItems, searchTerm]);
+
+  const isSourceLoading =
+    (isBillingTab && billingQuery.isLoading) ||
+    (isAttendanceTab && attendanceQuery.isLoading) ||
+    (isPatientTab && patientQuery.isLoading);
+
+  const totalSelected = selectedItems.length;
+
+  const addItem = (item: SelectedProtocolItem) => {
+    setSelectedItems((prev) => [...prev, item]);
+  };
+
+  const updateSelectedItem = (item: SelectedProtocolItem) => {
+    setSelectedItems((prev) => prev.map((current) => current.tempId === item.tempId ? item : current));
+    setEditingItem(null);
+  };
+
+  const removeSelectedItem = (tempId: string) => {
+    setSelectedItems((prev) => prev.filter((item) => item.tempId !== tempId));
+  };
+
+  const selectedDocTypeMap = new Map(activeDocTypes.map((type) => [type.id, type.name]));
+  const selectedReasonMap = new Map(activeReasons.map((reason) => [reason.id, reason.name]));
+
+  const addBillingItem = (account: BillingAccount) => {
+    const typeId = filterDocType !== "todos" ? filterDocType : null;
+    addItem({
+      tempId: nextTempId(),
+      item_type: "billing_account",
       billing_account_id: account.id,
-      patient_name: account.patients?.full_name || "Sem paciente",
-      insurance_name: account.insurance_name || "—",
-      amount: account.amount,
+      patient_id: account.patient_id,
+      patient_name: account.patients?.full_name || "Sem paciente vinculado",
+      insurance_name: account.insurance_name,
       competence: account.competence,
-      status: account.status,
-      document_type_id: selectedDocType || undefined,
-    }]);
+      account_number: account.id,
+      notes: account.notes,
+      document_type_id: typeId,
+      document_type_name: typeId ? selectedDocTypeMap.get(typeId) || null : null,
+      snapshot: {
+        source: "billing_account",
+        patient_name: account.patients?.full_name || null,
+        amount: account.amount,
+        status: account.status,
+      },
+      sourceLabel: "Conta do faturamento",
+    });
   };
 
-  const removeItem = (idx: number) => {
-    setSelectedItems(prev => prev.filter((_, i) => i !== idx));
+  const addAttendanceItem = (attendance: Attendance) => {
+    const typeId = filterDocType !== "todos" ? filterDocType : null;
+    addItem({
+      tempId: nextTempId(),
+      item_type: "attendance",
+      attendance_id: attendance.id,
+      patient_id: attendance.patient_id,
+      patient_name: attendance.patients?.full_name || "Sem paciente",
+      insurance_name: attendance.insurance_name,
+      attendance_type: attendance.attendance_type,
+      attendance_date: attendance.opened_at,
+      document_type_id: typeId,
+      document_type_name: typeId ? selectedDocTypeMap.get(typeId) || null : null,
+      snapshot: {
+        source: "attendance",
+        patient_name: attendance.patients?.full_name || null,
+        sector: attendance.sector,
+        status: attendance.status,
+      },
+      sourceLabel: "Atendimento",
+    });
   };
 
-  const totalAmount = selectedItems.reduce((sum, i) => sum + Number(i.amount || 0), 0);
+  const addPatientItem = (patient: Patient) => {
+    const typeId = filterDocType !== "todos" ? filterDocType : null;
+    addItem({
+      tempId: nextTempId(),
+      item_type: "patient_document",
+      patient_id: patient.id,
+      patient_name: patient.full_name,
+      insurance_name: patient.health_insurance,
+      medical_record: patient.id,
+      document_type_id: typeId,
+      document_type_name: typeId ? selectedDocTypeMap.get(typeId) || null : null,
+      manual_title: "Documento / prontuário do paciente",
+      snapshot: {
+        source: "patient",
+        patient_name: patient.full_name,
+        cpf: patient.cpf,
+      },
+      sourceLabel: "Paciente / prontuário",
+    });
+  };
+
+  const addManualItem = () => {
+    if (!manualItem.manual_title.trim()) {
+      toast.error("Informe um título para o item manual.");
+      return;
+    }
+    const typeId = filterDocType !== "todos" ? filterDocType : null;
+    addItem({
+      tempId: nextTempId(),
+      item_type: manualItem.item_type,
+      manual_title: manualItem.manual_title,
+      patient_name: manualItem.patient_name || null,
+      account_number: manualItem.account_number || null,
+      insurance_name: manualItem.insurance_name || null,
+      document_reference: manualItem.document_reference || null,
+      protocol_reference: manualItem.protocol_reference || null,
+      competence: manualItem.competence || null,
+      medical_record: manualItem.medical_record || null,
+      notes: manualItem.notes || null,
+      document_type_id: typeId,
+      document_type_name: typeId ? selectedDocTypeMap.get(typeId) || null : null,
+      snapshot: {
+        source: "manual",
+        patient_name: manualItem.patient_name || null,
+      },
+      sourceLabel: "Inclusão manual",
+    });
+    setManualItem(EMPTY_MANUAL);
+  };
+
+  const openEdit = (item: SelectedProtocolItem) => {
+    setEditingItem({ ...item });
+  };
+
+  const fetchProtocolDetail = async (protocolId: string) => {
+    const { data, error } = await supabase
+      .from("doc_protocols")
+      .select(`
+        *,
+        sector_origin:doc_protocol_sectors!doc_protocols_sector_origin_id_fkey(id, name, color, code),
+        sector_destination:doc_protocol_sectors!doc_protocols_sector_destination_id_fkey(id, name, color, code),
+        reason:doc_protocol_reasons(id, name, type),
+        emitter:profiles!doc_protocols_emitter_id_fkey(full_name),
+        receiver:profiles!doc_protocols_receiver_id_fkey(full_name),
+        flow_profile:doc_protocol_flow_profiles(id, name, code)
+      `)
+      .eq("id", protocolId)
+      .maybeSingle();
+    if (!error && data) {
+      setDetailProtocol(data as DocProtocolSummary);
+      return;
+    }
+
+    const fallback = await supabase
+      .from("doc_protocols")
+      .select(`
+        *,
+        sector_origin:doc_protocol_sectors!doc_protocols_sector_origin_id_fkey(id, name, color, code),
+        sector_destination:doc_protocol_sectors!doc_protocols_sector_destination_id_fkey(id, name, color, code),
+        reason:doc_protocol_reasons(id, name, type),
+        emitter:profiles!doc_protocols_emitter_id_fkey(full_name),
+        receiver:profiles!doc_protocols_receiver_id_fkey(full_name)
+      `)
+      .eq("id", protocolId)
+      .maybeSingle();
+
+    if (fallback.data) setDetailProtocol(fallback.data as DocProtocolSummary);
+  };
 
   const handleSubmit = async () => {
     if (!form.sector_origin_id || !form.sector_destination_id) {
-      toast.error("Selecione setor de origem e destino");
-      return;
-    }
-    if (form.sector_origin_id === form.sector_destination_id) {
-      toast.error("Setor de origem e destino não podem ser iguais");
+      toast.error("Selecione setor origem e setor destino para continuar.");
       return;
     }
     if (selectedItems.length === 0) {
-      toast.error("Adicione pelo menos um item ao protocolo");
+      toast.error("Inclua ao menos um item para gerar o protocolo.");
       return;
     }
 
-    setSubmitting(true);
-    try {
-      const protocolNumber = await generateProtocolNumber();
-      const protocol = await createProtocol.mutateAsync({
-        ...form,
-        protocol_number: protocolNumber,
-        total_items: selectedItems.length,
-        status: "enviado",
-      });
+    const metadata = getProtocolSessionMetadata(session);
+    const payload = {
+      ...form,
+      reason_id: form.reason_id || null,
+      external_protocol: form.external_protocol || null,
+      batch_number: form.batch_number || null,
+      notes: form.notes || null,
+      ...metadata,
+      items: selectedItems.map((item) => ({
+        billing_account_id: item.billing_account_id || null,
+        attendance_id: item.attendance_id || null,
+        patient_id: item.patient_id || null,
+        document_type_id: item.document_type_id || null,
+        item_reason_id: item.item_reason_id || null,
+        item_type: item.item_type,
+        account_number: item.account_number || null,
+        medical_record: item.medical_record || null,
+        insurance_name: item.insurance_name || null,
+        attendance_type: item.attendance_type || null,
+        attendance_date: item.attendance_date || null,
+        competence: item.competence || null,
+        priority: item.priority || form.priority,
+        tags: item.tags || null,
+        notes: item.notes || null,
+        document_reference: item.document_reference || null,
+        protocol_reference: item.protocol_reference || null,
+        manual_title: item.manual_title || null,
+        item_date: item.item_date || null,
+        pending_reason: item.pending_reason || null,
+        snapshot: {
+          ...(item.snapshot || {}),
+          patient_name: item.patient_name || null,
+          item_reason_name: item.item_reason_name || null,
+          document_type_name: item.document_type_name || null,
+          source_label: item.sourceLabel,
+        },
+      })),
+    };
 
-      for (const item of selectedItems) {
-        await createItem.mutateAsync({
-          protocol_id: protocol.id,
-          billing_account_id: item.billing_account_id,
-          document_type_id: item.document_type_id || null,
-          insurance_name: item.insurance_name,
-          competence: item.competence,
-          item_status: "pendente",
-          notes: item.notes || null,
-        });
-      }
-
-      await createMovement.mutateAsync({
-        protocol_id: protocol.id,
-        movement_type: "envio",
-        sector_origin_id: form.sector_origin_id,
-        sector_destination_id: form.sector_destination_id,
-        reason_id: form.reason_id || null,
-        status: "enviado",
-        notes: form.notes || null,
-      });
-
-      toast.success(`Protocolo ${protocolNumber} emitido com ${selectedItems.length} itens!`);
-      setForm({ protocol_type: "envio", sector_origin_id: "", sector_destination_id: "", reason_id: "", priority: "normal", external_protocol: "", batch_number: "", notes: "" });
-      setSelectedItems([]);
-      setSearchTerm("");
-    } catch {
-      toast.error("Erro ao criar protocolo");
-    } finally {
-      setSubmitting(false);
-    }
+    const result = await createProtocol.mutateAsync(payload);
+    setSelectedItems([]);
+    setForm({
+      protocol_type: "envio",
+      sector_origin_id: "",
+      sector_destination_id: "",
+      reason_id: "",
+      priority: "normal",
+      external_protocol: "",
+      batch_number: "",
+      notes: "",
+    });
+    await fetchProtocolDetail(result.protocol_id);
   };
 
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-medium flex items-center gap-2"><Send className="h-4 w-4" /> Dados do Envio</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label>Tipo de Movimento</Label>
-              <Select value={form.protocol_type} onValueChange={v => setForm(p => ({ ...p, protocol_type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="envio">Envio</SelectItem>
-                  <SelectItem value="remessa">Remessa</SelectItem>
-                  <SelectItem value="protocolo">Protocolo</SelectItem>
-                  <SelectItem value="transferencia">Transferência</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Setor Origem *</Label>
-              <Select value={form.sector_origin_id} onValueChange={v => setForm(p => ({ ...p, sector_origin_id: v, sector_destination_id: "" }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  {activeSectors.map((s: any) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
-                        {s.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Setor Destino *</Label>
-              <Select value={form.sector_destination_id} onValueChange={v => setForm(p => ({ ...p, sector_destination_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  {destinationSectors.filter((s: any) => s.id !== form.sector_origin_id).map((s: any) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
-                        {s.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Motivo</Label>
-              <Select value={form.reason_id} onValueChange={v => setForm(p => ({ ...p, reason_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  {activeReasons.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Prioridade</Label>
-              <Select value={form.priority} onValueChange={v => setForm(p => ({ ...p, priority: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="urgente">Urgente</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Protocolo Externo</Label>
-              <Input value={form.external_protocol} onChange={e => setForm(p => ({ ...p, external_protocol: e.target.value }))} placeholder="Nº protocolo convênio" />
-            </div>
-            <div>
-              <Label>Lote / Remessa</Label>
-              <Input value={form.batch_number} onChange={e => setForm(p => ({ ...p, batch_number: e.target.value }))} placeholder="Nº lote" />
-            </div>
-            <div className="md:col-span-2">
-              <Label>Observação</Label>
-              <Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} />
-            </div>
+        <CardHeader className="pb-3">
+          <div className="space-y-1">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Send className="h-4 w-4" />
+              Cabeçalho do protocolo
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Escolha sempre setor origem e setor destino, depois inclua os itens e gere o envio.
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-3">
+          <div>
+            <Label>Tipo de movimento</Label>
+            <Select value={form.protocol_type} onValueChange={(value) => setForm((current) => ({ ...current, protocol_type: value }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {MOVEMENT_TYPES.map((type) => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Setor origem</Label>
+            <Select value={form.sector_origin_id} onValueChange={(value) => setForm((current) => ({ ...current, sector_origin_id: value }))}>
+              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectContent>
+                {activeSectors.map((sector) => (
+                  <SelectItem key={sector.id} value={sector.id}>{sector.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Setor destino</Label>
+            <Select value={form.sector_destination_id} onValueChange={(value) => setForm((current) => ({ ...current, sector_destination_id: value }))}>
+              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectContent>
+                {activeSectors.map((sector) => (
+                  <SelectItem key={sector.id} value={sector.id}>{sector.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Motivo geral</Label>
+            <Select value={form.reason_id || "todos"} onValueChange={(value) => setForm((current) => ({ ...current, reason_id: value === "todos" ? "" : value }))}>
+              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Sem motivo geral</SelectItem>
+                {activeReasons.map((reason) => (
+                  <SelectItem key={reason.id} value={reason.id}>{reason.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Prioridade</Label>
+            <Select value={form.priority} onValueChange={(value) => setForm((current) => ({ ...current, priority: value }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PRIORITIES.map((priority) => <SelectItem key={priority} value={priority}>{PRIORITY_LABELS[priority]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Tipo documental base</Label>
+            <Select value={filterDocType} onValueChange={setFilterDocType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Sem tipo padrão</SelectItem>
+                {activeDocTypes.map((type) => <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Protocolo externo</Label>
+            <Input value={form.external_protocol} onChange={(event) => setForm((current) => ({ ...current, external_protocol: event.target.value }))} />
+          </div>
+          <div>
+            <Label>Lote / remessa</Label>
+            <Input value={form.batch_number} onChange={(event) => setForm((current) => ({ ...current, batch_number: event.target.value }))} />
+          </div>
+          <div className="md:col-span-3">
+            <Label>Observação geral</Label>
+            <Textarea value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} rows={2} />
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <FileText className="h-4 w-4" /> Contas / Documentos
-              <Badge variant="secondary">{selectedItems.length} itens</Badge>
-              {selectedItems.length > 0 && (
-                <Badge variant="outline" className="ml-1">
-                  {totalAmount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </Badge>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-1">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <FolderInput className="h-4 w-4" />
+                Itens do protocolo
+                <Badge variant="secondary">{totalSelected} item(ns)</Badge>
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Após preencher o cabeçalho, pesquise e adicione os itens abaixo.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative w-[260px]">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input className="pl-9" placeholder="Buscar paciente, conta, convênio..." value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
+              </div>
+              {isBillingTab && (
+                <>
+                  <Select value={filterInsurance} onValueChange={setFilterInsurance}>
+                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Convênio" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos convênios</SelectItem>
+                      {insurances.map((insurance) => <SelectItem key={insurance} value={insurance!}>{insurance}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterCompetence} onValueChange={setFilterCompetence}>
+                    <SelectTrigger className="w-[150px]"><SelectValue placeholder="Competência" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todas</SelectItem>
+                      {competences.map((competence) => <SelectItem key={competence} value={competence!}>{competence}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </>
               )}
-            </CardTitle>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-            <div className="relative md:col-span-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar por paciente, convênio, observação..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
-            </div>
-            <Select value={filterInsurance} onValueChange={setFilterInsurance}>
-              <SelectTrigger><SelectValue placeholder="Convênio" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos convênios</SelectItem>
-                {insurances.map(i => <SelectItem key={i} value={i!}>{i}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterCompetence} onValueChange={setFilterCompetence}>
-              <SelectTrigger><SelectValue placeholder="Competência" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todas</SelectItem>
-                {competences.map(c => <SelectItem key={c} value={c!}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={selectedDocType} onValueChange={setSelectedDocType}>
-              <SelectTrigger><SelectValue placeholder="Tipo documento" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos tipos</SelectItem>
-                {(docTypes || []).filter((d: any) => d.active).map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+        <CardContent className="space-y-4">
+          <Tabs value={sourceTab} onValueChange={(value) => setSourceTab(value as SourceTab)}>
+            <TabsList className="flex h-auto flex-wrap">
+              <TabsTrigger value="contas">Contas</TabsTrigger>
+              <TabsTrigger value="atendimentos">Atendimentos</TabsTrigger>
+              <TabsTrigger value="pacientes">Pacientes / prontuários</TabsTrigger>
+              <TabsTrigger value="manual">Inclusão manual</TabsTrigger>
+            </TabsList>
 
-          {(searchTerm || filterInsurance || filterCompetence) && (
-            <div className="border rounded-md max-h-48 overflow-auto">
-              {filteredAccounts.slice(0, 15).map((a: any) => (
-                <div key={a.id} className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 cursor-pointer border-b last:border-b-0" onClick={() => addItem(a)}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate">{a.patients?.full_name || "Sem paciente vinculado"}</span>
-                      <Badge variant="outline" className="text-[10px] shrink-0">{a.status}</Badge>
+            <TabsContent value="contas" className="mt-4">
+              <div className="max-h-[380px] overflow-y-auto rounded-lg border">
+                {isSourceLoading && (
+                  <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                )}
+                {!isSourceLoading && filteredBilling.slice(0, 12).map((account) => (
+                  <div key={account.id} className="flex items-center justify-between border-b px-4 py-3 text-left last:border-b-0">
+                    <div>
+                      <div className="font-medium">{account.patients?.full_name || `Conta ${String(account.id).slice(0, 8)}`}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Conta {String(account.id).slice(0, 8)} • {account.insurance_name || "—"} • Comp. {account.competence || "—"} • Status {account.status}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                      <span>{a.insurance_name || "—"}</span>
-                      <span>Comp: {a.competence || "—"}</span>
-                      <span>{Number(a.amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                      {a.notes && <span className="truncate max-w-[200px]">{a.notes}</span>}
-                    </div>
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => addBillingItem(account)}>
+                      <Plus className="h-3.5 w-3.5" />
+                      Adicionar
+                    </Button>
                   </div>
-                  <Plus className="h-4 w-4 text-primary shrink-0 ml-2" />
-                </div>
-              ))}
-              {filteredAccounts.length === 0 && <p className="text-sm text-muted-foreground text-center py-3">Nenhuma conta encontrada</p>}
-              {filteredAccounts.length > 15 && <p className="text-xs text-muted-foreground text-center py-2">Mostrando 15 de {filteredAccounts.length}. Refine os filtros.</p>}
-            </div>
-          )}
-
-          {selectedItems.length > 0 && (
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Paciente</TableHead><TableHead>Convênio</TableHead><TableHead>Competência</TableHead><TableHead>Status Conta</TableHead><TableHead className="text-right">Valor</TableHead><TableHead></TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {selectedItems.map((item, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="font-medium">{item.patient_name}</TableCell>
-                    <TableCell>{item.insurance_name}</TableCell>
-                    <TableCell>{item.competence || "—"}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-[10px]">{item.status}</Badge></TableCell>
-                    <TableCell className="text-right">{Number(item.amount || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</TableCell>
-                    <TableCell><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeItem(idx)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button></TableCell>
-                  </TableRow>
                 ))}
-              </TableBody>
-            </Table>
-          )}
+                {!isSourceLoading && filteredBilling.length === 0 && <div className="px-4 py-6 text-sm text-muted-foreground">Nenhuma conta encontrada.</div>}
+              </div>
+            </TabsContent>
 
-          <div className="flex items-center justify-between pt-2">
-            <div className="text-xs text-muted-foreground">
-              {selectedItems.length > 0 && (
-                <span>Total: {selectedItems.length} itens · {totalAmount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-              )}
+            <TabsContent value="atendimentos" className="mt-4">
+              <div className="max-h-[380px] overflow-y-auto rounded-lg border">
+                {isSourceLoading && (
+                  <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                )}
+                {!isSourceLoading && filteredAttendances.slice(0, 12).map((attendance) => (
+                  <div key={attendance.id} className="flex items-center justify-between border-b px-4 py-3 text-left last:border-b-0">
+                    <div>
+                      <div className="font-medium">{attendance.patients?.full_name || `Atendimento ${String(attendance.id).slice(0, 8)}`}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Atendimento {String(attendance.id).slice(0, 8)} • {attendance.insurance_name || "—"} • {attendance.attendance_type}
+                      </div>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => addAttendanceItem(attendance)}>
+                      <Plus className="h-3.5 w-3.5" />
+                      Adicionar
+                    </Button>
+                  </div>
+                ))}
+                {!isSourceLoading && filteredAttendances.length === 0 && <div className="px-4 py-6 text-sm text-muted-foreground">Nenhum atendimento encontrado.</div>}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="pacientes" className="mt-4">
+              <div className="max-h-[380px] overflow-y-auto rounded-lg border">
+                {isSourceLoading && (
+                  <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                )}
+                {!isSourceLoading && filteredPatients.slice(0, 12).map((patient) => (
+                  <div key={patient.id} className="flex items-center justify-between border-b px-4 py-3 text-left last:border-b-0">
+                    <div>
+                      <div className="font-medium">{patient.full_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        CPF {patient.cpf || "—"} • Convênio {patient.health_insurance || "—"}
+                      </div>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => addPatientItem(patient)}>
+                      <Plus className="h-3.5 w-3.5" />
+                      Adicionar
+                    </Button>
+                  </div>
+                ))}
+                {!isSourceLoading && filteredPatients.length === 0 && <div className="px-4 py-6 text-sm text-muted-foreground">Nenhum paciente encontrado.</div>}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="manual" className="mt-4">
+              <div className="grid gap-3 md:grid-cols-3">
+                <div>
+                  <Label>Tipo do item</Label>
+                  <Select value={manualItem.item_type} onValueChange={(value) => setManualItem((current) => ({ ...current, item_type: value }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(ITEM_TYPE_LABELS).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Título / identificação</Label>
+                  <Input value={manualItem.manual_title} onChange={(event) => setManualItem((current) => ({ ...current, manual_title: event.target.value }))} placeholder="Ex.: Prontuário 123 / Ficha de gasto" />
+                </div>
+                <div>
+                  <Label>Paciente</Label>
+                  <Input value={manualItem.patient_name} onChange={(event) => setManualItem((current) => ({ ...current, patient_name: event.target.value }))} />
+                </div>
+                <div>
+                  <Label>Conta</Label>
+                  <Input value={manualItem.account_number} onChange={(event) => setManualItem((current) => ({ ...current, account_number: event.target.value }))} />
+                </div>
+                <div>
+                  <Label>Convênio</Label>
+                  <Input value={manualItem.insurance_name} onChange={(event) => setManualItem((current) => ({ ...current, insurance_name: event.target.value }))} />
+                </div>
+                <div>
+                  <Label>Documento</Label>
+                  <Input value={manualItem.document_reference} onChange={(event) => setManualItem((current) => ({ ...current, document_reference: event.target.value }))} />
+                </div>
+                <div>
+                  <Label>Protocolo relacionado</Label>
+                  <Input value={manualItem.protocol_reference} onChange={(event) => setManualItem((current) => ({ ...current, protocol_reference: event.target.value }))} />
+                </div>
+                <div>
+                  <Label>Competência</Label>
+                  <Input value={manualItem.competence} onChange={(event) => setManualItem((current) => ({ ...current, competence: event.target.value }))} />
+                </div>
+                <div className="md:col-span-3">
+                  <Label>Observação do item</Label>
+                  <Textarea value={manualItem.notes} onChange={(event) => setManualItem((current) => ({ ...current, notes: event.target.value }))} rows={2} />
+                </div>
+              </div>
+              <div className="mt-3 flex justify-end">
+                <Button type="button" onClick={addManualItem} className="gap-1.5">
+                  <UserRoundPlus className="h-4 w-4" />
+                  Incluir item manual
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Itens selecionados para envio</CardTitle>
+            </CardHeader>
+            <CardContent className="max-h-[300px] overflow-y-auto p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Paciente</TableHead>
+                    <TableHead>Convênio</TableHead>
+                    <TableHead>Tipo documento</TableHead>
+                    <TableHead>Motivo / observação</TableHead>
+                    <TableHead className="w-[120px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedItems.map((item) => (
+                    <TableRow key={item.tempId}>
+                      <TableCell>
+                        <div className="font-medium">{item.manual_title || item.account_number || item.document_reference || item.sourceLabel}</div>
+                        <div className="text-xs text-muted-foreground">{ITEM_TYPE_LABELS[item.item_type] || item.item_type}</div>
+                      </TableCell>
+                      <TableCell>{item.patient_name || "—"}</TableCell>
+                      <TableCell>{item.insurance_name || "—"}</TableCell>
+                      <TableCell>{item.document_type_name || "—"}</TableCell>
+                      <TableCell>
+                        <div>{item.item_reason_name || "—"}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-1">{item.notes || "—"}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(item)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeSelectedItem(item.tempId)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {selectedItems.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                        Nenhum item incluído no protocolo.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="text-sm text-muted-foreground">
+              {selectedItems.length > 0 ? `${selectedItems.length} item(ns) pronto(s) para envio.` : "Inclua ao menos um item para gerar o protocolo."}
             </div>
-            <Button onClick={handleSubmit} disabled={submitting} className="gap-2">
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Gerar Protocolo e Enviar
+            <Button onClick={handleSubmit} disabled={createProtocol.isPending || selectedItems.length === 0} className="gap-2">
+              {createProtocol.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Gerar protocolo e enviar
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalhe do item</DialogTitle>
+            <DialogDescription>Defina motivo e observação específicos deste item antes do envio.</DialogDescription>
+          </DialogHeader>
+
+          {editingItem && (
+            <div className="space-y-3">
+              <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                <div className="font-medium">{editingItem.manual_title || editingItem.account_number || editingItem.document_reference || editingItem.sourceLabel}</div>
+                <div className="text-xs text-muted-foreground">{editingItem.patient_name || "Sem paciente vinculado"}</div>
+              </div>
+              <div>
+                <Label>Tipo de documento</Label>
+                <Select value={editingItem.document_type_id || "todos"} onValueChange={(value) => setEditingItem((current) => current ? ({
+                  ...current,
+                  document_type_id: value === "todos" ? null : value,
+                  document_type_name: value === "todos" ? null : selectedDocTypeMap.get(value) || null,
+                }) : current)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Sem tipo</SelectItem>
+                    {activeDocTypes.map((type) => <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Motivo do item</Label>
+                <Select value={editingItem.item_reason_id || "todos"} onValueChange={(value) => setEditingItem((current) => current ? ({
+                  ...current,
+                  item_reason_id: value === "todos" ? null : value,
+                  item_reason_name: value === "todos" ? null : selectedReasonMap.get(value) || null,
+                }) : current)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Sem motivo específico</SelectItem>
+                    {activeReasons.map((reason) => <SelectItem key={reason.id} value={reason.id}>{reason.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Observação do item</Label>
+                <Textarea value={editingItem.notes || ""} onChange={(event) => setEditingItem((current) => current ? ({ ...current, notes: event.target.value }) : current)} rows={3} />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingItem(null)}>Cancelar</Button>
+                <Button onClick={() => editingItem && updateSelectedItem(editingItem)}>Salvar item</Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ProtocolDetail protocol={detailProtocol} open={!!detailProtocol} onClose={() => setDetailProtocol(null)} />
     </div>
   );
 }

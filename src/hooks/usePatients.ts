@@ -27,15 +27,25 @@ export interface Patient {
   updated_at: string;
 }
 
-export function usePatients() {
+export function usePatients(
+  filters?: { limit?: number },
+  options?: { enabled?: boolean; staleTime?: number },
+) {
   return useQuery({
-    queryKey: ["patients"],
+    queryKey: ["patients", filters],
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("patients")
         .select("*")
         .order("created_at", { ascending: false });
 
+      if (filters?.limit) {
+        query = query.limit(filters.limit);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as Patient[];
     },

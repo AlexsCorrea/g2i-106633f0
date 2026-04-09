@@ -1,197 +1,371 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import * as XLSX from "xlsx";
+import { format } from "date-fns";
+import { FileText, Loader2, Printer, Search } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useDocMovements, useDocProtocols, useDocSectors } from "@/hooks/useDocProtocol";
+import { PROTOCOL_STATUS_LABELS } from "@/lib/docProtocol";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useDocProtocols, useDocSectors, useDocMovements } from "@/hooks/useDocProtocol";
-import { Printer, FileText, Download, BarChart3, Loader2 } from "lucide-react";
-import { format } from "date-fns";
 
 const REPORT_TYPES = [
-  { id: "protocolos_periodo", name: "Protocolos por Período" },
-  { id: "pendentes_aceite", name: "Pendentes de Aceite" },
-  { id: "rastreabilidade_protocolo", name: "Rastreabilidade por Protocolo" },
-  { id: "documentos_setor", name: "Documentos por Setor" },
-  { id: "devolvidos_motivos", name: "Devolvidos e Motivos" },
-  { id: "produtividade_setor", name: "Produtividade por Setor" },
+  { id: "protocolos_periodo", name: "Protocolos por período" },
+  { id: "movimentacoes_setor", name: "Movimentações por setor" },
+  { id: "pendentes", name: "Pendentes de recebimento" },
+  { id: "paciente", name: "Rastreabilidade por paciente" },
+  { id: "conta", name: "Rastreabilidade por conta" },
+  { id: "documentos_tipo", name: "Documentos por tipo" },
+  { id: "produtividade_usuario", name: "Produtividade por usuário" },
+  { id: "analitico", name: "Relatório analítico do protocolo" },
 ];
 
-const STATUS_LABELS: Record<string, string> = {
-  rascunho: "Rascunho", enviado: "Enviado", recebido: "Recebido",
-  recebido_parcial: "Parcial", devolvido: "Devolvido", pendente: "Pendente",
-  em_auditoria: "Em Auditoria", concluido: "Concluído", cancelado: "Cancelado",
-  pronto_envio: "Pronto", em_transito: "Trânsito",
-};
+function fmtDate(value?: string | null) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return format(parsed, "dd/MM/yyyy HH:mm");
+}
 
 export default function ProtocolReports() {
   const [reportType, setReportType] = useState("protocolos_periodo");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [showReport, setShowReport] = useState(false);
-
-  const { data: protocols, isLoading } = useDocProtocols();
+  const [sectorFilter, setSectorFilter] = useState("todos");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [search, setSearch] = useState("");
+  const { data: protocols, isLoading } = useDocProtocols({ status: statusFilter, date_from: dateFrom || undefined, date_to: dateTo || undefined });
   const { data: sectors } = useDocSectors();
-  const { data: movements } = useDocMovements();
-
-  const filteredProtocols = (protocols || []).filter((p: any) => {
-    if (dateFrom && p.created_at < dateFrom) return false;
-    if (dateTo && p.created_at > dateTo + "T23:59:59") return false;
-    if (reportType === "pendentes_aceite") return p.status === "enviado";
-    if (reportType === "devolvidos_motivos") return p.status === "devolvido";
-    return true;
+  const { data: movements } = useDocMovements({ date_from: dateFrom || undefined, date_to: dateTo || undefined });
+  const { data: items, isLoading: itemsLoading } = useQuery({
+    queryKey: ["doc_protocol_report_items", dateFrom, dateTo],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("doc_protocol_items")
+        .select(`
+          *,
+          patient:patients(id, full_name),
+          document_type:doc_protocol_document_types(id, name, category)
+        `)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
   });
 
-  const sectorStats = (sectors || []).map((s: any) => {
-    const asOrigin = (protocols || []).filter((p: any) => p.sector_origin_id === s.id).length;
-    const asDest = (protocols || []).filter((p: any) => p.sector_destination_id === s.id).length;
-    return { ...s, asOrigin, asDest };
-  }).filter(s => s.asOrigin > 0 || s.asDest > 0);
+  const filteredProtocols = useMemo(() => {
+    return (protocols || []).filter((protocol) => {
+      if (sectorFilter !== "todos" && protocol.sector_origin_id !== sectorFilter && protocol.sector_destination_id !== sectorFilter) return false;
+      if (!search) return true;
+      const term = search.toLowerCase();
+      return [
+        protocol.protocol_number,
+        protocol.sector_origin?.name,
+        protocol.sector_destination?.name,
+        protocol.emitter?.full_name,
+        protocol.receiver?.full_name,
+        protocol.batch_number,
+        protocol.external_protocol,
+      ].some((value) => (value || "").toLowerCase().includes(term));
+    });
+  }, [protocols, sectorFilter, search]);
 
-  const handlePrint = () => {
-    window.print();
+  const analyticRows = useMemo(() => {
+    const itemMap = new Map((items || []).map((item: any) => [item.protocol_id, [...((items || []).filter((inner: any) => inner.protocol_id === item.protocol_id))]]));
+    return filteredProtocols.flatMap((protocol) => {
+      const protocolItems = itemMap.get(protocol.id) || [];
+      return protocolItems.map((item: any) => ({
+        protocolo: protocol.protocol_number,
+        paciente: String(item.snapshot?.patient_name || item.patient?.full_name || item.manual_title || "—"),
+        convenio: item.insurance_name || "—",
+        conta: item.account_number || item.document_reference || item.protocol_reference || "—",
+        tipo_documento: item.document_type?.name || item.item_type,
+        motivo: item.item_reason?.name || item.snapshot?.item_reason_name || "—",
+        observacao: item.notes || "—",
+        origem: protocol.sector_origin?.name || "—",
+        destino: protocol.sector_destination?.name || "—",
+        data_hora: fmtDate(protocol.sent_at || protocol.created_at),
+        status: PROTOCOL_STATUS_LABELS[protocol.status] || protocol.status,
+        emissor: protocol.emitter?.full_name || "—",
+        recebedor: protocol.receiver?.full_name || "—",
+      }));
+    });
+  }, [filteredProtocols, items]);
+
+  const documentsByType = useMemo(() => {
+    const map = new Map<string, { type: string; quantity: number; sectors: Set<string> }>();
+    analyticRows.forEach((row) => {
+      const current = map.get(row.tipo_documento) || { type: row.tipo_documento, quantity: 0, sectors: new Set<string>() };
+      current.quantity += 1;
+      current.sectors.add(`${row.origem} → ${row.destino}`);
+      map.set(row.tipo_documento, current);
+    });
+    return Array.from(map.values()).map((entry) => ({ ...entry, sectors: Array.from(entry.sectors).join(", ") }));
+  }, [analyticRows]);
+
+  const productivityByUser = useMemo(() => {
+    const map = new Map<string, { user: string; generated: number; received: number; returned: number }>();
+    filteredProtocols.forEach((protocol) => {
+      const emitter = protocol.emitter?.full_name || "—";
+      const receiver = protocol.receiver?.full_name || "—";
+      const emitterEntry = map.get(emitter) || { user: emitter, generated: 0, received: 0, returned: 0 };
+      emitterEntry.generated += 1;
+      map.set(emitter, emitterEntry);
+      const receiverEntry = map.get(receiver) || { user: receiver, generated: 0, received: 0, returned: 0 };
+      if (protocol.receiver?.full_name) receiverEntry.received += 1;
+      if (protocol.status === "devolvido") receiverEntry.returned += 1;
+      map.set(receiver, receiverEntry);
+    });
+    return Array.from(map.values()).filter((entry) => entry.user !== "—");
+  }, [filteredProtocols]);
+
+  const movementBySector = useMemo(() => {
+    const map = new Map<string, { sector: string; sent: number; received: number; returned: number }>();
+    (movements || []).forEach((movement) => {
+      const origin = movement.sector_origin?.name || "—";
+      const destination = movement.sector_destination?.name || "—";
+      const originEntry = map.get(origin) || { sector: origin, sent: 0, received: 0, returned: 0 };
+      if (movement.movement_type === "envio") originEntry.sent += 1;
+      if (movement.movement_type === "devolucao") originEntry.returned += 1;
+      map.set(origin, originEntry);
+      const destinationEntry = map.get(destination) || { sector: destination, sent: 0, received: 0, returned: 0 };
+      if (movement.movement_type === "recebimento") destinationEntry.received += 1;
+      map.set(destination, destinationEntry);
+    });
+    return Array.from(map.values());
+  }, [movements]);
+
+  const pendingProtocols = filteredProtocols.filter((protocol) => ["pendente_recebimento", "enviado", "aceito_parcialmente"].includes(protocol.status));
+
+  const exportExcel = () => {
+    let rows: Record<string, unknown>[] = [];
+    switch (reportType) {
+      case "movimentacoes_setor":
+        rows = movementBySector;
+        break;
+      case "pendentes":
+        rows = pendingProtocols;
+        break;
+      case "paciente":
+        rows = analyticRows.filter((row) => row.paciente.toLowerCase().includes(search.toLowerCase()));
+        break;
+      case "conta":
+        rows = analyticRows.filter((row) => row.conta.toLowerCase().includes(search.toLowerCase()));
+        break;
+      case "documentos_tipo":
+        rows = documentsByType;
+        break;
+      case "produtividade_usuario":
+        rows = productivityByUser;
+        break;
+      case "analitico":
+        rows = analyticRows;
+        break;
+      default:
+        rows = filteredProtocols.map((protocol) => ({
+          protocolo: protocol.protocol_number,
+          origem: protocol.sector_origin?.name,
+          destino: protocol.sector_destination?.name,
+          status: PROTOCOL_STATUS_LABELS[protocol.status] || protocol.status,
+          data_hora: fmtDate(protocol.sent_at || protocol.created_at),
+          emissor: protocol.emitter?.full_name || "—",
+        }));
+    }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Relatorio");
+    XLSX.writeFile(wb, `relatorio-protocolos-${reportType}.xlsx`);
   };
 
-  const reportTitle = REPORT_TYPES.find(r => r.id === reportType)?.name || "";
+  const renderTable = () => {
+    switch (reportType) {
+      case "movimentacoes_setor":
+        return (
+          <Table>
+            <TableHeader><TableRow><TableHead>Setor</TableHead><TableHead>Qtd. enviada</TableHead><TableHead>Qtd. recebida</TableHead><TableHead>Qtd. devolvida</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {movementBySector.map((row) => (
+                <TableRow key={row.sector}>
+                  <TableCell>{row.sector}</TableCell>
+                  <TableCell>{row.sent}</TableCell>
+                  <TableCell>{row.received}</TableCell>
+                  <TableCell>{row.returned}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        );
+      case "pendentes":
+        return (
+          <Table>
+            <TableHeader><TableRow><TableHead>Protocolo</TableHead><TableHead>Origem</TableHead><TableHead>Destino</TableHead><TableHead>Pendências</TableHead><TableHead>Dias em aberto</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {pendingProtocols.map((protocol) => (
+                <TableRow key={protocol.id}>
+                  <TableCell>{protocol.protocol_number}</TableCell>
+                  <TableCell>{protocol.sector_origin?.name || "—"}</TableCell>
+                  <TableCell>{protocol.sector_destination?.name || "—"}</TableCell>
+                  <TableCell>{protocol.pending_items || protocol.total_items}</TableCell>
+                  <TableCell>{Math.max(0, Math.floor((Date.now() - new Date(protocol.created_at).getTime()) / 86400000))}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        );
+      case "documentos_tipo":
+        return (
+          <Table>
+            <TableHeader><TableRow><TableHead>Tipo</TableHead><TableHead>Quantidade</TableHead><TableHead>Setores envolvidos</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {documentsByType.map((row) => (
+                <TableRow key={row.type}>
+                  <TableCell>{row.type}</TableCell>
+                  <TableCell>{row.quantity}</TableCell>
+                  <TableCell>{row.sectors}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        );
+      case "produtividade_usuario":
+        return (
+          <Table>
+            <TableHeader><TableRow><TableHead>Usuário</TableHead><TableHead>Gerados</TableHead><TableHead>Recebidos</TableHead><TableHead>Devolvidos</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {productivityByUser.map((row) => (
+                <TableRow key={row.user}>
+                  <TableCell>{row.user}</TableCell>
+                  <TableCell>{row.generated}</TableCell>
+                  <TableCell>{row.received}</TableCell>
+                  <TableCell>{row.returned}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        );
+      case "analitico":
+      case "paciente":
+      case "conta":
+        return (
+          <Table>
+            <TableHeader><TableRow><TableHead>Protocolo</TableHead><TableHead>Paciente</TableHead><TableHead>Conta</TableHead><TableHead>Convênio</TableHead><TableHead>Tipo</TableHead><TableHead>Origem</TableHead><TableHead>Destino</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {analyticRows
+                .filter((row) => reportType === "paciente" ? row.paciente.toLowerCase().includes(search.toLowerCase()) : reportType === "conta" ? row.conta.toLowerCase().includes(search.toLowerCase()) : true)
+                .map((row, index) => (
+                  <TableRow key={`${row.protocolo}-${index}`}>
+                    <TableCell>{row.protocolo}</TableCell>
+                    <TableCell>{row.paciente}</TableCell>
+                    <TableCell>{row.conta}</TableCell>
+                    <TableCell>{row.convenio}</TableCell>
+                    <TableCell>{row.tipo_documento}</TableCell>
+                    <TableCell>{row.origem}</TableCell>
+                    <TableCell>{row.destino}</TableCell>
+                    <TableCell>{row.status}</TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        );
+      default:
+        return (
+          <Table>
+            <TableHeader><TableRow><TableHead>Protocolo</TableHead><TableHead>Origem</TableHead><TableHead>Destino</TableHead><TableHead>Status</TableHead><TableHead>Data/Hora</TableHead><TableHead>Emissor</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {filteredProtocols.map((protocol) => (
+                <TableRow key={protocol.id}>
+                  <TableCell className="font-medium">{protocol.protocol_number}</TableCell>
+                  <TableCell>{protocol.sector_origin?.name || "—"}</TableCell>
+                  <TableCell>{protocol.sector_destination?.name || "—"}</TableCell>
+                  <TableCell><Badge variant="secondary">{PROTOCOL_STATUS_LABELS[protocol.status] || protocol.status}</Badge></TableCell>
+                  <TableCell>{fmtDate(protocol.sent_at || protocol.created_at)}</TableCell>
+                  <TableCell>{protocol.emitter?.full_name || "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        );
+    }
+  };
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" /> Relatórios do Protocolo
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Relatórios do protocolo documental</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div>
-              <Label>Tipo de Relatório</Label>
-              <Select value={reportType} onValueChange={v => { setReportType(v); setShowReport(false); }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {REPORT_TYPES.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+        <CardContent className="grid gap-3 md:grid-cols-5">
+          <div>
+            <Label>Relatório</Label>
+            <Select value={reportType} onValueChange={setReportType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {REPORT_TYPES.map((report) => <SelectItem key={report.id} value={report.id}>{report.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Data inicial</Label>
+            <Input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
+          </div>
+          <div>
+            <Label>Data final</Label>
+            <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
+          </div>
+          <div>
+            <Label>Setor</Label>
+            <Select value={sectorFilter} onValueChange={setSectorFilter}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {(sectors || []).map((sector) => <SelectItem key={sector.id} value={sector.id}>{sector.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Status</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {Object.entries(PROTOCOL_STATUS_LABELS).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-3">
+            <Label>Busca complementar</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Paciente, conta, protocolo, convênio..." />
             </div>
-            <div>
-              <Label>Data Início</Label>
-              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-            </div>
-            <div>
-              <Label>Data Fim</Label>
-              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-            </div>
-            <div className="flex items-end gap-2">
-              <Button onClick={() => setShowReport(true)} className="gap-1.5">
-                <FileText className="h-4 w-4" /> Gerar
-              </Button>
-              {showReport && (
-                <Button variant="outline" onClick={handlePrint} className="gap-1.5">
-                  <Printer className="h-4 w-4" /> Imprimir
-                </Button>
-              )}
-            </div>
+          </div>
+          <div className="flex items-end gap-2 md:col-span-2">
+            <Button className="gap-1.5" onClick={() => window.print()}>
+              <Printer className="h-4 w-4" />
+              Imprimir
+            </Button>
+            <Button variant="outline" className="gap-1.5" onClick={exportExcel}>
+              <FileText className="h-4 w-4" />
+              Excel
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {showReport && (
-        <div className="print:p-0">
-          <Card className="print:shadow-none print:border-0">
-            <CardContent className="p-6">
-              {/* Print header */}
-              <div className="print:block hidden mb-6 border-b-2 border-foreground pb-4">
-                <h1 className="text-lg font-bold">Zurich 2.0 — Gestão Hospitalar</h1>
-                <h2 className="text-base font-semibold mt-1">{reportTitle}</h2>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {dateFrom && dateTo ? `Período: ${dateFrom} a ${dateTo}` : "Todos os períodos"} · Gerado em: {format(new Date(), "dd/MM/yyyy HH:mm")}
-                </p>
-              </div>
-
-              <h2 className="text-base font-semibold mb-4 print:hidden">{reportTitle}</h2>
-
-              {isLoading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (
-                <>
-                  {(reportType === "protocolos_periodo" || reportType === "pendentes_aceite" || reportType === "devolvidos_motivos") && (
-                    <Table>
-                      <TableHeader><TableRow>
-                        <TableHead>Protocolo</TableHead><TableHead>Tipo</TableHead><TableHead>Origem</TableHead><TableHead>Destino</TableHead><TableHead>Itens</TableHead><TableHead>Status</TableHead><TableHead>Data</TableHead>
-                      </TableRow></TableHeader>
-                      <TableBody>
-                        {filteredProtocols.map((p: any) => (
-                          <TableRow key={p.id}>
-                            <TableCell className="font-medium text-xs">{p.protocol_number}</TableCell>
-                            <TableCell className="text-xs capitalize">{p.protocol_type}</TableCell>
-                            <TableCell className="text-xs">{p.sector_origin?.name || "—"}</TableCell>
-                            <TableCell className="text-xs">{p.sector_destination?.name || "—"}</TableCell>
-                            <TableCell className="text-xs">{p.total_items}</TableCell>
-                            <TableCell><Badge variant="secondary" className="text-[10px]">{STATUS_LABELS[p.status] || p.status}</Badge></TableCell>
-                            <TableCell className="text-xs">{format(new Date(p.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
-                          </TableRow>
-                        ))}
-                        {filteredProtocols.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Nenhum resultado</TableCell></TableRow>}
-                      </TableBody>
-                    </Table>
-                  )}
-
-                  {(reportType === "documentos_setor" || reportType === "produtividade_setor") && (
-                    <Table>
-                      <TableHeader><TableRow>
-                        <TableHead>Setor</TableHead><TableHead>Enviados (como origem)</TableHead><TableHead>Recebidos (como destino)</TableHead><TableHead>Total</TableHead>
-                      </TableRow></TableHeader>
-                      <TableBody>
-                        {sectorStats.map(s => (
-                          <TableRow key={s.id}>
-                            <TableCell className="font-medium text-xs">
-                              <div className="flex items-center gap-1.5">
-                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
-                                {s.name}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-xs">{s.asOrigin}</TableCell>
-                            <TableCell className="text-xs">{s.asDest}</TableCell>
-                            <TableCell className="text-xs font-medium">{s.asOrigin + s.asDest}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-
-                  {reportType === "rastreabilidade_protocolo" && (
-                    <div className="space-y-3">
-                      {filteredProtocols.slice(0, 20).map((p: any) => {
-                        const protocolMovements = (movements || []).filter((m: any) => m.protocol_id === p.id);
-                        return (
-                          <Card key={p.id} className="p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-sm">{p.protocol_number}</span>
-                              <Badge variant="secondary" className="text-[10px]">{STATUS_LABELS[p.status] || p.status}</Badge>
-                            </div>
-                            {protocolMovements.length > 0 ? protocolMovements.map((m: any) => (
-                              <div key={m.id} className="flex items-center gap-2 text-xs text-muted-foreground ml-2">
-                                <span>{format(new Date(m.created_at), "dd/MM HH:mm")}</span>
-                                <span className="capitalize font-medium">{m.movement_type}</span>
-                                <span>{m.sector_origin?.name} → {m.sector_destination?.name}</span>
-                              </div>
-                            )) : <p className="text-xs text-muted-foreground ml-2">Sem movimentações</p>}
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <div className="mt-4 pt-3 border-t text-xs text-muted-foreground flex justify-between">
-                    <span>Total: {reportType.includes("setor") ? sectorStats.length : filteredProtocols.length} registros</span>
-                    <span>Gerado em {format(new Date(), "dd/MM/yyyy HH:mm")}</span>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading || itemsLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          ) : (
+            renderTable()
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

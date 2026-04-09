@@ -1,0 +1,122 @@
+{
+  "user": {
+    "id": "17d8a5c3-aa78-4719-a8ed-7b6bb1e56cc2",
+    "email": "protocol.validation.1775766766311@example.com"
+  },
+  "seed": {
+    "sectors": 6,
+    "document_types": 4,
+    "reasons": 3,
+    "patients": 5,
+    "attendances": 5,
+    "billing_accounts": 5,
+    "flow_mode": "missing"
+  },
+  "operations": {
+    "create_partial": {
+      "label": "create_protocol_partial",
+      "ms": 3992.7,
+      "value": {
+        "protocol_id": "0f0eb266-c3a3-4a36-96b9-d54e9cb12fe4",
+        "protocol_number": "PROT-2026-002",
+        "status": "pendente_recebimento",
+        "legacy": true
+      }
+    },
+    "create_integral": {
+      "label": "create_protocol_integral",
+      "ms": 2572.3,
+      "value": {
+        "protocol_id": "c3d744a0-5bab-4aeb-80e4-3cf31f5285ae",
+        "protocol_number": "PROT-2026-003",
+        "status": "pendente_recebimento",
+        "legacy": true
+      }
+    },
+    "receive_partial": {
+      "label": "receive_partial",
+      "ms": 1972,
+      "value": {
+        "mode": "legacy",
+        "result": {
+          "status": "aceito_parcialmente",
+          "accepted_items": 3,
+          "returned_items": 2
+        }
+      }
+    },
+    "receive_integral": {
+      "label": "receive_integral",
+      "ms": 915.2,
+      "value": {
+        "mode": "legacy",
+        "result": {
+          "status": "recebido",
+          "accepted_items": 3
+        }
+      }
+    }
+  },
+  "validations": [
+    {
+      "label": "dashboard_stats_query",
+      "ms": 275.6,
+      "ok": true,
+      "rows": 12,
+      "error": null
+    },
+    {
+      "label": "novo_protocolo_sources",
+      "ms": 319.8,
+      "ok": true,
+      "counts": {
+        "sectors": 16,
+        "reasons": 15,
+        "types": 13,
+        "billing": 25,
+        "attendances": 6,
+        "patients": 48
+      },
+      "error": null
+    },
+    {
+      "label": "recebimento_list",
+      "ms": 271.6,
+      "ok": true,
+      "rows": 9,
+      "error": null
+    },
+    {
+      "label": "rastreabilidade_movements",
+      "ms": 290.4,
+      "ok": true,
+      "rows": 25,
+      "error": null
+    },
+    {
+      "label": "protocolos_listagem",
+      "ms": 226.7,
+      "ok": true,
+      "rows": 12,
+      "error": null
+    },
+    {
+      "label": "admin_flow_tables",
+      "ms": 526.8,
+      "ok": true,
+      "counts": {
+        "flow_profiles": 0,
+        "flow_rules": 0
+      },
+      "error": null
+    }
+  ],
+  "protocols_created": [
+    "PROT-2026-002",
+    "PROT-2026-003"
+  ],
+  "protocol_ids": [
+    "0f0eb266-c3a3-4a36-96b9-d54e9cb12fe4",
+    "c3d744a0-5bab-4aeb-80e4-3cf31f5285ae"
+  ]
+}

@@ -22,9 +22,14 @@ export interface Attendance {
   profiles?: { full_name: string };
 }
 
-export function useAttendances(filters?: { status?: string; date?: string }) {
+export function useAttendances(
+  filters?: { status?: string; date?: string; limit?: number },
+  options?: { enabled?: boolean; staleTime?: number },
+) {
   return useQuery({
     queryKey: ["attendances", filters],
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 60_000,
     queryFn: async () => {
       let query = supabase
         .from("attendances")
@@ -33,6 +38,9 @@ export function useAttendances(filters?: { status?: string; date?: string }) {
 
       if (filters?.status && filters.status !== "todos") {
         query = query.eq("status", filters.status);
+      }
+      if (filters?.limit) {
+        query = query.limit(filters.limit);
       }
       const { data, error } = await query;
       if (error) throw error;

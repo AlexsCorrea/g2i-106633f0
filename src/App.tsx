@@ -38,6 +38,7 @@ import Portaria from "./pages/Portaria";
 import Financeiro from "./pages/Financeiro";
 import Faturamento from "./pages/Faturamento";
 import ProtocoloDocumentos from "./pages/ProtocoloDocumentos";
+import ProtocoloDocumentosAdmin from "./pages/ProtocoloDocumentosAdmin";
 import Estoque from "./pages/Estoque";
 import Diagnostico from "./pages/Diagnostico";
 import Escalas from "./pages/Escalas";
@@ -90,6 +91,7 @@ function App() {
                 <Route path="/gerenciamento/financeiro" element={<ProtectedRoute><Financeiro /></ProtectedRoute>} />
                 <Route path="/gerenciamento/faturamento" element={<ProtectedRoute><Faturamento /></ProtectedRoute>} />
                 <Route path="/gerenciamento/faturamento/protocolo" element={<ProtectedRoute><ProtocoloDocumentos /></ProtectedRoute>} />
+                <Route path="/gerenciamento/faturamento/protocolo/admin" element={<ProtectedRoute><ProtocoloDocumentosAdmin /></ProtectedRoute>} />
                 <Route path="/gerenciamento/produtividade" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
                 <Route path="/gerenciamento/caixa" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
                 <Route path="/gerenciamento/estoque/farmacia" element={<ProtectedRoute><Estoque stockType="farmacia" /></ProtectedRoute>} />
