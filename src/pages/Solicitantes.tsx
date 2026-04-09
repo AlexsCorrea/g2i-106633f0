@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Plus, Search, Edit2, UserCheck, UserX, Users, Stethoscope } from "lucide-react";
+import { Plus, Search, Edit2, UserCheck, UserX, Users, Stethoscope, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSolicitantes, useSaveSolicitante, useLookupTables, type Solicitante } from "@/hooks/useSolicitantes";
 import { toast } from "sonner";
 
@@ -45,16 +45,27 @@ export default function SolicitantesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<Partial<Solicitante>>(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 30;
 
   const situacaoAtiva = situacoes.data?.find(s => s.nome === 'Ativo');
 
-  const filtered = solicitantes.filter(s => {
+  const filtered = useMemo(() => solicitantes.filter(s => {
     const q = search.toLowerCase();
     if (q && !s.nome.toLowerCase().includes(q) && !s.cpf.includes(q) && !s.conselho.toLowerCase().includes(q) && !s.sigla.toLowerCase().includes(q)) return false;
     if (filterSituacao !== 'all' && s.situacao_id !== filterSituacao) return false;
     if (filterUnidade !== 'all' && s.unidade_id !== filterUnidade) return false;
     return true;
-  });
+  }), [solicitantes, search, filterSituacao, filterUnidade]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedData = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Reset page when filters change
+  const handleSearch = (v: string) => { setSearch(v); setCurrentPage(1); };
+  const handleFilterSituacao = (v: string) => { setFilterSituacao(v); setCurrentPage(1); };
+  const handleFilterUnidade = (v: string) => { setFilterUnidade(v); setCurrentPage(1); };
 
   const openNew = () => {
     setEditId(null);
@@ -112,16 +123,16 @@ export default function SolicitantesPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar por nome, CPF, conselho ou sigla..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+              <Input placeholder="Buscar por nome, CPF, conselho ou sigla..." value={search} onChange={e => handleSearch(e.target.value)} className="pl-9" />
             </div>
-            <Select value={filterSituacao} onValueChange={setFilterSituacao}>
+            <Select value={filterSituacao} onValueChange={handleFilterSituacao}>
               <SelectTrigger><SelectValue placeholder="Situação" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas situações</SelectItem>
                 {situacoes.data?.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={filterUnidade} onValueChange={setFilterUnidade}>
+            <Select value={filterUnidade} onValueChange={handleFilterUnidade}>
               <SelectTrigger><SelectValue placeholder="Unidade" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas unidades</SelectItem>
@@ -154,9 +165,9 @@ export default function SolicitantesPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-                ) : filtered.length === 0 ? (
+                ) : paginatedData.length === 0 ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum solicitante encontrado</TableCell></TableRow>
-                ) : filtered.map(s => (
+                ) : paginatedData.map(s => (
                   <TableRow key={s.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openEdit(s)}>
                     <TableCell className="font-medium">{s.nome}</TableCell>
                     <TableCell>{s.conselho}</TableCell>
@@ -174,6 +185,38 @@ export default function SolicitantesPage() {
               </TableBody>
             </Table>
           </div>
+          {/* Pagination */}
+          {filtered.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between pt-4">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {((safePage - 1) * PAGE_SIZE) + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} de {filtered.length}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage <= 1} onClick={() => setCurrentPage(p => p - 1)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+                  .reduce<(number | 'ellipsis')[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && p - (arr[idx - 1]) > 1) acc.push('ellipsis');
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, i) =>
+                    p === 'ellipsis' ? (
+                      <span key={`e${i}`} className="px-1 text-muted-foreground">…</span>
+                    ) : (
+                      <Button key={p} variant={p === safePage ? 'default' : 'outline'} size="icon" className="h-8 w-8 text-xs" onClick={() => setCurrentPage(p)}>
+                        {p}
+                      </Button>
+                    )
+                  )}
+                <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
