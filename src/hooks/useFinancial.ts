@@ -5,11 +5,12 @@ import { toast } from "sonner";
 // ── Generic helper ──
 function useFinTable<T>(table: string, queryKey: string, orderBy = "created_at", filters?: Record<string, any>) {
   const qc = useQueryClient();
+  const client = supabase as any;
 
   const query = useQuery({
     queryKey: [queryKey, filters],
     queryFn: async () => {
-      let q = (supabase.from(table) as any).select("*").order(orderBy);
+      let q = client.from(table).select("*").order(orderBy);
       if (filters) {
         Object.entries(filters).forEach(([k, v]) => {
           if (v !== undefined && v !== null && v !== "" && v !== "todos") q = q.eq(k, v);
@@ -23,7 +24,7 @@ function useFinTable<T>(table: string, queryKey: string, orderBy = "created_at",
 
   const create = useMutation({
     mutationFn: async (item: Partial<T>) => {
-      const { data, error } = await (supabase.from(table) as any).insert(item).select().single();
+      const { data, error } = await client.from(table).insert(item).select().single();
       if (error) throw error;
       return data;
     },
@@ -33,7 +34,7 @@ function useFinTable<T>(table: string, queryKey: string, orderBy = "created_at",
 
   const update = useMutation({
     mutationFn: async ({ id, ...rest }: any) => {
-      const { data, error } = await (supabase.from(table) as any).update(rest).eq("id", id).select().single();
+      const { data, error } = await client.from(table).update(rest).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -43,7 +44,7 @@ function useFinTable<T>(table: string, queryKey: string, orderBy = "created_at",
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase.from(table) as any).delete().eq("id", id);
+      const { error } = await client.from(table).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: [queryKey] }); toast.success("Registro removido!"); },
