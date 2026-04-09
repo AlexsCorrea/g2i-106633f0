@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Plus, Search, Edit2, UserCheck, UserX, Users, Stethoscope } from "lucide-react";
+import { Plus, Search, Edit2, UserCheck, UserX, Users, Stethoscope, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSolicitantes, useSaveSolicitante, useLookupTables, type Solicitante } from "@/hooks/useSolicitantes";
 import { toast } from "sonner";
 
