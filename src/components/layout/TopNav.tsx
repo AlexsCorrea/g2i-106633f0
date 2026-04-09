@@ -129,9 +129,10 @@ const menuConfig: MenuItem[] = [
       {
         heading: "Financeiro",
         items: [
-          { label: "Financeiro", icon: Wallet, path: "/gerenciamento/financeiro" },
-          { label: "Faturamento", icon: CreditCard, path: "/gerenciamento/faturamento" },
-          { label: "Fechamento de Caixa", icon: Receipt, path: "/gerenciamento/caixa" },
+          { label: "Dashboard Financeiro", icon: Wallet, path: "/gerenciamento/financeiro" },
+          { label: "Contas a Pagar", icon: TrendingUp, path: "/gerenciamento/financeiro" },
+          { label: "Contas a Receber", icon: CreditCard, path: "/gerenciamento/financeiro" },
+          { label: "Faturamento", icon: Receipt, path: "/gerenciamento/faturamento" },
         ],
       },
       {
