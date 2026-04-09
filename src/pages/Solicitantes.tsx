@@ -45,16 +45,27 @@ export default function SolicitantesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<Partial<Solicitante>>(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 30;
 
   const situacaoAtiva = situacoes.data?.find(s => s.nome === 'Ativo');
 
-  const filtered = solicitantes.filter(s => {
+  const filtered = useMemo(() => solicitantes.filter(s => {
     const q = search.toLowerCase();
     if (q && !s.nome.toLowerCase().includes(q) && !s.cpf.includes(q) && !s.conselho.toLowerCase().includes(q) && !s.sigla.toLowerCase().includes(q)) return false;
     if (filterSituacao !== 'all' && s.situacao_id !== filterSituacao) return false;
     if (filterUnidade !== 'all' && s.unidade_id !== filterUnidade) return false;
     return true;
-  });
+  }), [solicitantes, search, filterSituacao, filterUnidade]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedData = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Reset page when filters change
+  const handleSearch = (v: string) => { setSearch(v); setCurrentPage(1); };
+  const handleFilterSituacao = (v: string) => { setFilterSituacao(v); setCurrentPage(1); };
+  const handleFilterUnidade = (v: string) => { setFilterUnidade(v); setCurrentPage(1); };
 
   const openNew = () => {
     setEditId(null);
