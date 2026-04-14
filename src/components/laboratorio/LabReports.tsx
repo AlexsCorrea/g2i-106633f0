@@ -1,19 +1,21 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { createLabLog, generateLabReportNumber } from "@/hooks/useLaboratory";
-import { FileText, Printer, CheckCircle2, Eye, Search, Plus } from "lucide-react";
+import { FileText, Printer, CheckCircle2, Eye, Search, Plus, FileStack } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { LabReportPreview, openPrintWindow, renderLabReportHTML, renderConsolidatedReportHTML, labReportCSS } from "./LabReportPrint";
 
 const statusColors: Record<string, string> = {
   rascunho: "bg-gray-100 text-gray-800",
@@ -33,7 +35,7 @@ function useReportsWithDetails() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("lab_reports")
-        .select("*, patients(full_name, cpf, birth_date, gender), lab_requests(request_number, specialty, insurance_name, clinical_notes, requesting_doctor_id, profiles!lab_requests_requesting_doctor_id_fkey(full_name))")
+        .select("*, patients(full_name, cpf, birth_date, gender), lab_requests(request_number, specialty, insurance_name, clinical_notes, requesting_doctor_id, profiles!lab_requests_requesting_doctor_id_fkey(full_name, crm_coren))")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
@@ -41,36 +43,46 @@ function useReportsWithDetails() {
   });
 }
 
+async function fetchResultsForRequest(requestId: string) {
+  const { data, error } = await (supabase as any)
+    .from("lab_results")
+    .select("*, lab_request_items(*, lab_exams(id, name, code, unit, result_mode))")
+    .eq("lab_request_items.request_id", requestId)
+    .in("status", ["validado", "aguardando_conferencia"])
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  const results = (data ?? []).filter((r: any) => r.lab_request_items !== null);
+
+  for (const r of results) {
+    if (r.lab_request_items?.lab_exams?.result_mode === "estruturado") {
+      const { data: comps } = await (supabase as any)
+        .from("lab_result_components")
+        .select("*, lab_exam_components(name, code, group_name, unit, reference_text, sort_order)")
+        .eq("result_id", r.id)
+        .order("created_at", { ascending: true });
+      r._components = (comps ?? []).sort((a: any, b: any) =>
+        (a.lab_exam_components?.sort_order ?? 0) - (b.lab_exam_components?.sort_order ?? 0)
+      );
+    }
+  }
+  return results;
+}
+
 function useReportResults(requestId: string | null) {
   return useQuery({
     queryKey: ["lab-report-results", requestId],
-    queryFn: async () => {
-      if (!requestId) return [];
-      const { data, error } = await (supabase as any)
-        .from("lab_results")
-        .select("*, lab_request_items(*, lab_exams(id, name, code, unit, result_mode))")
-        .eq("lab_request_items.request_id", requestId)
-        .in("status", ["validado", "aguardando_conferencia"])
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      const results = (data ?? []).filter((r: any) => r.lab_request_items !== null);
-
-      // For structured exams, fetch their components
-      for (const r of results) {
-        if (r.lab_request_items?.lab_exams?.result_mode === "estruturado") {
-          const { data: comps } = await (supabase as any)
-            .from("lab_result_components")
-            .select("*, lab_exam_components(name, code, group_name, unit, reference_text, sort_order)")
-            .eq("result_id", r.id)
-            .order("created_at", { ascending: true });
-          r._components = (comps ?? []).sort((a: any, b: any) =>
-            (a.lab_exam_components?.sort_order ?? 0) - (b.lab_exam_components?.sort_order ?? 0)
-          );
-        }
-      }
-      return results;
-    },
+    queryFn: () => fetchResultsForRequest(requestId!),
     enabled: !!requestId,
+  });
+}
+
+function useUnitConfig() {
+  return useQuery({
+    queryKey: ["unit-config-lab"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("unit_config").select("unit_name, logo_url").limit(1).single();
+      return data as { unit_name?: string; logo_url?: string } | null;
+    },
   });
 }
 
@@ -78,15 +90,17 @@ export default function LabReports() {
   const { data: reports, isLoading } = useReportsWithDetails();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { data: unitConfig } = useUnitConfig();
   const [showDetail, setShowDetail] = useState<any>(null);
   const [showPrint, setShowPrint] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState("");
-  const printRef = useRef<HTMLDivElement>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [consolidatedLoading, setConsolidatedLoading] = useState(false);
+
   const { data: printResults } = useReportResults(showPrint?.request_id);
 
-  // Requests that have results but no report yet
   const { data: eligibleRequests } = useQuery({
     queryKey: ["lab-requests-eligible-report"],
     queryFn: async () => {
@@ -96,9 +110,7 @@ export default function LabReports() {
         .in("status", ["processando", "concluido", "coletando", "solicitado"])
         .order("created_at", { ascending: false });
       if (!allReqs?.length) return [];
-      // Filter out requests that already have reports
-      const { data: existingReports } = await (supabase as any)
-        .from("lab_reports").select("request_id");
+      const { data: existingReports } = await (supabase as any).from("lab_reports").select("request_id");
       const reportedIds = new Set((existingReports ?? []).map((r: any) => r.request_id));
       return allReqs.filter((r: any) => !reportedIds.has(r.id));
     },
@@ -111,11 +123,7 @@ export default function LabReports() {
       if (!req) return;
       const num = await generateLabReportNumber();
       const { data, error } = await (supabase as any).from("lab_reports").insert({
-        report_number: num,
-        patient_id: req.patient_id,
-        request_id: req.id,
-        status: "rascunho",
-        version: 1,
+        report_number: num, patient_id: req.patient_id, request_id: req.id, status: "rascunho", version: 1,
       }).select("id").single();
       if (error) throw error;
       await createLabLog("lab_reports", data.id, "laudo_criado", user?.id);
@@ -124,15 +132,11 @@ export default function LabReports() {
       toast.success(`Laudo ${num} criado`);
       setShowCreate(false);
       setSelectedRequestId("");
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+    } catch (e: any) { toast.error(e.message); }
   };
 
   const handleEmit = async (r: any) => {
-    const { error } = await supabase.from("lab_reports").update({
-      status: "emitido", issued_at: new Date().toISOString(),
-    } as any).eq("id", r.id);
+    const { error } = await supabase.from("lab_reports").update({ status: "emitido", issued_at: new Date().toISOString() } as any).eq("id", r.id);
     if (error) { toast.error(error.message); return; }
     await createLabLog("lab_reports", r.id, "laudo_emitido", user?.id);
     qc.invalidateQueries({ queryKey: ["lab-reports-details"] });
@@ -140,80 +144,74 @@ export default function LabReports() {
   };
 
   const handleRelease = async (r: any) => {
-    const { error } = await supabase.from("lab_reports").update({
-      status: "liberado", released_at: new Date().toISOString(), released_by: user?.id,
-    } as any).eq("id", r.id);
+    const { error } = await supabase.from("lab_reports").update({ status: "liberado", released_at: new Date().toISOString(), released_by: user?.id } as any).eq("id", r.id);
     if (error) { toast.error(error.message); return; }
-
-    // Update lab_requests status to concluido
     if (r.request_id) {
       await (supabase as any).from("lab_requests").update({ status: "concluido" }).eq("id", r.request_id);
     }
-
-    // Sync back to exam_requests: find matching exam_request by patient_id and update to liberado
     if (r.patient_id && r.request_id) {
-      const { data: labReq } = await (supabase as any).from("lab_requests").select("request_number, clinical_notes").eq("id", r.request_id).single();
-      // Find exam_request with matching patient and exam info
-      const { data: examReqs } = await supabase.from("exam_requests")
-        .select("id, status")
-        .eq("patient_id", r.patient_id)
-        .neq("status", "liberado")
-        .order("created_at", { ascending: false })
-        .limit(5);
-      // Update the most recent matching one to liberado with result info
+      const { data: examReqs } = await supabase.from("exam_requests").select("id, status").eq("patient_id", r.patient_id).neq("status", "liberado").order("created_at", { ascending: false }).limit(5);
       if (examReqs?.length) {
-        await supabase.from("exam_requests").update({
-          status: "liberado",
-          result_date: new Date().toISOString(),
-          result_text: `Laudo ${r.report_number} liberado. Requisição: ${labReq?.request_number || "—"}`,
-        } as any).eq("id", examReqs[0].id);
+        await supabase.from("exam_requests").update({ status: "liberado", result_date: new Date().toISOString(), result_text: `Laudo ${r.report_number} liberado.` } as any).eq("id", examReqs[0].id);
       }
     }
-
     await createLabLog("lab_reports", r.id, "laudo_liberado", user?.id);
     qc.invalidateQueries({ queryKey: ["lab-reports-details"] });
-    qc.invalidateQueries({ queryKey: ["lab-requests-details"] });
     toast.success("Laudo liberado");
   };
 
-  const handlePrint = (r: any) => {
-    setShowPrint(r);
-  };
+  const handlePrintSingle = (r: any) => setShowPrint(r);
 
   const doPrint = () => {
-    const content = printRef.current;
-    if (!content) return;
-    const w = window.open("", "_blank", "width=800,height=1100");
-    if (!w) return;
-    w.document.write(`<!DOCTYPE html><html><head><title>Laudo ${showPrint?.report_number}</title>
-    <style>
-      @page { size: A4; margin: 15mm; }
-      * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
-      body { padding: 0; color: #1a1a1a; font-size: 11px; }
-      .header { text-align: center; border-bottom: 2px solid #1a5276; padding-bottom: 10px; margin-bottom: 12px; }
-      .header h1 { font-size: 16px; color: #1a5276; margin-bottom: 2px; }
-      .header p { font-size: 10px; color: #666; }
-      .patient-info { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin-bottom: 12px; padding: 8px; background: #f8f9fa; border-radius: 4px; }
-      .patient-info .label { color: #666; font-size: 10px; }
-      .patient-info .value { font-weight: 600; }
-      table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-      th { background: #1a5276; color: white; padding: 6px 8px; text-align: left; font-size: 10px; text-transform: uppercase; }
-      td { padding: 5px 8px; border-bottom: 1px solid #e0e0e0; font-size: 11px; }
-      tr:nth-child(even) { background: #f8f9fa; }
-      .critical { color: #c0392b; font-weight: bold; }
-      .abnormal { color: #e67e22; font-weight: 600; }
-      .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #ccc; text-align: center; font-size: 9px; color: #888; }
-      .signature { margin-top: 30px; text-align: center; }
-      .signature-line { width: 200px; border-top: 1px solid #333; margin: 0 auto 4px; }
-    </style></head><body>${content.innerHTML}</body></html>`);
-    w.document.close();
-    setTimeout(() => { w.print(); }, 300);
+    if (!printResults?.length || !showPrint) return;
+    const html = renderLabReportHTML({ report: showPrint, results: printResults, unitName: unitConfig?.unit_name, logoUrl: unitConfig?.logo_url });
+    openPrintWindow(html, `Laudo ${showPrint.report_number}`);
+  };
+
+  // Consolidated print
+  const handleConsolidatedPrint = async () => {
+    if (selectedIds.size === 0) { toast.error("Selecione ao menos um laudo"); return; }
+    setConsolidatedLoading(true);
+    try {
+      const selected = reports?.filter((r: any) => selectedIds.has(r.id)) ?? [];
+      const items: { report: any; results: any[] }[] = [];
+      for (const rep of selected) {
+        const results = await fetchResultsForRequest(rep.request_id);
+        items.push({ report: rep, results });
+      }
+      const html = renderConsolidatedReportHTML(items, unitConfig?.unit_name, unitConfig?.logo_url);
+      openPrintWindow(html, `Laudos Consolidados — ${selected[0]?.patients?.full_name || "Paciente"}`);
+    } catch (e: any) { toast.error(e.message); }
+    setConsolidatedLoading(false);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((r: any) => r.id)));
+    }
   };
 
   const filtered = reports?.filter((r: any) => {
     const q = search.toLowerCase();
     return r.report_number?.toLowerCase().includes(q) || r.patients?.full_name?.toLowerCase().includes(q) || r.status?.includes(q);
   }) ?? [];
+
+  // Group by patient for consolidated selection
+  const selectedPatientName = (() => {
+    if (selectedIds.size === 0) return null;
+    const first = reports?.find((r: any) => selectedIds.has(r.id));
+    return first?.patients?.full_name;
+  })();
 
   return (
     <div className="space-y-4">
@@ -230,9 +228,18 @@ export default function LabReports() {
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar laudo..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex gap-2 flex-wrap items-center">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar laudo..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        {selectedIds.size > 0 && (
+          <Button size="sm" variant="outline" onClick={handleConsolidatedPrint} disabled={consolidatedLoading} className="gap-1.5">
+            <FileStack className="h-4 w-4" />
+            Imprimir {selectedIds.size} laudo(s) consolidado(s)
+            {selectedPatientName && <span className="text-muted-foreground text-xs ml-1">— {selectedPatientName}</span>}
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -240,6 +247,9 @@ export default function LabReports() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox checked={selectedIds.size > 0 && selectedIds.size === filtered.length} onCheckedChange={toggleSelectAll} />
+                </TableHead>
                 <TableHead>Nº Laudo</TableHead>
                 <TableHead>Paciente</TableHead>
                 <TableHead>Solicitação</TableHead>
@@ -252,11 +262,14 @@ export default function LabReports() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !filtered.length ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum laudo encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhum laudo encontrado</TableCell></TableRow>
               ) : filtered.map((r: any) => (
-                <TableRow key={r.id}>
+                <TableRow key={r.id} className={selectedIds.has(r.id) ? "bg-primary/5" : ""}>
+                  <TableCell>
+                    <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelect(r.id)} />
+                  </TableCell>
                   <TableCell className="font-mono text-sm">{r.report_number}</TableCell>
                   <TableCell className="font-medium">{r.patients?.full_name ?? "—"}</TableCell>
                   <TableCell className="font-mono text-sm">{r.lab_requests?.request_number ?? "—"}</TableCell>
@@ -276,7 +289,7 @@ export default function LabReports() {
                         </Button>
                       )}
                       {(r.status === "liberado" || r.status === "emitido") && (
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handlePrint(r)}><Printer className="h-3.5 w-3.5" /></Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handlePrintSingle(r)}><Printer className="h-3.5 w-3.5" /></Button>
                       )}
                     </div>
                   </TableCell>
@@ -311,116 +324,24 @@ export default function LabReports() {
         </DialogContent>
       </Dialog>
 
-      {/* Print Preview */}
+      {/* Print Preview with professional layout */}
       <Dialog open={!!showPrint} onOpenChange={() => setShowPrint(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Preview do Laudo {showPrint?.report_number}</DialogTitle>
-            <DialogDescription>Visualização do laudo para impressão</DialogDescription>
+            <DialogTitle>Preview — Laudo {showPrint?.report_number}</DialogTitle>
+            <DialogDescription>Visualização profissional do laudo para impressão</DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <Button size="sm" onClick={doPrint} className="gap-1"><Printer className="h-4 w-4" />Imprimir</Button>
           </div>
-          <div ref={printRef} className="border rounded-lg p-6 bg-white text-black">
-            <div className="header">
-              <h1 style={{ fontSize: 16, color: "#1a5276", fontWeight: "bold" }}>LABORATÓRIO CLÍNICO — ZURICH SAÚDE</h1>
-              <p style={{ fontSize: 10, color: "#666" }}>CNPJ: 00.000.000/0001-00 — Rua Exemplo, 123 — São Paulo/SP — Tel: (11) 3000-0000</p>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", padding: 8, background: "#f8f9fa", borderRadius: 4, marginBottom: 12, fontSize: 11 }}>
-              <div><span style={{ color: "#666", fontSize: 10 }}>Paciente:</span> <strong>{showPrint?.patients?.full_name ?? "—"}</strong></div>
-              <div><span style={{ color: "#666", fontSize: 10 }}>CPF:</span> {showPrint?.patients?.cpf ?? "—"}</div>
-              <div><span style={{ color: "#666", fontSize: 10 }}>Nascimento:</span> {showPrint?.patients?.birth_date ? format(new Date(showPrint.patients.birth_date), "dd/MM/yyyy") : "—"}</div>
-              <div><span style={{ color: "#666", fontSize: 10 }}>Sexo:</span> {showPrint?.patients?.gender === "M" ? "Masculino" : showPrint?.patients?.gender === "F" ? "Feminino" : "—"}</div>
-              <div><span style={{ color: "#666", fontSize: 10 }}>Nº Laudo:</span> <strong>{showPrint?.report_number}</strong></div>
-              <div><span style={{ color: "#666", fontSize: 10 }}>Solicitação:</span> {showPrint?.lab_requests?.request_number ?? "—"}</div>
-              <div><span style={{ color: "#666", fontSize: 10 }}>Médico:</span> {showPrint?.lab_requests?.profiles?.full_name ?? "—"}</div>
-              <div><span style={{ color: "#666", fontSize: 10 }}>Convênio:</span> {showPrint?.lab_requests?.insurance_name ?? "Particular"}</div>
-              <div><span style={{ color: "#666", fontSize: 10 }}>Emissão:</span> {showPrint?.issued_at ? format(new Date(showPrint.issued_at), "dd/MM/yyyy HH:mm") : "—"}</div>
-              <div><span style={{ color: "#666", fontSize: 10 }}>Liberação:</span> {showPrint?.released_at ? format(new Date(showPrint.released_at), "dd/MM/yyyy HH:mm") : "—"}</div>
-            </div>
-
-            <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8, fontSize: 11 }}>
-              <thead>
-                <tr>
-                  <th style={{ background: "#1a5276", color: "white", padding: "6px 8px", textAlign: "left", fontSize: 10 }}>EXAME</th>
-                  <th style={{ background: "#1a5276", color: "white", padding: "6px 8px", textAlign: "left", fontSize: 10 }}>RESULTADO</th>
-                  <th style={{ background: "#1a5276", color: "white", padding: "6px 8px", textAlign: "left", fontSize: 10 }}>UNIDADE</th>
-                  <th style={{ background: "#1a5276", color: "white", padding: "6px 8px", textAlign: "left", fontSize: 10 }}>V. REFERÊNCIA</th>
-                  <th style={{ background: "#1a5276", color: "white", padding: "6px 8px", textAlign: "left", fontSize: 10 }}>FLAGS</th>
-                </tr>
-              </thead>
-               <tbody>
-                {printResults?.length ? printResults.map((r: any, i: number) => {
-                  const isStructured = r.lab_request_items?.lab_exams?.result_mode === "estruturado" && r._components?.length;
-                  if (isStructured) {
-                    // Group components by group_name
-                    const groups = new Map<string, any[]>();
-                    r._components.forEach((c: any) => {
-                      const g = c.lab_exam_components?.group_name || "Geral";
-                      if (!groups.has(g)) groups.set(g, []);
-                      groups.get(g)!.push(c);
-                    });
-                    return [
-                      <tr key={`${r.id}-header`} style={{ background: "#e8f0fe" }}>
-                        <td colSpan={5} style={{ padding: "6px 8px", fontWeight: "bold", fontSize: 11, borderBottom: "1px solid #c0c0c0" }}>
-                          {r.lab_request_items?.lab_exams?.name ?? "—"}
-                          {r.is_critical && <span style={{ color: "#c0392b", marginLeft: 8 }}>⚠ CRÍTICO</span>}
-                        </td>
-                      </tr>,
-                      ...Array.from(groups.entries()).flatMap(([gName, comps]) => [
-                        <tr key={`${r.id}-g-${gName}`} style={{ background: "#f0f4f8" }}>
-                          <td colSpan={5} style={{ padding: "4px 8px", fontSize: 10, fontWeight: 600, color: "#1a5276", borderBottom: "1px solid #e0e0e0" }}>{gName}</td>
-                        </tr>,
-                        ...comps.map((c: any, ci: number) => (
-                          <tr key={c.id} style={{ background: ci % 2 === 0 ? "white" : "#f8f9fa" }}>
-                            <td style={{ padding: "4px 8px 4px 16px", borderBottom: "1px solid #e0e0e0", fontSize: 10 }}>{c.lab_exam_components?.name ?? "—"}</td>
-                            <td style={{ padding: "4px 8px", borderBottom: "1px solid #e0e0e0", fontWeight: c.is_critical ? "bold" : "normal", color: c.is_critical ? "#c0392b" : c.is_abnormal ? "#e67e22" : "#1a1a1a" }}>{c.value ?? "—"}</td>
-                            <td style={{ padding: "4px 8px", borderBottom: "1px solid #e0e0e0", fontSize: 10 }}>{c.lab_exam_components?.unit ?? "—"}</td>
-                            <td style={{ padding: "4px 8px", borderBottom: "1px solid #e0e0e0", color: "#666", fontSize: 10 }}>{c.lab_exam_components?.reference_text ?? "—"}</td>
-                            <td style={{ padding: "4px 8px", borderBottom: "1px solid #e0e0e0" }}>
-                              {c.is_critical && <span style={{ color: "#c0392b", fontWeight: "bold", fontSize: 10 }}>⚠ CRÍTICO</span>}
-                              {c.is_abnormal && !c.is_critical && <span style={{ color: "#e67e22", fontSize: 10 }}>↑ Alterado</span>}
-                            </td>
-                          </tr>
-                        )),
-                      ]),
-                    ];
-                  }
-                  // Simple exam
-                  return (
-                    <tr key={r.id} style={{ background: i % 2 === 0 ? "white" : "#f8f9fa" }}>
-                      <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0" }}>{r.lab_request_items?.lab_exams?.name ?? "—"}</td>
-                      <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0", fontWeight: r.is_critical ? "bold" : "normal", color: r.is_critical ? "#c0392b" : r.is_abnormal ? "#e67e22" : "#1a1a1a" }}>{r.value ?? "—"}</td>
-                      <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0" }}>{r.unit ?? r.lab_request_items?.lab_exams?.unit ?? "—"}</td>
-                      <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0", color: "#666" }}>{r.reference_text ?? "—"}</td>
-                      <td style={{ padding: "5px 8px", borderBottom: "1px solid #e0e0e0" }}>
-                        {r.is_critical && <span style={{ color: "#c0392b", fontWeight: "bold" }}>⚠ CRÍTICO</span>}
-                        {r.is_abnormal && !r.is_critical && <span style={{ color: "#e67e22" }}>↑ Alterado</span>}
-                      </td>
-                    </tr>
-                  );
-                }) : (
-                  <tr><td colSpan={5} style={{ padding: "12px 8px", textAlign: "center", color: "#999" }}>Nenhum resultado vinculado a esta solicitação</td></tr>
-                )}
-              </tbody>
-            </table>
-
-            {showPrint?.lab_requests?.clinical_notes && (
-              <div style={{ marginTop: 12, fontSize: 10, color: "#666" }}>
-                <strong>Informação Clínica:</strong> {showPrint.lab_requests.clinical_notes}
-              </div>
-            )}
-
-            <div style={{ marginTop: 40, textAlign: "center" }}>
-              <div style={{ width: 200, borderTop: "1px solid #333", margin: "0 auto 4px" }} />
-              <div style={{ fontSize: 11 }}>Responsável Técnico</div>
-              <div style={{ fontSize: 10, color: "#666" }}>CRF/CRM — Laboratório Zurich Saúde</div>
-            </div>
-
-            <div style={{ marginTop: 20, paddingTop: 10, borderTop: "1px solid #ccc", textAlign: "center", fontSize: 9, color: "#888" }}>
-              Documento emitido eletronicamente pelo Sistema Zurich 2.0 — {format(new Date(), "dd/MM/yyyy HH:mm")}
-            </div>
-          </div>
+          {showPrint && printResults && (
+            <LabReportPreview
+              report={showPrint}
+              results={printResults}
+              unitName={unitConfig?.unit_name}
+              logoUrl={unitConfig?.logo_url}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
